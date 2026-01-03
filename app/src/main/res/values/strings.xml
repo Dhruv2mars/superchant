@@ -36,4 +36,15 @@
     <string name="accessibility_setup_instructions">1. Tap \"Open Settings\" below\n2. Find \"SuperChant Volume Counter\"\n3. Toggle it ON\n4. Return to the app</string>
     <string name="open_settings">Open Settings</string>
     <string name="accessibility_not_enabled">Please enable the accessibility service to start counting</string>
+    
+    <!-- Restricted Settings (Android 13+) -->
+    <string name="restricted_settings_title">Setup Required</string>
+    <string name="restricted_settings_message">Since this app was installed outside the Play Store, you may need to allow restricted settings before enabling accessibility.</string>
+    <string name="restricted_settings_step1">If the toggle is blocked:</string>
+    <string name="restricted_settings_step1_desc">Open App Info, look for \"Allow restricted settings\" in the menu or under permissions, enable it, then return here.</string>
+    <string name="restricted_settings_step2">Enable Accessibility</string>
+    <string name="restricted_settings_step2_desc">Find \"SuperChant Volume Counter\" in the list and turn it ON</string>
+    <string name="open_app_info">Open App Info</string>
+    <string name="enable_accessibility">Open Accessibility Settings</string>
+    <string name="done_return">Done</string>
 </resources>

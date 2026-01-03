@@ -4,6 +4,8 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import android.view.KeyEvent
@@ -64,6 +66,49 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
         fun openAccessibilitySettings(context: Context) {
             context.startActivity(
                 Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+            )
+        }
+
+        /**
+         * Check if restricted settings might be blocking accessibility service.
+         * On Android 13+, sideloaded apps need "Allow restricted settings" enabled.
+         */
+        fun needsRestrictedSettingsPermission(context: Context): Boolean {
+            // Only applies to Android 13 (TIRAMISU) and above
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                return false
+            }
+            // If accessibility is already enabled, restricted settings isn't blocking
+            if (isAccessibilityServiceEnabled(context)) {
+                return false
+            }
+            // Check if app was sideloaded (not from Play Store)
+            return try {
+                val installerPackage = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    context.packageManager.getInstallSourceInfo(context.packageName).installingPackageName
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.packageManager.getInstallerPackageName(context.packageName)
+                }
+                // Sideloaded apps have null installer or are from package installer
+                installerPackage == null || 
+                    installerPackage == "com.android.packageinstaller" ||
+                    installerPackage == "com.google.android.packageinstaller"
+            } catch (e: Exception) {
+                // If we can't determine, assume it might need it
+                true
+            }
+        }
+
+        /**
+         * Open the app's settings page where user can enable "Allow restricted settings"
+         */
+        fun openAppSettings(context: Context) {
+            context.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:${context.packageName}")
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
             )

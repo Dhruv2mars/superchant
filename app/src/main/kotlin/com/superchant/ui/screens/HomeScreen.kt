@@ -44,6 +44,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -444,6 +445,36 @@ private fun AccessibilitySetupDialog(
     onDismiss: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
+    val context = LocalContext.current
+    val needsRestrictedSettings = remember {
+        VolumeKeyAccessibilityService.needsRestrictedSettingsPermission(context)
+    }
+    
+    if (needsRestrictedSettings) {
+        // Android 13+ sideloaded app - show two-step flow
+        RestrictedSettingsDialog(
+            onDismiss = onDismiss,
+            onOpenAppInfo = {
+                VolumeKeyAccessibilityService.openAppSettings(context)
+            },
+            onOpenAccessibility = {
+                onOpenSettings()
+            }
+        )
+    } else {
+        // Standard flow - just open accessibility settings
+        SimpleAccessibilityDialog(
+            onDismiss = onDismiss,
+            onOpenSettings = onOpenSettings
+        )
+    }
+}
+
+@Composable
+private fun SimpleAccessibilityDialog(
+    onDismiss: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -476,6 +507,119 @@ private fun AccessibilitySetupDialog(
                 Text(stringResource(R.string.open_settings))
             }
         },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun RestrictedSettingsDialog(
+    onDismiss: () -> Unit,
+    onOpenAppInfo: () -> Unit,
+    onOpenAccessibility: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.restricted_settings_title),
+                style = MaterialTheme.typography.headlineSmall
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = stringResource(R.string.restricted_settings_message),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                // Primary action - Open Accessibility Settings
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.restricted_settings_step2),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.restricted_settings_step2_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = onOpenAccessibility,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Text(
+                                text = stringResource(R.string.enable_accessibility),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Secondary info - If toggle is blocked
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.restricted_settings_step1),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.restricted_settings_step1_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = onOpenAppInfo,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = stringResource(R.string.open_app_info),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Cancel")

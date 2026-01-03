@@ -4,59 +4,50 @@ This document provides guidance for AI coding agents working on the SuperChant A
 
 ## Project Overview
 
-SuperChant is a Kotlin/Jetpack Compose Android app for tracking chanting/meditation sessions. It uses
-volume keys to increment counts via an AccessibilityService, runs as a foreground service, and persists
-data using DataStore Preferences.
+SuperChant is a Kotlin/Jetpack Compose Android app for tracking chanting/meditation sessions. It uses volume keys to increment counts via an AccessibilityService, runs as a foreground service, and persists data using DataStore Preferences.
 
 ## Build Commands
 
 ```bash
-# Build debug APK
-./gradlew assembleDebug
+# Build
+./gradlew assembleDebug          # Debug APK
+./gradlew assembleRelease        # Release APK
+./gradlew bundleRelease          # Release AAB (for Play Store)
+./gradlew installDebug           # Install debug on device
+./gradlew clean                  # Clean build
 
-# Build release APK
-./gradlew assembleRelease
+# Custom tasks (output to project root)
+./gradlew buildReleaseApk        # Build & copy APK as SuperChant-v{version}.apk
+./gradlew buildReleaseBundle     # Build & copy AAB as SuperChant-v{version}.aab
 
-# Install debug build on connected device
-./gradlew installDebug
-
-# Clean build
-./gradlew clean
-
-# Run all unit tests
-./gradlew test
-
-# Run single test class
-./gradlew test --tests "com.superchant.ExampleTest"
-
-# Run single test method
-./gradlew test --tests "com.superchant.ExampleTest.testMethod"
-
-# Run Android instrumentation tests
-./gradlew connectedAndroidTest
-
-# Run specific instrumentation test
+# Testing
+./gradlew test                                                    # All unit tests
+./gradlew test --tests "com.superchant.ExampleTest"              # Single test class
+./gradlew test --tests "com.superchant.ExampleTest.testMethod"   # Single test method
+./gradlew connectedAndroidTest                                    # Instrumentation tests
 ./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.superchant.ExampleTest
 
-# Check for lint issues
+# Lint
 ./gradlew lint
 ```
 
 ## Project Configuration
 
-- **Namespace**: `com.superchant`
-- **Min SDK**: 26 (Android 8.0)
-- **Target/Compile SDK**: 35
-- **Java/Kotlin Target**: 17
-- **Kotlin Version**: 2.0.21
-- **Compose BOM**: 2024.12.01
+| Setting | Value |
+|---------|-------|
+| Namespace | `com.superchant` |
+| Min SDK | 26 (Android 8.0) |
+| Target/Compile SDK | 35 |
+| Java/Kotlin Target | 17 |
+| Kotlin Version | 2.0.21 |
+| Compose BOM | 2024.12.01 |
 
 ## Code Style Guidelines
 
 ### Import Order
-1. Standard Android imports (android.*, androidx.*)
-2. Third-party imports (kotlinx.*, org.*)
-3. Local project imports (com.superchant.*)
+1. Android imports (`android.*`, `androidx.*`)
+2. Third-party imports (`kotlinx.*`, `org.*`)
+3. Project imports (`com.superchant.*`)
 
 ### Naming Conventions
 | Type | Convention | Example |
@@ -69,13 +60,13 @@ data using DataStore Preferences.
 | Flow properties | `*Flow` suffix | `themeModeFlow`, `goalsFlow` |
 | Boolean getters | `is*` prefix | `isRunning`, `isGoalComplete` |
 
-### Formatting Rules
+### Formatting
 - 4-space indentation (no tabs)
 - Trailing lambda style for Compose DSL
 - `when` expressions preferred over if-else chains
 - Extension properties for computed values: `val progress: Float get() = ...`
 - `@Serializable` annotation for JSON-serialized data classes
-- `modifier: Modifier = Modifier` always last parameter with default
+- Composable modifier parameter: always last with default `modifier: Modifier = Modifier`
 
 ### Error Handling
 ```kotlin
@@ -94,15 +85,15 @@ val items = try {
 }
 ```
 
-### Threading
+### Threading & Concurrency
 ```kotlin
 // Service scope with SupervisorJob
 private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-// @Volatile for thread-safe singleton access
+// Thread-safe singleton access
 @Volatile private var _instance: Service? = null
 
-// runBlocking for synchronous persistence in lifecycle methods
+// Synchronous persistence in lifecycle methods
 override fun onDestroy() {
     runBlocking { repository.saveData(data) }
 }
@@ -145,7 +136,7 @@ com.superchant/
 ├── MainActivity.kt              # Entry point, navigation host
 ├── SuperChantApplication.kt     # Application class
 ├── data/
-│   ├── ChantState.kt           # State models
+│   ├── ChantState.kt           # State models (ChantState, Goal, SessionRecord)
 │   └── PreferencesRepository.kt # DataStore persistence
 ├── service/
 │   ├── ChantingService.kt      # Foreground counting service
@@ -153,7 +144,7 @@ com.superchant/
 └── ui/
     ├── components/             # Reusable composables
     ├── screens/                # Screen-level composables
-    └── theme/                  # Material 3 theming
+    └── theme/                  # Material 3 theming (Color, Theme, Type)
 ```
 
 ## Key Dependencies
@@ -168,11 +159,12 @@ com.superchant/
 
 - Unit tests: `app/src/test/kotlin/com/superchant/`
 - Instrumentation tests: `app/src/androidTest/kotlin/com/superchant/`
-- Use JUnit 4, Espresso, and Compose UI Test
+- Frameworks: JUnit 4, Espresso, Compose UI Test
 
 ## Important Notes
 
 1. All user-facing strings must be in `res/values/strings.xml`
 2. ProGuard rules in `app/proguard-rules.pro` preserve serialization
-3. Release builds require keystore at `../superchant.keystore`
+3. Release signing config loaded from `local.properties` (gitignored)
 4. Accessibility service config in `res/xml/accessibility_service_config.xml`
+5. App distributed via Google Play Store Internal Testing (bypasses Restricted Settings)

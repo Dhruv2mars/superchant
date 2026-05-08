@@ -1,0 +1,18 @@
+Thoroughly explore this Android project at /Users/dhruv2mars/dev/github/superchant. I need to understand:
+
+1. What the app does (its purpose - chanting/meditation tracking)
+2. All key features (from code, not assumptions)
+3. How users interact with it (volume key counting, accessibility service, foreground service, etc.)
+4. The tech stack (Kotlin, Jetpack Compose, DataStore, etc.)
+5. Any screenshots in the project
+6. The app version from build.gradle.kts
+7. Any existing marketing copy (strings.xml descriptions, etc.)
+
+Read these files for context:
+- app/build.gradle.kts (for version, dependencies)
+- app/src/main/res/values/strings.xml (for app name, descriptions)
+- AGENTS.md (for architecture overview)
+- PRIVACY_POLICY.md (for privacy policy)
+- docs/ directory contents
+
+Return a comprehensive summary of the app's purpose, features, and technical details.

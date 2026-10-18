@@ -166,7 +166,9 @@ fun HomeScreen(
     }.collectAsState(initial = null to false).value
     val savedRoundSize by preferencesRepository.roundSize.collectAsStateWithLifecycle()
     val appRoundSize = savedRoundSize ?: RoundSize.DEFAULT
-    val inputModeLoaded = inputModeFlowLoaded && savedRoundSize != null
+    val savedConsent by preferencesRepository.accessibilityConsent.collectAsStateWithLifecycle()
+    val accessibilityConsent = savedConsent == true
+    val inputModeLoaded = inputModeFlowLoaded && savedRoundSize != null && savedConsent != null
     val inputMode = savedInputMode ?: InputMode.default(isAccessibilityEnabled)
     val setInputMode: (InputMode) -> Unit = { mode -> preferencesRepository.write { setInputMode(mode) } }
 
@@ -175,7 +177,6 @@ fun HomeScreen(
 
     // Setup dialog, shown on Start (volume counting without accessibility) or from "Set up"
     var showAccessibilityDialog by remember { mutableStateOf(false) }
-    val accessibilityConsent = preferencesRepository.accessibilityConsent.collectAsStateWithLifecycle().value == true
     var accessibilityDialogStartsSession by remember { mutableStateOf(false) }
     var focusMode by rememberSaveable { mutableStateOf(false) }
 
@@ -250,7 +251,8 @@ fun HomeScreen(
 
     fun requestStart(goal: Goal?) {
         goalToStart = goal
-        if (inputMode.usesVolumeKeys && !isAccessibilityEnabled) {
+        // Also for users who enabled the service before the disclosure existed: they agree once first
+        if (inputMode.usesVolumeKeys && (!isAccessibilityEnabled || !accessibilityConsent)) {
             accessibilityDialogStartsSession = true
             showAccessibilityDialog = true
         } else {
@@ -288,7 +290,14 @@ fun HomeScreen(
     if (showAccessibilityDialog) {
         AccessibilitySetupDialog(
             consented = accessibilityConsent,
-            onConsent = { preferencesRepository.write { setAccessibilityConsent(true) } },
+            onConsent = {
+                preferencesRepository.write { setAccessibilityConsent(true) }
+                // Already enabled (e.g. from an older version): nothing left to set up
+                if (isAccessibilityEnabled) {
+                    showAccessibilityDialog = false
+                    if (accessibilityDialogStartsSession) continueStart(inputMode) else goalToStart = null
+                }
+            },
             onDismiss = {
                 showAccessibilityDialog = false
                 goalToStart = null

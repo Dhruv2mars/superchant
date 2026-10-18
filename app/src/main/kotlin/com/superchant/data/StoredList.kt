@@ -45,8 +45,18 @@ fun <T> Json.encodeStoredList(serializer: KSerializer<T>, items: List<T>, unread
  * and crash LazyColumns keyed by ID; later duplicates get a fresh ID.
  */
 fun <T> List<T>.withUniqueIds(id: (T) -> String, withId: (T, String) -> T): List<T> {
+    // Replacement IDs are derived, not random, so decoding (or importing) the same data twice gives the same IDs
     val seen = HashSet<String>()
-    return map { item -> if (seen.add(id(item))) item else withId(item, newId()).also { seen.add(id(it)) } }
+    return map { item ->
+        val original = id(item)
+        if (seen.add(original)) {
+            item
+        } else {
+            val replacement = generateSequence(2) { it + 1 }.map { "$original-$it" }.first { it !in seen }
+            seen.add(replacement)
+            withId(item, replacement)
+        }
+    }
 }
 
 fun List<Goal>.withUniqueGoalIds(): List<Goal> =

@@ -45,8 +45,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         
         val preferencesRepository = PreferencesRepository.get(this)
-        // Not on recreation (e.g. rotation), or the same start would run again
-        if (savedInstanceState == null) launchRequest.value = AppShortcuts.parse(intent)
+        // Not on recreation (e.g. rotation) or a relaunch from Recents, which re-delivers the old intent
+        val fromHistory = intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
+        if (savedInstanceState == null && !fromHistory) launchRequest.value = AppShortcuts.parse(intent)
         
         // Hold the first frame (the system splash stays up) until the saved theme is known,
         // so a forced light/dark theme never flashes the system one.
@@ -70,12 +71,14 @@ class MainActivity : ComponentActivity() {
                     val launchStart by launchRequest
                     LaunchedEffect(launchStart) {
                         val request = launchStart ?: return@LaunchedEffect
-                        launchRequest.value = null
                         AppShortcuts.reportUsed(this@MainActivity, request)
                         val goals = preferencesRepository.goals.filterNotNull().first()
                         // A shortcut to a deleted goal falls back to a free session
                         val goal = request.goalId?.let { id -> goals.firstOrNull { it.id == id } }
                         pendingStart = StartRequest(goal)
+                        // Cleared only now: clearing it earlier changes this effect's key and cancels it
+                        // while the goals are still loading (a cold start from the tile or a shortcut)
+                        launchRequest.value = null
                         navController.popBackStack("home", inclusive = false)
                     }
                     val goals by preferencesRepository.goals.collectAsStateWithLifecycle()

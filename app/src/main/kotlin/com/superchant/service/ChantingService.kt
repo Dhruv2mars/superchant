@@ -135,6 +135,13 @@ class ChantingService : Service() {
         if (previous.isActive && previous.count > 0) {
             preferencesRepository.write { addSessionRecord(previous.toRecord(now)) }
         }
+        // A session persisted by a dead process and not restored yet (e.g. the tile started a new one
+        // first) is saved to history instead of being overwritten. Queued before the new state's write.
+        val previousId = previous.sessionId.takeIf { previous.isActive }
+        preferencesRepository.write {
+            loadActiveSession()?.takeIf { it.isActive && it.count > 0 && it.sessionId != previousId }
+                ?.let { addSessionRecord(it.toRecord(maxOf(it.lastUpdatedAt, it.sessionStartTime))) }
+        }
 
         setState(ChantState.start(goal, now, roundSize))
         _instance = this

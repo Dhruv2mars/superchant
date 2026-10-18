@@ -1,6 +1,9 @@
 package com.superchant.ui.screens
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,11 +33,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.superchant.R
 import com.superchant.data.Backup
 import com.superchant.data.BackupCodec
 import com.superchant.data.BackupFormatException
 import com.superchant.data.PreferencesRepository
+import com.superchant.data.ReminderSettings
+import com.superchant.reminder.ReminderTime
 import com.superchant.reminder.ReminderScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -82,7 +88,13 @@ internal fun BackupControls(
             val message = try {
                 val backup = BackupCodec.decode(readText(context, uri))
                 val result = preferencesRepository.importBackup(backup)
-                // The backup may turn the reminder on or move it
+                // The backup may turn the reminder on; without the notification permission here it
+                // could never show, so it stays off until turned on in Settings (which asks for it)
+                if (backup.settings.reminderEnabled == true && !canPostNotifications(context)) {
+                    preferencesRepository.setReminder(
+                        ReminderSettings(enabled = false, minuteOfDay = backup.settings.reminderMinuteOfDay ?: ReminderTime.DEFAULT_MINUTE_OF_DAY)
+                    )
+                }
                 ReminderScheduler.sync(context.applicationContext)
                 resources.getQuantityString(
                     R.plurals.backup_imported, result.sessionsAdded, result.sessionsAdded, result.goalsAdded + result.goalsUpdated
@@ -127,6 +139,10 @@ internal fun BackupControls(
         }
     }
 }
+
+private fun canPostNotifications(context: Context): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
 private suspend fun writeText(context: Context, uri: Uri, text: String) = withContext(Dispatchers.IO) {
     // "wt" truncates, so overwriting a longer old backup leaves no trailing bytes

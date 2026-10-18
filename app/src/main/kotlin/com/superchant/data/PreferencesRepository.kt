@@ -388,6 +388,8 @@ class PreferencesRepository private constructor(private val context: Context) {
     suspend fun loadActiveSession(): ChantState? = try {
         context.sessionDataStore.data.first()[PreferencesKeys.ACTIVE_SESSION]
             ?.let { json.decodeFromString(ChantState.serializer(), it) }
+            // A bad size (e.g. 0) would divide by zero on every count and every launch
+            ?.let { it.copy(roundSize = RoundSize.sanitize(it.roundSize)) }
     } catch (e: Exception) {
         Log.e(TAG, "Reading the active session failed", e)
         null

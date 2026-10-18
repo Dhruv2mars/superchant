@@ -74,6 +74,15 @@ class BackupTest {
     }
 
     @Test
+    fun reimportingAFileWithDuplicateIdsAddsNothingNew() {
+        val text = BackupCodec.encode(backup.copy(history = listOf(record, record.copy(startTime = 5))))
+        val first = BackupCodec.mergeHistory(emptyList(), BackupCodec.decode(text).history)
+        val second = BackupCodec.mergeHistory(first, BackupCodec.decode(text).history)
+        assertEquals(2, first.size)
+        assertEquals(first, second)
+    }
+
+    @Test
     fun mergeAddsUpdatesAndIsIdempotent() {
         val existing = listOf(record.copy(totalCounts = 5), record.copy(id = "local", startTime = 900))
         val merged = BackupCodec.mergeHistory(existing, backup.history)

@@ -274,12 +274,14 @@ fun HoldButton(
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             currentOnConfirm()
                         }
-                        tryAwaitRelease()
-                        if (!fired) {
-                            hold.cancel()
-                            scope.launch { tooltipState.show() }
+                        try {
+                            tryAwaitRelease()
+                            if (!fired) scope.launch { tooltipState.show() }
+                        } finally {
+                            // Also when the gesture is cancelled (e.g. the button is disabled mid-press)
+                            if (!fired) hold.cancel()
+                            scope.launch { progress.animateTo(0f, tween(150)) }
                         }
-                        scope.launch { progress.animateTo(0f, tween(150)) }
                     })
                 }
                 .clearAndSetSemantics {

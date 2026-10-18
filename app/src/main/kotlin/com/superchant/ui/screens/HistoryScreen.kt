@@ -60,6 +60,7 @@ import com.superchant.ui.components.ConfirmDestructiveDialog
 import com.superchant.data.bucketSessions
 import com.superchant.data.millisUntilNextMidnight
 import com.superchant.ui.components.EmptyState
+import com.superchant.ui.components.InsightsCard
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -75,6 +76,7 @@ fun HistoryScreen(
     val loadedHistory by preferencesRepository.sessionHistory.collectAsStateWithLifecycle()
     val sessionHistory = loadedHistory ?: emptyList()
     var showClearDialog by rememberSaveable { mutableStateOf(false) }
+    val dailyTarget = preferencesRepository.dailyTarget.collectAsStateWithLifecycle().value ?: 0
     
     // Re-bucket when the day changes (at midnight while open, or on returning to the screen)
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -139,6 +141,9 @@ fun HistoryScreen(
                     // Summary card
                     item {
                         SummaryCard(sessions = sessionHistory)
+                    }
+                    item {
+                        InsightsCard(sessions = sessionHistory, dailyTarget = dailyTarget)
                     }
                     
                     // Today section

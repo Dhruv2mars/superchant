@@ -32,6 +32,46 @@
     <string name="disclosure_agree">I agree</string>
     <string name="disclosure_decline">Not now</string>
 
+    <!-- Practice: daily target, streak, insights -->
+    <string name="settings_practice">Practice</string>
+    <string name="daily_target_title">Daily target</string>
+    <string name="daily_target_desc">Rounds to aim for each day. Days that reach it build your streak.</string>
+    <string name="daily_target_off">Off</string>
+    <string name="daily_target_decrease">Lower daily target</string>
+    <string name="daily_target_increase">Raise daily target</string>
+    <plurals name="today_rounds">
+        <item quantity="one">Today: %d round</item>
+        <item quantity="other">Today: %d rounds</item>
+    </plurals>
+    <plurals name="today_rounds_of_target">
+        <item quantity="one">Today: %1$d of %2$d round</item>
+        <item quantity="other">Today: %1$d of %2$d rounds</item>
+    </plurals>
+    <plurals name="streak_days">
+        <item quantity="one">%d-day streak</item>
+        <item quantity="other">%d-day streak</item>
+    </plurals>
+    <string name="insights_title">Your practice</string>
+    <plurals name="insights_streak_days">
+        <item quantity="one">Day streak</item>
+        <item quantity="other">Day streak</item>
+    </plurals>
+    <string name="insights_best_streak">Best streak</string>
+    <string name="insights_rounds_today">Rounds today</string>
+    <plurals name="insights_heatmap_summary">
+        <item quantity="one">Practiced %1$d of the last %2$d day</item>
+        <item quantity="other">Practiced %1$d of the last %2$d days</item>
+    </plurals>
+    <string name="insights_less">Less</string>
+    <string name="insights_more">More</string>
+    <string name="insights_mantras_title">Lifetime by mantra</string>
+    <plurals name="insights_counts">
+        <item quantity="one">%d count</item>
+        <item quantity="other">%d counts</item>
+    </plurals>
+    <string name="insights_show_all">Show all</string>
+    <string name="insights_show_less">Show less</string>
+
     <!-- Restricted Settings (Android 13+) -->
     <string name="restricted_settings_title">Setup Required</string>
     <string name="restricted_settings_message">Since this app was installed outside the Play Store, you may need to allow restricted settings before enabling accessibility.</string>

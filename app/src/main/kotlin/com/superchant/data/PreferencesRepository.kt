@@ -75,6 +75,7 @@ class PreferencesRepository private constructor(private val context: Context) {
         val BEAD_CLICK = booleanPreferencesKey("bead_click")
         val POCKET_GUARD = booleanPreferencesKey("pocket_guard")
         val ACCESSIBILITY_CONSENT = booleanPreferencesKey("accessibility_consent")
+        val DAILY_TARGET = intPreferencesKey("daily_target")
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -188,6 +189,15 @@ class PreferencesRepository private constructor(private val context: Context) {
 
     suspend fun setPocketGuard(enabled: Boolean) {
         context.dataStore.edit { it[PreferencesKeys.POCKET_GUARD] = enabled }
+    }
+
+    /** Rounds per day to aim for; 0 means no target. */
+    val dailyTarget: StateFlow<Int?> = prefs.map {
+        (it[PreferencesKeys.DAILY_TARGET] ?: 0).coerceIn(0, PracticeStats.DAILY_TARGET_MAX)
+    }.share()
+
+    suspend fun setDailyTarget(rounds: Int) {
+        context.dataStore.edit { it[PreferencesKeys.DAILY_TARGET] = rounds.coerceIn(0, PracticeStats.DAILY_TARGET_MAX) }
     }
 
     /** Whether the user agreed to the accessibility service disclosure. */

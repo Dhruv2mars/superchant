@@ -102,6 +102,7 @@ import com.superchant.ui.components.InputModeSelector
 import com.superchant.ui.components.KeepScreenOn
 import com.superchant.ui.components.StartStopButton
 import com.superchant.ui.components.TapToCountPad
+import com.superchant.ui.components.TodayLine
 import com.superchant.ui.components.rememberProximityCovered
 import com.superchant.ui.theme.FocusBackground
 import com.superchant.ui.theme.FocusText
@@ -360,7 +361,12 @@ fun HomeScreen(
                     showAccessibilityDialog = true
                 },
                 onStart = onStartStopClick,
-                modifier = modifier
+                modifier = modifier,
+                todayLine = {
+                    val sessions = preferencesRepository.sessionHistory.collectAsStateWithLifecycle().value
+                    val target = preferencesRepository.dailyTarget.collectAsStateWithLifecycle().value
+                    if (sessions != null && target != null) TodayLine(sessions = sessions, dailyTarget = target)
+                }
             )
         }
         val goalStrip: @Composable () -> Unit = {
@@ -542,13 +548,15 @@ private fun IdleControls(
     accessibilityEnabled: Boolean,
     onSetUpAccessibility: () -> Unit,
     onStart: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    todayLine: @Composable () -> Unit = {}
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        todayLine()
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(

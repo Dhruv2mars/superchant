@@ -13,6 +13,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Remove
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
@@ -36,7 +42,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,6 +84,7 @@ fun SettingsScreen(
     val vibration = preferencesRepository.vibrationSettings.collectAsStateWithLifecycle().value ?: VibrationSettings()
     val roundSize = preferencesRepository.roundSize.collectAsStateWithLifecycle().value ?: RoundSize.DEFAULT
     val feel = preferencesRepository.countingFeel.collectAsStateWithLifecycle().value ?: CountingFeel()
+    val dailyTarget = preferencesRepository.dailyTarget.collectAsStateWithLifecycle().value ?: 0
     val accessibilityConsent = preferencesRepository.accessibilityConsent.collectAsStateWithLifecycle().value == true
     var showAccessibilitySetup by remember { mutableStateOf(false) }
     if (showAccessibilitySetup) {
@@ -146,6 +155,13 @@ fun SettingsScreen(
                     subtitle = stringResource(R.string.bead_click_desc),
                     checked = feel.beadClick,
                     onCheckedChange = { enabled -> preferencesRepository.write { setBeadClick(enabled) } }
+                )
+            }
+            
+            SettingsSection(title = stringResource(R.string.settings_practice)) {
+                DailyTargetItem(
+                    target = dailyTarget,
+                    onChange = { rounds -> preferencesRepository.write { setDailyTarget(rounds) } }
                 )
             }
             
@@ -262,6 +278,46 @@ fun SettingsScreen(
         }
     }
 }
+
+/** Rounds per day, stepped through common values; 0 is off. */
+@Composable
+private fun DailyTargetItem(target: Int, onChange: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.daily_target_title),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = stringResource(R.string.daily_target_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        FilledTonalIconButton(
+            onClick = { onChange(DAILY_TARGET_STEPS.lastOrNull { it < target } ?: 0) },
+            enabled = target > 0
+        ) {
+            Icon(Icons.Outlined.Remove, contentDescription = stringResource(R.string.daily_target_decrease))
+        }
+        Text(
+            text = if (target > 0) pluralStringResource(R.plurals.rounds_count, target, target) else stringResource(R.string.daily_target_off),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(min = 84.dp)
+        )
+        FilledTonalIconButton(
+            onClick = { onChange(DAILY_TARGET_STEPS.firstOrNull { it > target } ?: target) },
+            enabled = target < DAILY_TARGET_STEPS.last()
+        ) {
+            Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.daily_target_increase))
+        }
+    }
+}
+
+private val DAILY_TARGET_STEPS = (1..16).toList() + listOf(20, 24, 27, 32, 48, 54, 64, 108)
 
 @Composable
 private fun SettingsSection(

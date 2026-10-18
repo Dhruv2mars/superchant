@@ -68,8 +68,24 @@ data class ChantState(
         totalRounds = rounds,
         goalId = activeGoal?.id,
         goalName = activeGoal?.name,
-        roundSize = roundSize
+        roundSize = roundSize,
+        mantras = mantraTallies()
     )
+
+    /** What was chanted of each goal mantra so far; empty without a goal. Counts add up to [count]. */
+    fun mantraTallies(): List<MantraTally> {
+        val goal = activeGoal ?: return emptyList()
+        return goal.mantras.mapIndexedNotNull { index, mantra ->
+            val rounds = when {
+                index < currentMantraIndex -> mantra.targetRounds
+                index == currentMantraIndex -> mantraRoundsCompleted
+                else -> 0
+            }
+            val partial = if (index == currentMantraIndex) currentRoundCount else 0
+            val counts = rounds * roundSize + partial
+            if (counts > 0) MantraTally(mantra.name, rounds, counts) else null
+        }
+    }
 
     /**
      * Decides what to do with a session persisted by a process that no longer exists: resume it,
@@ -170,6 +186,14 @@ data class Goal(
         get() = mantras.sumOf { it.targetRounds }
 }
 
+/** Rounds and counts of one mantra within a session. */
+@Serializable
+data class MantraTally(
+    val name: String,
+    val rounds: Int,
+    val counts: Int
+)
+
 /**
  * Represents a completed chanting session for history.
  */
@@ -184,7 +208,9 @@ data class SessionRecord(
     @Serializable(with = LenientIdSerializer::class)
     val goalId: String? = null,
     val goalName: String? = null,
-    val roundSize: Int = RoundSize.DEFAULT
+    val roundSize: Int = RoundSize.DEFAULT,
+    /** Per-mantra breakdown for goal sessions; empty for free sessions and older records. */
+    val mantras: List<MantraTally> = emptyList()
 ) {
     val durationMillis: Long
         get() = (endTime - startTime).coerceAtLeast(0)

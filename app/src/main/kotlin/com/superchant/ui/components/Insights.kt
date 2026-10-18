@@ -42,9 +42,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.superchant.R
 import com.superchant.data.DayTotal
+import com.superchant.data.HistoryStats
 import com.superchant.data.MantraTotal
 import com.superchant.data.PracticeStats
-import com.superchant.data.SessionRecord
 import com.superchant.data.Streak
 import com.superchant.data.millisUntilNextMidnight
 import kotlinx.coroutines.delay
@@ -69,17 +69,17 @@ fun rememberToday(): LocalDate {
     return today
 }
 
-/** Streak, a practice heatmap and per-mantra lifetime totals, derived from [sessions]. */
+/** Streak, a practice heatmap and per-mantra lifetime totals, from [stats]. */
 @Composable
 fun InsightsCard(
-    sessions: List<SessionRecord>,
+    stats: HistoryStats,
     dailyTarget: Int,
     modifier: Modifier = Modifier
 ) {
     val today = rememberToday()
-    val daily = remember(sessions) { PracticeStats.dailyTotals(sessions) }
+    val daily = stats.daily
     val streak = remember(daily, today, dailyTarget) { PracticeStats.streak(daily, today, dailyTarget) }
-    val mantras = remember(sessions) { PracticeStats.mantraTotals(sessions) }
+    val mantras = stats.mantras
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -277,13 +277,13 @@ private const val COLLAPSED_MANTRAS = 5
 /** One quiet line for Home: today's rounds (against the target, if set) and the current streak. */
 @Composable
 fun TodayLine(
-    sessions: List<SessionRecord>,
+    stats: HistoryStats,
     dailyTarget: Int,
     modifier: Modifier = Modifier
 ) {
-    if (sessions.isEmpty() && dailyTarget == 0) return
+    if (stats.sessions == 0 && dailyTarget == 0) return
     val today = rememberToday()
-    val daily = remember(sessions) { PracticeStats.dailyTotals(sessions) }
+    val daily = stats.daily
     val streak = remember(daily, today, dailyTarget) { PracticeStats.streak(daily, today, dailyTarget) }
     val rounds = daily[today]?.rounds ?: 0
     val todayText = if (dailyTarget > 0) {

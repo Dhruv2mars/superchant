@@ -332,10 +332,10 @@ fun HomeScreen(
                 AnimatedVisibility(visible = lastSummary != null, enter = fadeIn(), exit = fadeOut()) {
                     lastSummary?.let { SessionSavedLine(it) }
                 }
-                val sessions = preferencesRepository.sessionHistory.collectAsStateWithLifecycle().value
+                val stats = preferencesRepository.historyStats.collectAsStateWithLifecycle().value
                 val target = preferencesRepository.dailyTarget.collectAsStateWithLifecycle().value
-                if (sessions != null && target != null) TodayLine(sessions = sessions, dailyTarget = target)
-                ReportDrawnWhen { sessions != null && target != null }
+                if (stats != null && target != null) TodayLine(stats = stats, dailyTarget = target)
+                ReportDrawnWhen { stats != null && target != null }
                 StartButton(onClick = onStart, modifier = Modifier.fillMaxWidth(0.7f))
             }
         }

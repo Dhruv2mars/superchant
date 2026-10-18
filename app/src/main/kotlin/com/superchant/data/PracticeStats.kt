@@ -3,6 +3,8 @@ package com.superchant.data
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.SortedMap
+import java.util.TreeMap
 
 /** Everything chanted on one local day. */
 data class DayTotal(
@@ -19,22 +21,81 @@ data class Streak(val current: Int, val best: Int, val todayDone: Boolean)
 data class MantraTotal(val name: String, val rounds: Int, val counts: Int)
 
 /**
+ * Everything the stats views show, derived from the whole history once per change (off the main thread)
+ * instead of in composition, where it reran on every visit to Home or History.
+ */
+class HistoryStats(
+    val sessions: Int,
+    val totalCounts: Int,
+    val totalRounds: Int,
+    val totalMillis: Long,
+    /** Per local day, in date order. */
+    val daily: Map<LocalDate, DayTotal>,
+    val mantras: List<MantraTotal>
+) {
+    companion object {
+        fun of(history: List<SessionRecord>, zone: ZoneId = ZoneId.systemDefault()): HistoryStats {
+            val daily = PracticeStats.dailyTotals(history, zone)
+            // The daily totals already add everything up
+            var counts = 0
+            var rounds = 0
+            var millis = 0L
+            for (total in daily.values) {
+                counts += total.counts
+                rounds += total.rounds
+                millis += total.millis
+            }
+            return HistoryStats(history.size, counts, rounds, millis, daily, PracticeStats.mantraTotals(history))
+        }
+    }
+}
+
+/**
  * Insights derived from session history. Pure functions, so they're computed off the stored records
  * (the single source of truth) and unit tested.
  */
 object PracticeStats {
 
-    /** Totals per local day; a session belongs to the day it started. */
-    fun dailyTotals(sessions: List<SessionRecord>, zone: ZoneId = ZoneId.systemDefault()): Map<LocalDate, DayTotal> =
-        sessions.groupBy { Instant.ofEpochMilli(it.startTime).atZone(zone).toLocalDate() }
-            .mapValues { (_, day) ->
-                DayTotal(
-                    counts = day.sumOf { it.totalCounts },
-                    rounds = day.sumOf { it.totalRounds },
-                    millis = day.sumOf { it.durationMillis },
-                    sessions = day.size
-                )
+    /** Totals per local day, in date order; a session belongs to the day it started. */
+    fun dailyTotals(sessions: List<SessionRecord>, zone: ZoneId = ZoneId.systemDefault()): SortedMap<LocalDate, DayTotal> {
+        val daily = TreeMap<LocalDate, DayTotal>()
+        // Sessions are mostly newest first, so consecutive ones usually share a day: they are summed as a
+        // run, converting the day once and touching the map once per run
+        var dayStart = Long.MAX_VALUE
+        var dayEnd = Long.MIN_VALUE
+        var day = LocalDate.MIN
+        var counts = 0
+        var rounds = 0
+        var millis = 0L
+        var count = 0
+        fun flush() {
+            if (count == 0) return
+            val total = daily[day]
+            daily[day] = if (total == null) {
+                DayTotal(counts, rounds, millis, count)
+            } else {
+                DayTotal(total.counts + counts, total.rounds + rounds, total.millis + millis, total.sessions + count)
             }
+        }
+        for (session in sessions) {
+            if (session.startTime !in dayStart until dayEnd) {
+                flush()
+                counts = 0
+                rounds = 0
+                millis = 0L
+                count = 0
+                day = Instant.ofEpochMilli(session.startTime).atZone(zone).toLocalDate()
+                dayStart = day.atStartOfDay(zone).toInstant().toEpochMilli()
+                dayEnd = day.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            }
+            counts += session.totalCounts
+            rounds += session.totalRounds
+            millis += session.durationMillis
+            count++
+        }
+        flush()
+        return daily
+    }
 
     /** A day counts towards the streak once it meets the daily target (rounds), or has any counts without one. */
     fun isPracticeDay(total: DayTotal?, dailyTarget: Int): Boolean =
@@ -52,7 +113,8 @@ object PracticeStats {
         var best = 0
         var run = 0
         var previous: LocalDate? = null
-        for (practiceDay in daily.keys.filter(::practiced).sorted()) {
+        val days = if (daily is SortedMap) daily.keys else daily.keys.sorted()
+        for (practiceDay in days.filter(::practiced)) {
             run = if (previous != null && previous.plusDays(1) == practiceDay) run + 1 else 1
             best = maxOf(best, run)
             previous = practiceDay
@@ -61,12 +123,25 @@ object PracticeStats {
     }
 
     /** Lifetime per-mantra totals, most chanted first. Names match ignoring case and surrounding spaces. */
-    fun mantraTotals(sessions: List<SessionRecord>): List<MantraTotal> =
-        sessions.flatMap { it.mantras }
-            .filter { it.name.isNotBlank() }
-            .groupBy { it.name.trim().lowercase() }
-            .map { (_, tallies) -> MantraTotal(tallies.first().name.trim(), tallies.sumOf { it.rounds }, tallies.sumOf { it.counts }) }
+    fun mantraTotals(sessions: List<SessionRecord>): List<MantraTotal> {
+        // One pass, summing in place; the first spelling seen names the mantra
+        class Sum(val name: String) {
+            var rounds = 0
+            var counts = 0
+        }
+        val sums = LinkedHashMap<String, Sum>()
+        for (session in sessions) {
+            for (tally in session.mantras) {
+                if (tally.name.isBlank()) continue
+                val name = tally.name.trim()
+                val sum = sums.getOrPut(name.lowercase()) { Sum(name) }
+                sum.rounds += tally.rounds
+                sum.counts += tally.counts
+            }
+        }
+        return sums.values.map { MantraTotal(it.name, it.rounds, it.counts) }
             .sortedWith(compareByDescending<MantraTotal> { it.counts }.thenBy { it.name.lowercase() })
+    }
 
     /**
      * Heatmap shade 0..4: 0 for no practice, then four steps up to [reference] rounds (the daily target,

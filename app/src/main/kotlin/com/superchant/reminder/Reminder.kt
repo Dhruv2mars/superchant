@@ -124,11 +124,11 @@ class ReminderReceiver : BroadcastReceiver() {
         val settings = repository.reminder.filterNotNull().first()
         if (!settings.enabled || ChantingService.isRunning) return
         val target = repository.dailyTarget.filterNotNull().first()
-        val history = repository.sessionHistory.filterNotNull().first()
+        val daily = repository.historyStats.filterNotNull().first().daily
         val today = LocalDate.now()
-        val todayTotal = PracticeStats.dailyTotals(history)[today]
+        val todayTotal = daily[today]
         if (PracticeStats.isPracticeDay(todayTotal, target)) return
-        val streak = PracticeStats.streak(PracticeStats.dailyTotals(history), today, target).current
+        val streak = PracticeStats.streak(daily, today, target).current
         post(context, target, todayTotal?.rounds ?: 0, streak)
     }
 

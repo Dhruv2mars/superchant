@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -307,8 +308,15 @@ class PreferencesRepository private constructor(private val context: Context) {
     // Session history. Decoded only when the stored JSON changes, not on every preference write.
     val sessionHistory: StateFlow<List<SessionRecord>?> = historyPrefs.map { it[PreferencesKeys.SESSION_HISTORY] }
         .distinctUntilChanged()
-        .map { stored -> json.decodeStoredList(SessionRecord.serializer(), stored).items.withUniqueRecordIds() }
+        .map { stored ->
+            PerfTrace.section("SC.decodeHistory") { json.decodeStoredList(SessionRecord.serializer(), stored).items.withUniqueRecordIds() }
+        }
         .share()
+
+    /** Totals, daily totals and per-mantra totals of [sessionHistory]; computed off the main thread, once per change. */
+    val historyStats: StateFlow<HistoryStats?> = sessionHistory.filterNotNull()
+        .map { PerfTrace.section("SC.historyStats") { HistoryStats.of(it) } }
+        .stateIn(scope, SharingStarted.Lazily, null)
 
     /** Adds [record] at the top, replacing a record with the same ID. History is never truncated. */
     suspend fun addSessionRecord(record: SessionRecord) {

@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.superchant.R
+import com.superchant.data.HistoryStats
 import com.superchant.data.PreferencesRepository
 import com.superchant.data.SessionRecord
 import com.superchant.ui.components.AppTopBar
@@ -78,6 +79,7 @@ fun HistoryScreen(
     val sessionHistory = loadedHistory ?: emptyList()
     var showClearDialog by rememberSaveable { mutableStateOf(false) }
     val dailyTarget = preferencesRepository.dailyTarget.collectAsStateWithLifecycle().value ?: 0
+    val stats = preferencesRepository.historyStats.collectAsStateWithLifecycle().value
     
     // Re-bucket when the day changes (at midnight while open, or on returning to the screen)
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -130,8 +132,9 @@ fun HistoryScreen(
                 )
             }
             
+            // Waits for the stats too, so the cards above the list never pop in over it
             AnimatedVisibility(
-                visible = sessionHistory.isNotEmpty(),
+                visible = sessionHistory.isNotEmpty() && stats != null,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
@@ -140,11 +143,13 @@ fun HistoryScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     // Summary card
-                    item {
-                        SummaryCard(sessions = sessionHistory)
-                    }
-                    item {
-                        InsightsCard(sessions = sessionHistory, dailyTarget = dailyTarget)
+                    if (stats != null) {
+                        item {
+                            SummaryCard(stats = stats)
+                        }
+                        item {
+                            InsightsCard(stats = stats, dailyTarget = dailyTarget)
+                        }
                     }
                     
                     // Today section
@@ -222,11 +227,11 @@ private fun SectionHeader(title: String) {
 }
 
 @Composable
-private fun SummaryCard(sessions: List<SessionRecord>) {
-    val totalCounts = remember(sessions) { sessions.sumOf { it.totalCounts } }
-    val totalRounds = remember(sessions) { sessions.sumOf { it.totalRounds } }
-    val totalSessions = sessions.size
-    val totalDuration = remember(sessions) { sessions.sumOf { it.durationMillis } }
+private fun SummaryCard(stats: HistoryStats) {
+    val totalCounts = stats.totalCounts
+    val totalRounds = stats.totalRounds
+    val totalSessions = stats.sessions
+    val totalDuration = stats.totalMillis
     
     Card(
         modifier = Modifier.fillMaxWidth(),

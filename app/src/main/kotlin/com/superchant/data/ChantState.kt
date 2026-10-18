@@ -18,7 +18,7 @@ data class ChantState(
     val mantraRoundsCompleted: Int = 0 // Rounds completed for current mantra
 ) {
     val progress: Float
-        get() = if (COUNTS_PER_ROUND > 0) (count % COUNTS_PER_ROUND).toFloat() / COUNTS_PER_ROUND else 0f
+        get() = currentRoundCount.toFloat() / COUNTS_PER_ROUND
     
     val currentRoundCount: Int
         get() = count % COUNTS_PER_ROUND
@@ -86,15 +86,3 @@ data class SessionRecord(
     val durationMillis: Long
         get() = endTime - startTime
 }
-
-/**
- * User preferences for the app.
- */
-@Serializable
-data class UserPreferences(
-    val themeMode: Int = 2, // 0 = Light, 1 = Dark, 2 = System
-    val vibrationEnabled: Boolean = true,
-    val countVibrationEnabled: Boolean = true, // Vibrate on every count
-    val countVibrationIntensity: Int = 80, // 1-255, default light vibration
-    val roundVibrationIntensity: Int = 255 // 1-255, default full intensity
-)

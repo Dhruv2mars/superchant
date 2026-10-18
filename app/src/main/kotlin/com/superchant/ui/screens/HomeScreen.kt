@@ -40,7 +40,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,8 +47,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -61,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -76,12 +74,12 @@ import com.superchant.data.ChantState
 import com.superchant.data.Goal
 import com.superchant.service.ChantingService
 import com.superchant.service.VolumeKeyAccessibilityService
+import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.CounterDisplay
 import com.superchant.ui.components.RoundsDisplay
 import com.superchant.ui.components.StartStopButton
 import com.superchant.ui.theme.ThemeMode
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     themeMode: ThemeMode,
@@ -188,15 +186,8 @@ fun HomeScreen(
     
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "SuperChant",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    )
-                },
+            AppTopBar(
+                title = "SuperChant",
                 actions = {
                     IconButton(onClick = onGoalsClick) {
                         Icon(
@@ -216,10 +207,7 @@ fun HomeScreen(
                             contentDescription = "Settings"
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -318,28 +306,14 @@ private fun PortraitContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(vertical = 8.dp)
             ) {
-                Text(
-                    text = if (chantState.isPaused) "Paused" else "Press volume button to count",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                SessionStatusText(isPaused = chantState.isPaused)
             }
         }
         
-        // Show hint when accessibility not enabled and service not running
-        AnimatedVisibility(
+        AccessibilityHint(
             visible = !isServiceRunning && !isAccessibilityEnabled,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            Text(
-                text = "Tap Start, then enable the accessibility service to begin counting",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
-            )
-        }
+            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp)
+        )
         
         Spacer(modifier = Modifier.weight(1f))
         
@@ -405,28 +379,13 @@ private fun LandscapeContent(
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                Text(
-                    text = if (chantState.isPaused) "Paused" else "Press volume button to count",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
+                SessionStatusText(isPaused = chantState.isPaused)
             }
             
-            // Show hint when accessibility not enabled and service not running
-            AnimatedVisibility(
+            AccessibilityHint(
                 visible = !isServiceRunning && !isAccessibilityEnabled,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                Text(
-                    text = "Tap Start, then enable the accessibility service to begin counting",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
             
             Spacer(modifier = Modifier.height(24.dp))
             
@@ -437,6 +396,30 @@ private fun LandscapeContent(
                 modifier = Modifier.fillMaxWidth(0.8f)
             )
         }
+    }
+}
+
+@Composable
+private fun SessionStatusText(isPaused: Boolean) {
+    Text(
+        text = if (isPaused) "Paused" else "Press volume button to count",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center
+    )
+}
+
+/** Shown when accessibility is not enabled and no session is running. */
+@Composable
+private fun AccessibilityHint(visible: Boolean, modifier: Modifier) {
+    AnimatedVisibility(visible = visible, enter = fadeIn(), exit = fadeOut()) {
+        Text(
+            text = "Tap Start, then enable the accessibility service to begin counting",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = modifier
+        )
     }
 }
 
@@ -457,9 +440,7 @@ private fun AccessibilitySetupDialog(
             onOpenAppInfo = {
                 VolumeKeyAccessibilityService.openAppSettings(context)
             },
-            onOpenAccessibility = {
-                onOpenSettings()
-            }
+            onOpenAccessibility = onOpenSettings
         )
     } else {
         // Standard flow - just open accessibility settings
@@ -541,80 +522,43 @@ private fun RestrictedSettingsDialog(
                 Spacer(modifier = Modifier.height(20.dp))
                 
                 // Primary action - Open Accessibility Settings
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
+                SetupStepCard(
+                    title = stringResource(R.string.restricted_settings_step2),
+                    description = stringResource(R.string.restricted_settings_step2_desc),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    titleColor = Color.Unspecified
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                    Button(
+                        onClick = onOpenAccessibility,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
                     ) {
                         Text(
-                            text = stringResource(R.string.restricted_settings_step2),
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            text = stringResource(R.string.enable_accessibility),
+                            style = MaterialTheme.typography.labelMedium
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = stringResource(R.string.restricted_settings_step2_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Button(
-                            onClick = onOpenAccessibility,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Text(
-                                text = stringResource(R.string.enable_accessibility),
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
                     }
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 // Secondary info - If toggle is blocked
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
+                SetupStepCard(
+                    title = stringResource(R.string.restricted_settings_step1),
+                    description = stringResource(R.string.restricted_settings_step1_desc),
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    titleColor = MaterialTheme.colorScheme.onSurfaceVariant
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                    OutlinedButton(
+                        onClick = onOpenAppInfo,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = stringResource(R.string.restricted_settings_step1),
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = stringResource(R.string.open_app_info),
+                            style = MaterialTheme.typography.labelMedium
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = stringResource(R.string.restricted_settings_step1_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedButton(
-                            onClick = onOpenAppInfo,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = stringResource(R.string.open_app_info),
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
                     }
                 }
             }
@@ -626,6 +570,41 @@ private fun RestrictedSettingsDialog(
             }
         }
     )
+}
+
+@Composable
+private fun SetupStepCard(
+    title: String,
+    description: String,
+    containerColor: Color,
+    titleColor: Color,
+    action: @Composable () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = titleColor
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            action()
+        }
+    }
 }
 
 @Composable

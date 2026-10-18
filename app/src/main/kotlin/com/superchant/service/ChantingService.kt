@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
@@ -49,9 +48,6 @@ class ChantingService : Service() {
     // Job for volume key collection - allows proper cancellation
     private var volumeKeyCollectionJob: Job? = null
     
-    // Jobs for preference collection
-    private var vibrationPrefsJob: Job? = null
-    
     private lateinit var notificationManager: NotificationManager
     private lateinit var vibrator: Vibrator
     private lateinit var preferencesRepository: PreferencesRepository
@@ -82,29 +78,11 @@ class ChantingService : Service() {
     }
     
     private fun startVibrationPrefsCollection() {
-        vibrationPrefsJob?.cancel()
-        vibrationPrefsJob = serviceScope.launch {
-            // Collect all preferences in parallel
-            launch {
-                preferencesRepository.vibrationEnabledFlow.collect { enabled ->
-                    cachedVibrationEnabled = enabled
-                }
-            }
-            launch {
-                preferencesRepository.countVibrationEnabledFlow.collect { enabled ->
-                    cachedCountVibrationEnabled = enabled
-                }
-            }
-            launch {
-                preferencesRepository.countVibrationIntensityFlow.collect { intensity ->
-                    cachedCountVibrationIntensity = intensity
-                }
-            }
-            launch {
-                preferencesRepository.roundVibrationIntensityFlow.collect { intensity ->
-                    cachedRoundVibrationIntensity = intensity
-                }
-            }
+        with(preferencesRepository) {
+            serviceScope.launch { vibrationEnabledFlow.collect { cachedVibrationEnabled = it } }
+            serviceScope.launch { countVibrationEnabledFlow.collect { cachedCountVibrationEnabled = it } }
+            serviceScope.launch { countVibrationIntensityFlow.collect { cachedCountVibrationIntensity = it } }
+            serviceScope.launch { roundVibrationIntensityFlow.collect { cachedRoundVibrationIntensity = it } }
         }
     }
     
@@ -144,22 +122,11 @@ class ChantingService : Service() {
         // Cancel collection jobs first to prevent any more processing
         volumeKeyCollectionJob?.cancel()
         volumeKeyCollectionJob = null
-        vibrationPrefsJob?.cancel()
-        vibrationPrefsJob = null
         
         // Save current session before destruction if there's unsaved data
-        // This handles cases where the service is killed by the system
         val currentState = _sharedChantState.value
         if (currentState.isActive && currentState.count > 0) {
-            runBlocking {
-                val record = SessionRecord(
-                    startTime = currentState.sessionStartTime,
-                    endTime = System.currentTimeMillis(),
-                    totalCounts = currentState.count,
-                    totalRounds = currentState.rounds
-                )
-                preferencesRepository.addSessionRecord(record)
-            }
+            saveSession(currentState, goal = null)
         }
         
         // Reset the shared state ONLY if we're actually stopping (not just being killed)
@@ -182,14 +149,9 @@ class ChantingService : Service() {
         _instance = this
         
         _sharedChantState.value = ChantState(
-            count = 0,
-            rounds = 0,
             isActive = true,
-            isPaused = false,
             sessionStartTime = System.currentTimeMillis(),
-            activeGoal = goal,
-            currentMantraIndex = 0,
-            mantraRoundsCompleted = 0
+            activeGoal = goal
         )
         
         // Start collecting volume key events from accessibility service
@@ -238,25 +200,27 @@ class ChantingService : Service() {
         // Clear singleton AFTER state is reset
         _instance = null
         
-        // Save session to history SYNCHRONOUSLY if there were any counts
-        // Using runBlocking ensures the session is saved before the service stops
         if (currentState.count > 0) {
-            runBlocking {
-                val record = SessionRecord(
-                    startTime = currentState.sessionStartTime,
-                    endTime = System.currentTimeMillis(),
-                    totalCounts = currentState.count,
-                    totalRounds = currentState.rounds,
-                    goalId = currentState.activeGoal?.id,
-                    goalName = currentState.activeGoal?.name
-                )
-                preferencesRepository.addSessionRecord(record)
-            }
+            saveSession(currentState, currentState.activeGoal)
         }
         
         // Stop foreground service
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+    
+    /** Saves synchronously so the record is written before the service stops. */
+    private fun saveSession(state: ChantState, goal: Goal?) = runBlocking {
+        preferencesRepository.addSessionRecord(
+            SessionRecord(
+                startTime = state.sessionStartTime,
+                endTime = System.currentTimeMillis(),
+                totalCounts = state.count,
+                totalRounds = state.rounds,
+                goalId = goal?.id,
+                goalName = goal?.name
+            )
+        )
     }
     
     private fun pauseSession() {
@@ -321,11 +285,10 @@ class ChantingService : Service() {
         // Handle sounds and vibrations - count and round vibrations are independent
         if (goalCompleted) {
             // Goal complete! Play celebration sound and vibration
-            playGoalCompleteSound()
+            playSound(RingtoneManager.TYPE_RINGTONE)
             vibrateGoalComplete()
         } else if (sectionCompleted) {
-            // Section complete - play notification sound
-            playSectionCompleteSound()
+            playSound(RingtoneManager.TYPE_NOTIFICATION)
             if (cachedVibrationEnabled) {
                 vibrateRoundComplete(1)
             }
@@ -341,79 +304,37 @@ class ChantingService : Service() {
     }
     
     private fun vibrateCount() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val effect = VibrationEffect.createOneShot(30, cachedCountVibrationIntensity)
-            vibrator.vibrate(effect)
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(30)
-        }
+        vibrator.vibrate(VibrationEffect.createOneShot(30, cachedCountVibrationIntensity))
     }
     
+    /** Vibrates once per completed round (capped at 10): 150ms on, 100ms off. */
     private fun vibrateRoundComplete(rounds: Int) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Create a pattern: vibrate N times with pauses
-            // Each vibration: 150ms on, 100ms off
-            val timings = mutableListOf<Long>()
-            val amplitudes = mutableListOf<Int>()
-            
-            repeat(rounds.coerceAtMost(10)) { // Cap at 10 to avoid very long vibration
-                timings.add(0) // delay before vibration
-                timings.add(150) // vibration duration
-                amplitudes.add(0) // no vibration during delay
-                amplitudes.add(cachedRoundVibrationIntensity)
-                if (it < rounds - 1) {
-                    timings.add(100) // pause between vibrations
-                    amplitudes.add(0)
-                }
+        val timings = mutableListOf<Long>()
+        val amplitudes = mutableListOf<Int>()
+        repeat(rounds.coerceAtMost(10)) {
+            timings += listOf(0L, 150L)
+            amplitudes += listOf(0, cachedRoundVibrationIntensity)
+            if (it < rounds - 1) {
+                timings += 100L
+                amplitudes += 0
             }
-            
-            val effect = VibrationEffect.createWaveform(
-                timings.toLongArray(),
-                amplitudes.toIntArray(),
-                -1 // don't repeat
-            )
-            vibrator.vibrate(effect)
-        } else {
-            @Suppress("DEPRECATION")
-            val pattern = LongArray(rounds * 2) { i ->
-                if (i % 2 == 0) 100L else 150L
-            }
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(pattern, -1)
         }
+        vibrator.vibrate(VibrationEffect.createWaveform(timings.toLongArray(), amplitudes.toIntArray(), -1))
     }
     
     private fun vibrateGoalComplete() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Special celebration pattern: long-short-long-short-long
-            val timings = longArrayOf(0, 300, 100, 150, 100, 150, 100, 300)
-            val amplitudes = intArrayOf(0, 255, 0, 200, 0, 200, 0, 255)
-            val effect = VibrationEffect.createWaveform(timings, amplitudes, -1)
-            vibrator.vibrate(effect)
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator.vibrate(longArrayOf(0, 300, 100, 150, 100, 150, 100, 300), -1)
-        }
+        // Celebration pattern: long-short-short-long
+        val timings = longArrayOf(0, 300, 100, 150, 100, 150, 100, 300)
+        val amplitudes = intArrayOf(0, 255, 0, 200, 0, 200, 0, 255)
+        vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
     }
     
-    private fun playSectionCompleteSound() {
+    /** Plays the default sound of [type], falling back to the notification sound. Failures are ignored. */
+    private fun playSound(type: Int) {
         try {
-            val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val ringtone = RingtoneManager.getRingtone(applicationContext, notification)
-            ringtone?.play()
-        } catch (e: Exception) {
-            // Silently fail if sound can't be played
-        }
-    }
-    
-    private fun playGoalCompleteSound() {
-        try {
-            // Play a more celebratory sound for goal completion
-            val notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            val uri = RingtoneManager.getDefaultUri(type)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val ringtone = RingtoneManager.getRingtone(applicationContext, notification)
-            ringtone?.play()
+            RingtoneManager.getRingtone(applicationContext, uri)?.play()
         } catch (e: Exception) {
             // Silently fail if sound can't be played
         }
@@ -441,7 +362,6 @@ class ChantingService : Service() {
     
     private fun buildNotification(): Notification {
         val state = _sharedChantState.value
-        val currentRoundCount = state.count % ChantState.COUNTS_PER_ROUND
         
         // Reuse builder if possible for faster updates
         val builder = cachedNotificationBuilder ?: NotificationCompat.Builder(this, CHANNEL_ID).apply {
@@ -460,7 +380,7 @@ class ChantingService : Service() {
                 Intent(this@ChantingService, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
                 },
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+                PENDING_INTENT_FLAGS
             )
             setContentIntent(contentIntent)
         }.also { cachedNotificationBuilder = it }
@@ -471,12 +391,12 @@ class ChantingService : Service() {
         } else if (state.isGoalComplete) {
             "Goal Complete!"
         } else {
-            "${currentRoundCount} / ${ChantState.COUNTS_PER_ROUND}"
+            "${state.currentRoundCount} / ${ChantState.COUNTS_PER_ROUND}"
         }
         
         val text = if (state.activeGoal != null) {
             val goal = state.activeGoal
-            val currentMantra = goal.mantras.getOrNull(state.currentMantraIndex)
+            val currentMantra = state.currentMantra
             if (state.isGoalComplete) {
                 "${goal.name} - All ${goal.totalRounds} rounds completed"
             } else if (currentMantra != null) {
@@ -492,40 +412,24 @@ class ChantingService : Service() {
         
         builder.setContentTitle(title)
         builder.setContentText(text)
-        builder.setProgress(ChantState.COUNTS_PER_ROUND, currentRoundCount, false)
+        builder.setProgress(ChantState.COUNTS_PER_ROUND, state.currentRoundCount, false)
         
         // Update actions (need to clear and re-add as pause/resume state changes)
         builder.clearActions()
         
-        // Pause/Resume action
-        val pauseResumeIntent = PendingIntent.getService(
-            this,
-            REQUEST_CODE_PAUSE_RESUME,
-            Intent(this, ChantingService::class.java).apply {
-                action = if (state.isPaused) ACTION_RESUME else ACTION_PAUSE
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-        builder.addAction(
-            R.drawable.ic_notification,
-            if (state.isPaused) getString(R.string.action_resume) else getString(R.string.action_pause),
-            pauseResumeIntent
-        )
-        
-        // Stop action
-        val stopIntent = PendingIntent.getService(
-            this,
-            REQUEST_CODE_STOP,
-            Intent(this, ChantingService::class.java).apply { action = ACTION_STOP },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-        builder.addAction(
-            R.drawable.ic_notification,
-            getString(R.string.action_stop),
-            stopIntent
-        )
+        if (state.isPaused) {
+            builder.addServiceAction(R.string.action_resume, REQUEST_CODE_PAUSE_RESUME, ACTION_RESUME)
+        } else {
+            builder.addServiceAction(R.string.action_pause, REQUEST_CODE_PAUSE_RESUME, ACTION_PAUSE)
+        }
+        builder.addServiceAction(R.string.action_stop, REQUEST_CODE_STOP, ACTION_STOP)
         
         return builder.build()
+    }
+    
+    private fun NotificationCompat.Builder.addServiceAction(titleRes: Int, requestCode: Int, action: String) {
+        val intent = PendingIntent.getService(this@ChantingService, requestCode, intent(this@ChantingService, action), PENDING_INTENT_FLAGS)
+        addAction(R.drawable.ic_notification, getString(titleRes), intent)
     }
     
     private fun updateNotification() {
@@ -533,19 +437,20 @@ class ChantingService : Service() {
     }
     
     companion object {
-        const val NOTIFICATION_ID = 1
-        const val CHANNEL_ID = "chanting_session"
+        private const val NOTIFICATION_ID = 1
+        private const val CHANNEL_ID = "chanting_session"
         
         // PendingIntent request codes
         private const val REQUEST_CODE_CONTENT = 100
         private const val REQUEST_CODE_STOP = 101
         private const val REQUEST_CODE_PAUSE_RESUME = 102
+        private const val PENDING_INTENT_FLAGS = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         
-        const val ACTION_START = "com.superchant.action.START"
-        const val ACTION_START_WITH_GOAL = "com.superchant.action.START_WITH_GOAL"
-        const val ACTION_STOP = "com.superchant.action.STOP"
-        const val ACTION_PAUSE = "com.superchant.action.PAUSE"
-        const val ACTION_RESUME = "com.superchant.action.RESUME"
+        private const val ACTION_START = "com.superchant.action.START"
+        private const val ACTION_START_WITH_GOAL = "com.superchant.action.START_WITH_GOAL"
+        private const val ACTION_STOP = "com.superchant.action.STOP"
+        private const val ACTION_PAUSE = "com.superchant.action.PAUSE"
+        private const val ACTION_RESUME = "com.superchant.action.RESUME"
         
         @Volatile
         private var _instance: ChantingService? = null
@@ -568,40 +473,20 @@ class ChantingService : Service() {
         val currentState: ChantState?
             get() = if (_instance != null) _sharedChantState.value else null
         
+        private fun intent(context: Context, action: String) =
+            Intent(context, ChantingService::class.java).setAction(action)
+        
         fun start(context: Context) {
-            val intent = Intent(context, ChantingService::class.java).apply {
-                action = ACTION_START
-            }
-            context.startForegroundService(intent)
+            context.startForegroundService(intent(context, ACTION_START))
         }
         
         fun stop(context: Context) {
-            val intent = Intent(context, ChantingService::class.java).apply {
-                action = ACTION_STOP
-            }
-            context.startService(intent)
-        }
-        
-        fun pause(context: Context) {
-            val intent = Intent(context, ChantingService::class.java).apply {
-                action = ACTION_PAUSE
-            }
-            context.startService(intent)
-        }
-        
-        fun resume(context: Context) {
-            val intent = Intent(context, ChantingService::class.java).apply {
-                action = ACTION_RESUME
-            }
-            context.startService(intent)
+            context.startService(intent(context, ACTION_STOP))
         }
         
         fun startWithGoal(context: Context, goal: Goal) {
             _pendingGoalForStart = goal
-            val intent = Intent(context, ChantingService::class.java).apply {
-                action = ACTION_START_WITH_GOAL
-            }
-            context.startForegroundService(intent)
+            context.startForegroundService(intent(context, ACTION_START_WITH_GOAL))
         }
     }
 }

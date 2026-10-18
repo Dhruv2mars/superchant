@@ -41,8 +41,8 @@ fun CounterDisplay(
     isDarkTheme: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val currentCount = state.count % ChantState.COUNTS_PER_ROUND
-    val progress = currentCount.toFloat() / ChantState.COUNTS_PER_ROUND
+    val currentCount = state.currentRoundCount
+    val progress = state.progress
     
     // Animated progress
     val animatedProgress = remember { Animatable(0f) }

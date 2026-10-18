@@ -18,27 +18,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -54,6 +47,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.superchant.data.PreferencesRepository
 import com.superchant.data.SessionRecord
+import com.superchant.ui.components.AppTopBar
+import com.superchant.ui.components.BackButton
+import com.superchant.ui.components.ConfirmDestructiveDialog
+import com.superchant.ui.components.EmptyState
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -61,7 +58,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
     preferencesRepository: PreferencesRepository,
@@ -78,23 +74,9 @@ fun HistoryScreen(
     
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "History",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
+            AppTopBar(
+                title = "History",
+                navigationIcon = { BackButton(onBackClick) },
                 actions = {
                     if (sessionHistory.isNotEmpty()) {
                         IconButton(onClick = { showClearDialog = true }) {
@@ -104,10 +86,7 @@ fun HistoryScreen(
                             )
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                }
             )
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -122,7 +101,12 @@ fun HistoryScreen(
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                EmptyHistoryState()
+                EmptyState(
+                    icon = Icons.Outlined.History,
+                    title = "No sessions yet",
+                    message = "Your chanting history will appear here",
+                    modifier = Modifier.fillMaxSize()
+                )
             }
             
             AnimatedVisibility(
@@ -190,27 +174,17 @@ fun HistoryScreen(
     
     // Clear confirmation dialog
     if (showClearDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearDialog = false },
-            title = { Text("Clear History") },
-            text = { Text("Are you sure you want to clear all session history? This cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        scope.launch {
-                            preferencesRepository.clearSessionHistory()
-                        }
-                        showClearDialog = false
-                    }
-                ) {
-                    Text("Clear", color = MaterialTheme.colorScheme.error)
+        ConfirmDestructiveDialog(
+            title = "Clear History",
+            text = "Are you sure you want to clear all session history? This cannot be undone.",
+            confirmLabel = "Clear",
+            onConfirm = {
+                scope.launch {
+                    preferencesRepository.clearSessionHistory()
                 }
+                showClearDialog = false
             },
-            dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            onDismiss = { showClearDialog = false }
         )
     }
 }
@@ -223,42 +197,6 @@ private fun SectionHeader(title: String) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 4.dp)
     )
-}
-
-@Composable
-private fun EmptyHistoryState() {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.History,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "No sessions yet",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Your chanting history will appear here",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
 }
 
 @Composable
@@ -472,33 +410,18 @@ private data class CategorizedSessions(
 )
 
 private fun categorizeSessions(sessions: List<SessionRecord>): CategorizedSessions {
-    val now = Calendar.getInstance()
-    
-    // Start of today
-    val startOfToday = Calendar.getInstance().apply {
+    // Midnight today, optionally moved to the start of the week (locale's first day) or month.
+    fun startOf(adjust: Calendar.() -> Unit = {}) = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 0)
         set(Calendar.MINUTE, 0)
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
+        adjust()
     }.timeInMillis
     
-    // Start of this week (Sunday)
-    val startOfWeek = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-        set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
-    }.timeInMillis
-    
-    // Start of this month
-    val startOfMonth = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-        set(Calendar.DAY_OF_MONTH, 1)
-    }.timeInMillis
+    val startOfToday = startOf()
+    val startOfWeek = startOf { set(Calendar.DAY_OF_WEEK, firstDayOfWeek) }
+    val startOfMonth = startOf { set(Calendar.DAY_OF_MONTH, 1) }
     
     val today = mutableListOf<SessionRecord>()
     val thisWeek = mutableListOf<SessionRecord>()
@@ -543,9 +466,9 @@ private fun formatDurationLong(millis: Long): String {
 
 private fun formatNumber(number: Int): String {
     return when {
-        number >= 1_000_000 -> String.format("%.1fM", number / 1_000_000.0)
-        number >= 10_000 -> String.format("%.1fK", number / 1_000.0)
-        number >= 1_000 -> String.format("%,d", number)
+        number >= 1_000_000 -> String.format(Locale.getDefault(), "%.1fM", number / 1_000_000.0)
+        number >= 10_000 -> String.format(Locale.getDefault(), "%.1fK", number / 1_000.0)
+        number >= 1_000 -> String.format(Locale.getDefault(), "%,d", number)
         else -> number.toString()
     }
 }

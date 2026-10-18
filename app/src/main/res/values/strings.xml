@@ -55,6 +55,11 @@
     <string name="status_volume">Press a volume button to count</string>
     <string name="status_both">Tap here or press a volume button to count</string>
     <string name="status_goal_complete">Goal complete. Tap Stop to save it.</string>
+    <string name="notification_paused">Paused</string>
+    <string name="notification_goal_complete">Goal Complete!</string>
+    <string name="notifications_off_hint">Notifications are off, so the session runs without its notification. You can turn them on in app settings.</string>
+
+    <!-- Plurals: always use these instead of appending "s" -->
     <plurals name="rounds_count">
         <item quantity="one">%d round</item>
         <item quantity="other">%d rounds</item>
@@ -81,4 +86,33 @@
     <string name="goal_mantra_completed">Completed</string>
     <string name="goal_show_mantras">Show all mantras</string>
     <string name="goal_hide_mantras">Hide mantras</string>
+    <plurals name="rounds_completed">
+        <item quantity="one">%d round completed</item>
+        <item quantity="other">%d rounds completed</item>
+    </plurals>
+    <plurals name="rounds_total">
+        <item quantity="one">%d round total</item>
+        <item quantity="other">%d rounds total</item>
+    </plurals>
+    <plurals name="mantras_count">
+        <item quantity="one">%d mantra</item>
+        <item quantity="other">%d mantras</item>
+    </plurals>
+    <plurals name="minutes_count">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="notification_goal_complete_text">
+        <item quantity="one">%1$s - %2$d round completed</item>
+        <item quantity="other">%1$s - All %2$d rounds completed</item>
+    </plurals>
+    <!-- Captions shown under a number that is displayed separately -->
+    <plurals name="rounds_label">
+        <item quantity="one">round</item>
+        <item quantity="other">rounds</item>
+    </plurals>
+    <plurals name="counts_label">
+        <item quantity="one">count</item>
+        <item quantity="other">counts</item>
+    </plurals>
 </resources>

@@ -11,7 +11,7 @@ class ChantCounterTest {
     private val active = ChantState(isActive = true)
     private val goal = Goal(
         name = "Morning",
-        mantras = listOf(MantraGoal(id = 1, name = "A", targetRounds = 1), MantraGoal(id = 2, name = "B", targetRounds = 2))
+        mantras = listOf(MantraGoal(id = "1", name = "A", targetRounds = 1), MantraGoal(id = "2", name = "B", targetRounds = 2))
     )
 
     private fun ChantState.inc() = ChantCounter.increment(this)!!

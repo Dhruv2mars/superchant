@@ -2,12 +2,13 @@ package com.superchant.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.superchant.ui.theme.ThemeMode
 
@@ -38,8 +40,11 @@ fun ThemeToggle(
         color = MaterialTheme.colorScheme.surfaceVariant,
         tonalElevation = 2.dp
     ) {
+        // A radio group for TalkBack: "Light theme, radio button, not selected, 1 of 3"
         Row(
-            modifier = Modifier.padding(4.dp),
+            modifier = Modifier
+                .padding(4.dp)
+                .selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             ThemeOption(
@@ -94,7 +99,7 @@ private fun ThemeOption(
             .size(40.dp)
             .clip(CircleShape)
             .background(backgroundColor)
-            .clickable(onClick = onClick),
+            .selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Icon(

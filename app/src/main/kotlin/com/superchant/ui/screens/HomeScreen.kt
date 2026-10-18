@@ -58,6 +58,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -121,12 +122,23 @@ fun HomeScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val configuration = LocalConfiguration.current
-    val chantState by ChantingService.chantStateFlow.collectAsStateWithLifecycle()
+    // The count changes on every press, so it is only read where it's shown (CounterArea, focus mode);
+    // this screen reads coarse derived values and recomposes only when those change.
+    val chantStateHolder = ChantingService.chantStateFlow.collectAsStateWithLifecycle()
+    val chantState = remember(chantStateHolder) { { chantStateHolder.value } }
 
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // Derived from the service's state rather than set optimistically on tap, so it can't stick
-    val isServiceRunning = chantState.isActive
+    val isServiceRunning by remember { derivedStateOf { chantStateHolder.value.isActive } }
+    val isPaused by remember { derivedStateOf { chantStateHolder.value.isPaused } }
+    val isGoalComplete by remember { derivedStateOf { chantStateHolder.value.isGoalComplete } }
+    val rounds by remember { derivedStateOf { chantStateHolder.value.rounds } }
+    val canUndo by remember { derivedStateOf { chantStateHolder.value.count > 0 && !chantStateHolder.value.isPaused } }
+    // Goal progress without the per-press fields, so the goal strip only changes at round boundaries
+    val goalProgress by remember {
+        derivedStateOf { chantStateHolder.value.copy(count = 0, rounds = 0, lastUpdatedAt = 0L) }
+    }
 
     // Track accessibility service enabled state
     var isAccessibilityEnabled by remember {
@@ -264,26 +276,18 @@ fun HomeScreen(
 
     val session = SessionUi(
         state = chantState,
-        tapEnabled = tapCounting && !chantState.isPaused && !chantState.isGoalComplete,
+        tapEnabled = tapCounting && !isPaused && !isGoalComplete,
         statusText = stringResource(
             when {
-                chantState.isGoalComplete -> R.string.status_goal_complete
-                chantState.isPaused -> R.string.status_paused
+                isGoalComplete -> R.string.status_goal_complete
+                isPaused -> R.string.status_paused
                 tapCounting && volumeCounting -> R.string.status_both
                 tapCounting -> R.string.status_tap
                 else -> R.string.status_volume
             }
         ),
-        countDescription = stringResource(
-            R.string.count_description,
-            chantState.currentRoundCount,
-            ChantState.COUNTS_PER_ROUND,
-            pluralStringResource(R.plurals.rounds_count, chantState.rounds, chantState.rounds)
-        ),
-        roundsText = if (chantState.rounds > 0) {
-            pluralStringResource(R.plurals.rounds_count, chantState.rounds, chantState.rounds)
-        } else null,
-        canUndo = chantState.count > 0 && !chantState.isPaused,
+        roundsText = if (rounds > 0) pluralStringResource(R.plurals.rounds_count, rounds, rounds) else null,
+        canUndo = canUndo,
         onCount = ChantingService::countFromScreen,
         onUndo = ChantingService::undo
     )
@@ -334,7 +338,7 @@ fun HomeScreen(
             )
         }
         val goalStrip: @Composable () -> Unit = {
-            chantState.activeGoal?.let { goal -> GoalStrip(state = chantState, goal = goal) }
+            goalProgress.activeGoal?.let { goal -> GoalStrip(state = goalProgress, goal = goal) }
         }
 
         if (isLandscape) {
@@ -398,16 +402,27 @@ fun HomeScreen(
     }
 }
 
-/** Everything the session layouts need, resolved once in [HomeScreen]. */
-private class SessionUi(
-    val state: ChantState,
+/**
+ * Everything the session layouts need, resolved once in [HomeScreen]. [state] is read lazily by the
+ * composables that show the count, so a press doesn't recompose the rest of the screen.
+ */
+private data class SessionUi(
+    val state: () -> ChantState,
     val tapEnabled: Boolean,
     val statusText: String,
-    val countDescription: String,
     val roundsText: String?,
     val canUndo: Boolean,
     val onCount: () -> Unit,
     val onUndo: () -> Unit
+)
+
+/** TalkBack description of the count, e.g. "Count 42 of 108. 3 rounds". */
+@Composable
+private fun countDescription(state: ChantState): String = stringResource(
+    R.string.count_description,
+    state.currentRoundCount,
+    ChantState.COUNTS_PER_ROUND,
+    pluralStringResource(R.plurals.rounds_count, state.rounds, state.rounds)
 )
 
 /** The ring; during a session it sits in the tap-to-count pad with the status line underneath. */
@@ -422,9 +437,10 @@ private fun CounterArea(
         CounterDisplay(state = ChantState(), isDarkTheme = isDarkTheme, modifier = modifier)
         return
     }
+    val state = session.state()
     TapToCountPad(
         enabled = session.tapEnabled,
-        countDescription = session.countDescription,
+        countDescription = countDescription(state),
         onCount = session.onCount,
         modifier = modifier
     ) {
@@ -433,7 +449,7 @@ private fun CounterArea(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CounterDisplay(
-                state = session.state,
+                state = state,
                 isDarkTheme = isDarkTheme,
                 footer = session.roundsText,
                 modifier = Modifier
@@ -522,6 +538,7 @@ private fun IdleControls(
 /** Minimal, near-black layout with a dimmed window: the whole screen counts. */
 @Composable
 private fun FocusContent(session: SessionUi, onExit: () -> Unit) {
+    val state = session.state()
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -529,7 +546,7 @@ private fun FocusContent(session: SessionUi, onExit: () -> Unit) {
     ) {
         TapToCountPad(
             enabled = session.tapEnabled,
-            countDescription = session.countDescription,
+            countDescription = countDescription(state),
             onCount = session.onCount,
             shape = RectangleShape,
             containerColor = Color.Transparent,
@@ -544,7 +561,7 @@ private fun FocusContent(session: SessionUi, onExit: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 CounterDisplay(
-                    state = session.state,
+                    state = state,
                     isDarkTheme = true,
                     footer = session.roundsText,
                     dimmed = true,
@@ -553,7 +570,6 @@ private fun FocusContent(session: SessionUi, onExit: () -> Unit) {
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
                 )
-                val state = session.state
                 val mantra = state.currentMantra
                 Text(
                     text = if (mantra != null && !state.isGoalComplete) {

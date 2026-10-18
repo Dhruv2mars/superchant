@@ -56,6 +56,9 @@ fun List<Goal>.withUniqueGoalIds(): List<Goal> =
 fun List<SessionRecord>.withUniqueRecordIds(): List<SessionRecord> =
     withUniqueIds(SessionRecord::id) { record, id -> record.copy(id = id) }
 
-/** Adds [record] at the top, replacing any record with the same ID, and keeps the newest [limit]. */
-fun List<SessionRecord>.upsert(record: SessionRecord, limit: Int): List<SessionRecord> =
-    (listOf(record) + filterNot { it.id == record.id }).take(limit)
+/**
+ * Adds [record] at the top, replacing any record with the same ID. Nothing is ever dropped: history
+ * is unbounded (about 170 bytes per session, see StoredListTest) because stats need all of it.
+ */
+fun List<SessionRecord>.upsert(record: SessionRecord): List<SessionRecord> =
+    listOf(record) + filterNot { it.id == record.id }

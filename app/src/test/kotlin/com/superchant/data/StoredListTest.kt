@@ -56,7 +56,7 @@ class StoredListTest {
         assertEquals(1, list.unreadable.size)
 
         val newRecord = SessionRecord(id = "b", startTime = 5, endTime = 6, totalCounts = 2, totalRounds = 0)
-        val written = json.encodeStoredList(SessionRecord.serializer(), list.items.upsert(newRecord, 100), list.unreadable)
+        val written = json.encodeStoredList(SessionRecord.serializer(), list.items.upsert(newRecord), list.unreadable)
         val elements = json.parseToJsonElement(written).jsonArray
         assertEquals(3, elements.size)
         assertEquals(json.parseToJsonElement("""{"id":"broken"}"""), elements.last())
@@ -74,9 +74,51 @@ class StoredListTest {
     fun upsertReplacesSameSessionInsteadOfDuplicating() {
         val first = SessionRecord(id = "s", startTime = 0, endTime = 10, totalCounts = 5, totalRounds = 0)
         val other = SessionRecord(id = "o", startTime = 0, endTime = 1, totalCounts = 1, totalRounds = 0)
-        val history = listOf(first, other).upsert(first.copy(endTime = 20, totalCounts = 9), limit = 100)
+        val history = listOf(first, other).upsert(first.copy(endTime = 20, totalCounts = 9))
         assertEquals(listOf("s", "o"), history.map { it.id })
         assertEquals(9, history[0].totalCounts)
-        assertEquals(1, listOf(first, other).upsert(first, limit = 1).size)
+    }
+
+    @Test
+    fun historyCappedAt100ByV110KeepsGrowingWithoutDroppingAnything() {
+        // v1.1.0 stored at most 100 sessions with numeric IDs; the next save must keep all of them.
+        val capped = (1..100).joinToString(",", "[", "]") { i ->
+            """{"id":${1_700_000_000_000L + i},"startTime":$i,"endTime":${i + 1},"totalCounts":$i,"totalRounds":0}"""
+        }
+        val stored = json.decodeStoredList(SessionRecord.serializer(), capped)
+        assertEquals(100, stored.items.size)
+
+        var history = stored.items
+        repeat(5) { history = history.upsert(SessionRecord(startTime = 1_000L + it, endTime = 1_001L + it, totalCounts = 1, totalRounds = 0)) }
+        val reloaded = json.decodeStoredList(
+            SessionRecord.serializer(),
+            json.encodeStoredList(SessionRecord.serializer(), history, stored.unreadable)
+        ).items
+        assertEquals(105, reloaded.size)
+        assertEquals((1..100).sum() + 5, reloaded.sumOf { it.totalCounts })
+        assertTrue(reloaded.any { it.id == "1700000000001" }) // the oldest v1.1.0 record survives
+    }
+
+    @Test
+    fun tenYearsOfHistoryStaysSmallAndFastToDecode() {
+        // ~3 sessions a day for 10 years
+        val records = (0 until 11_000).map { i ->
+            SessionRecord(
+                startTime = 1_700_000_000_000L + i * 28_800_000L,
+                endTime = 1_700_000_000_000L + i * 28_800_000L + 900_000L,
+                totalCounts = 1_080,
+                totalRounds = 10,
+                goalId = if (i % 2 == 0) newId() else null,
+                goalName = if (i % 2 == 0) "Morning practice" else null
+            )
+        }
+        val encoded = json.encodeStoredList(SessionRecord.serializer(), records, emptyList())
+        val bytesPerRecord = encoded.length / records.size
+        val start = System.nanoTime()
+        val decoded = json.decodeStoredList(SessionRecord.serializer(), encoded).items
+        val decodeMs = (System.nanoTime() - start) / 1_000_000
+        println("history size: ${encoded.length / 1024} KiB for ${records.size} sessions ($bytesPerRecord B/session), decode $decodeMs ms")
+        assertEquals(records, decoded)
+        assertTrue("$bytesPerRecord bytes per session", bytesPerRecord < 220)
     }
 }

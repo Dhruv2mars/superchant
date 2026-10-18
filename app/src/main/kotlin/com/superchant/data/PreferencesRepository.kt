@@ -165,14 +165,15 @@ class PreferencesRepository private constructor(private val context: Context) {
         }
     }
     
-    // Session history
-    val sessionHistory: StateFlow<List<SessionRecord>?> = prefs.map { preferences ->
-        json.decodeStoredList(SessionRecord.serializer(), preferences[PreferencesKeys.SESSION_HISTORY]).items.withUniqueRecordIds()
-    }.share()
+    // Session history. Decoded only when the stored JSON changes, not on every preference write.
+    val sessionHistory: StateFlow<List<SessionRecord>?> = prefs.map { it[PreferencesKeys.SESSION_HISTORY] }
+        .distinctUntilChanged()
+        .map { stored -> json.decodeStoredList(SessionRecord.serializer(), stored).items.withUniqueRecordIds() }
+        .share()
 
-    /** Adds [record] at the top, replacing a record with the same ID; keeps the last 100 sessions. */
+    /** Adds [record] at the top, replacing a record with the same ID. History is never truncated. */
     suspend fun addSessionRecord(record: SessionRecord) {
-        updateList(PreferencesKeys.SESSION_HISTORY, SessionRecord.serializer()) { it.upsert(record, HISTORY_LIMIT) }
+        updateList(PreferencesKeys.SESSION_HISTORY, SessionRecord.serializer()) { it.upsert(record) }
     }
 
     suspend fun clearSessionHistory() {
@@ -182,9 +183,10 @@ class PreferencesRepository private constructor(private val context: Context) {
     }
 
     // Goals
-    val goals: StateFlow<List<Goal>?> = prefs.map { preferences ->
-        json.decodeStoredList(Goal.serializer(), preferences[PreferencesKeys.SAVED_GOALS]).items.withUniqueGoalIds()
-    }.share()
+    val goals: StateFlow<List<Goal>?> = prefs.map { it[PreferencesKeys.SAVED_GOALS] }
+        .distinctUntilChanged()
+        .map { stored -> json.decodeStoredList(Goal.serializer(), stored).items.withUniqueGoalIds() }
+        .share()
 
     /** Replaces the goal with the same ID, or adds it at the top. */
     suspend fun saveGoal(goal: Goal) {
@@ -247,7 +249,6 @@ class PreferencesRepository private constructor(private val context: Context) {
 
     companion object {
         private const val TAG = "PreferencesRepository"
-        private const val HISTORY_LIMIT = 100
 
         // Holds only the application context, so this can't leak an Activity.
         @SuppressLint("StaticFieldLeak")

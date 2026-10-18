@@ -28,10 +28,14 @@ Built for japa meditation, mantra chanting, prayer counting, and any repetitive 
 
 ### Core
 - Press volume up or down to increment your count, or tap the screen (no permissions needed)
-- 108 counts per round — just like a traditional mala
+- 108 beads per round like a traditional mala, or 27, 54 or any size to match yours (per goal too)
+- A calm mala ring: beads that match your round size, a meru bead, a soft glow when a round completes
 - Works with screen off or in any other app
 - Foreground service with persistent notification
-- Pause and resume sessions anytime
+- Pause and resume from Home, the notification or the Quick Settings tile; hold to stop
+- Optional milestone pulse every 27 beads, an optional soft bead click, and a pocket guard that
+  ignores taps while the screen is covered
+- Start in one tap from a launcher shortcut (or a shortcut per goal) or the Quick Settings tile
 - A running session survives Android closing the app and picks up where it left off
 
 ### Goals & Tracking
@@ -40,6 +44,8 @@ Built for japa meditation, mantra chanting, prayer counting, and any repetitive 
 - Drag-to-reorder mantras in the goal editor
 - Session history with time-based categorization (Today, This Week, This Month, Older)
 - All-time stats: total counts, rounds, sessions, and practice time
+- Your practice: daily target, streak, an 18-week heatmap and lifetime totals per mantra
+- A gentle optional daily reminder, skipped once you've practiced
 
 ### Customization
 - Light, dark, and system theme modes
@@ -52,6 +58,7 @@ Built for japa meditation, mantra chanting, prayer counting, and any repetitive 
 - History, goals and settings are stored on your device and included in Android's own device backup
   (Google backup and phone-to-phone transfer), so they come with you to a new phone. Turn off backup
   for SuperChant in Android settings if you'd rather keep them on this device only.
+- Export everything to a JSON file you keep, and import it on another phone
 - No accounts, no sign-up
 - No analytics, no tracking, no ads
 - [Read the privacy policy](PRIVACY_POLICY.md)

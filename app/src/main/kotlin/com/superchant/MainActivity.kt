@@ -34,6 +34,7 @@ import com.superchant.ui.screens.SettingsScreen
 import com.superchant.ui.screens.StartRequest
 import com.superchant.ui.theme.SuperChantTheme
 import com.superchant.ui.theme.ThemeMode
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -83,7 +84,7 @@ class MainActivity : ComponentActivity() {
                         navController.popBackStack("home", inclusive = false)
                     }
                     val goals by preferencesRepository.goals.collectAsStateWithLifecycle()
-                    LaunchedEffect(goals) { goals?.let { AppShortcuts.updateGoalShortcuts(this@MainActivity, it) } }
+                    LaunchedEffect(goals) { goals?.let { AppShortcuts.updateGoalShortcuts(applicationContext, it) } }
                     
                     NavHost(
                         navController = navController,
@@ -167,7 +168,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         // Re-arm the daily reminder in case the alarm was lost (e.g. the app was force-stopped).
-        lifecycleScope.launch { ReminderScheduler.sync(applicationContext) }
+        lifecycleScope.launch(Dispatchers.Default) { ReminderScheduler.sync(applicationContext) }
         // A session persisted by a process that died (and wasn't restarted yet) resumes here.
         lifecycleScope.launch {
             if (!ChantingService.isRunning && PreferencesRepository.get(this@MainActivity).loadActiveSession() != null) {

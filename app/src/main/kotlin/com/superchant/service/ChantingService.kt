@@ -119,7 +119,7 @@ class ChantingService : Service() {
     /** Publishes [newState] and persists it while the session is active. */
     private fun setState(newState: ChantState) {
         _sharedChantState.value = newState
-        if (newState.isActive) preferencesRepository.write { saveActiveSession(newState) }
+        if (newState.isActive) preferencesRepository.queueActiveSession(newState)
     }
 
     private fun startSession(goal: Goal?, touchCounting: Boolean) {

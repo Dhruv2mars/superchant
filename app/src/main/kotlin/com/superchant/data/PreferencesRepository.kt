@@ -455,6 +455,15 @@ class PreferencesRepository private constructor(private val context: Context) {
         null
     }
 
+    private val activeSessionWrites = LatestWins<ChantState>({ save -> write { save() } }) { saveActiveSession(it) }
+
+    /**
+     * Queues [state] to be written as the active session, like `write { saveActiveSession(state) }`, except
+     * that snapshots arriving while one is still waiting in the queue replace it (see [LatestWins]), so a
+     * backed-up queue (fast counting, slow storage, a long history save ahead) doesn't fsync every count.
+     */
+    fun queueActiveSession(state: ChantState) = activeSessionWrites.offer(state)
+
     suspend fun saveActiveSession(state: ChantState) {
         context.sessionDataStore.edit { it[PreferencesKeys.ACTIVE_SESSION] = json.encodeToString(ChantState.serializer(), state) }
     }

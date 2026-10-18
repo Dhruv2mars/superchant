@@ -25,15 +25,66 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import java.io.IOException
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "superchant_prefs")
 
+// History and goals have their own store: they grow without bound (megabytes after years of practice),
+// and in superchant_prefs every settings change rewrote them and the first frame (which waits for the
+// theme) waited for them to be read. Version 1.1.x kept them in superchant_prefs; [moveHistory] moves them.
+private val Context.historyDataStore: DataStore<Preferences> by preferencesDataStore(name = "history")
+
 // Separate small store so the per-count session snapshot doesn't rewrite history and goals.
 private val Context.sessionDataStore: DataStore<Preferences> by preferencesDataStore(name = "active_session")
+
+internal val SESSION_HISTORY_KEY = stringPreferencesKey("session_history")
+internal val SAVED_GOALS_KEY = stringPreferencesKey("saved_goals")
+
+private val MOVED_KEYS = listOf(SESSION_HISTORY_KEY, SAVED_GOALS_KEY)
+
+/**
+ * Moves history and goals out of superchant_prefs ([legacy], where 1.1.x kept them) into [history]: copied,
+ * then removed from [legacy], so an interrupted move simply runs again. Should both hold a list (an older
+ * version used after the move), they are merged by ID. Not a DataMigration: a DataStore with migrations
+ * re-reads its file under a lock at every start, and this one holds megabytes.
+ */
+internal suspend fun moveHistory(legacy: DataStore<Preferences>, history: DataStore<Preferences>, json: Json) {
+    val old = legacy.data.first()
+    if (MOVED_KEYS.none { old[it] != null }) return
+    history.edit { preferences ->
+        old[SESSION_HISTORY_KEY]?.let { moved ->
+            preferences[SESSION_HISTORY_KEY] = mergeMoved(preferences[SESSION_HISTORY_KEY], moved, json, SessionRecord.serializer()) { kept, add ->
+                BackupCodec.mergeHistory(kept, add)
+            }
+        }
+        old[SAVED_GOALS_KEY]?.let { moved ->
+            preferences[SAVED_GOALS_KEY] = mergeMoved(preferences[SAVED_GOALS_KEY], moved, json, Goal.serializer()) { kept, add ->
+                BackupCodec.mergeGoals(kept, add)
+            }
+        }
+    }
+    legacy.edit { preferences -> MOVED_KEYS.forEach { preferences.remove(it) } }
+}
+
+private fun <T> mergeMoved(
+    current: String?,
+    moved: String,
+    json: Json,
+    serializer: KSerializer<T>,
+    merge: (List<T>, List<T>) -> List<T>
+): String {
+    if (current == null || current == moved) return moved
+    val kept = json.decodeStoredList(serializer, current)
+    val add = json.decodeStoredList(serializer, moved)
+    return json.encodeStoredList(serializer, merge(kept.items, add.items), kept.unreadable + add.unreadable)
+}
 
 /** Optional extras around each count. */
 data class CountingFeel(
@@ -71,8 +122,9 @@ class PreferencesRepository private constructor(private val context: Context) {
         val COUNT_VIBRATION_ENABLED = booleanPreferencesKey("count_vibration_enabled")
         val COUNT_VIBRATION_INTENSITY = intPreferencesKey("count_vibration_intensity")
         val ROUND_VIBRATION_INTENSITY = intPreferencesKey("round_vibration_intensity")
-        val SESSION_HISTORY = stringPreferencesKey("session_history")
-        val SAVED_GOALS = stringPreferencesKey("saved_goals")
+        // In historyDataStore (in superchant_prefs before the move)
+        val SESSION_HISTORY = SESSION_HISTORY_KEY
+        val SAVED_GOALS = SAVED_GOALS_KEY
         val ACTIVE_SESSION = stringPreferencesKey("active_session")
         // Keys of removed features ("input_mode", "round_size", "pocket_guard") may still be stored; they are never read.
         val MILESTONE_PULSE = booleanPreferencesKey("milestone_pulse")
@@ -115,13 +167,30 @@ class PreferencesRepository private constructor(private val context: Context) {
     }
 
     // A read error (e.g. IOException) shows defaults instead of crashing every collector.
-    private val prefs: Flow<Preferences> = context.dataStore.data.catch { e ->
+    private fun DataStore<Preferences>.safeData(): Flow<Preferences> = data.catch { e ->
         if (e is IOException) {
             Log.e(TAG, "Reading preferences failed", e)
             emit(emptyPreferences())
         } else {
             throw e
         }
+    }
+
+    private val prefs: Flow<Preferences> = context.dataStore.safeData()
+
+    // History is read (and written) only once anything 1.1.x left in superchant_prefs has moved. Its file is
+    // read right away anyway, overlapping the (tiny) settings read the move check needs.
+    private val historyRead = scope.launch { runCatching { context.historyDataStore.data.first() } }
+    private val historyMoved = scope.async {
+        try {
+            moveHistory(context.dataStore, context.historyDataStore, json)
+        } catch (e: Exception) {
+            Log.e(TAG, "Moving history failed; it stays in superchant_prefs until the next start", e)
+        }
+    }
+    private val historyPrefs: Flow<Preferences> = flow {
+        historyMoved.await()
+        emitAll(context.historyDataStore.safeData())
     }
 
     private fun <T> Flow<T>.share(): StateFlow<T?> = distinctUntilChanged().stateIn(scope, SharingStarted.Eagerly, null)
@@ -236,7 +305,7 @@ class PreferencesRepository private constructor(private val context: Context) {
     }
 
     // Session history. Decoded only when the stored JSON changes, not on every preference write.
-    val sessionHistory: StateFlow<List<SessionRecord>?> = prefs.map { it[PreferencesKeys.SESSION_HISTORY] }
+    val sessionHistory: StateFlow<List<SessionRecord>?> = historyPrefs.map { it[PreferencesKeys.SESSION_HISTORY] }
         .distinctUntilChanged()
         .map { stored -> json.decodeStoredList(SessionRecord.serializer(), stored).items.withUniqueRecordIds() }
         .share()
@@ -247,13 +316,14 @@ class PreferencesRepository private constructor(private val context: Context) {
     }
 
     suspend fun clearSessionHistory() {
-        context.dataStore.edit { preferences ->
+        historyMoved.await()
+        context.historyDataStore.edit { preferences ->
             preferences[PreferencesKeys.SESSION_HISTORY] = "[]"
         }
     }
 
     // Goals
-    val goals: StateFlow<List<Goal>?> = prefs.map { it[PreferencesKeys.SAVED_GOALS] }
+    val goals: StateFlow<List<Goal>?> = historyPrefs.map { it[PreferencesKeys.SAVED_GOALS] }
         .distinctUntilChanged()
         .map { stored -> json.decodeStoredList(Goal.serializer(), stored).items.withUniqueGoalIds() }
         .share()
@@ -278,7 +348,8 @@ class PreferencesRepository private constructor(private val context: Context) {
         serializer: KSerializer<T>,
         transform: (List<T>) -> List<T>
     ) {
-        context.dataStore.edit { preferences ->
+        historyMoved.await()
+        context.historyDataStore.edit { preferences ->
             val stored = preferences[key]
             val list = json.decodeStoredList(serializer, stored)
             if (list.corrupt && stored != null) {
@@ -290,9 +361,10 @@ class PreferencesRepository private constructor(private val context: Context) {
     }
 
     /** Everything worth keeping, as a [Backup]. Settings never changed by the user are left out. */
-    suspend fun exportBackup(now: Long): Backup {
+    suspend fun exportBackup(now: Long): Backup = withContext(Dispatchers.Default) {
         val p = prefs.first()
-        return Backup(
+        val h = historyPrefs.first()
+        Backup(
             exportedAt = now,
             settings = BackupSettings(
                 themeMode = when (p[PreferencesKeys.THEME_MODE]) {
@@ -311,19 +383,21 @@ class PreferencesRepository private constructor(private val context: Context) {
                 reminderEnabled = p[PreferencesKeys.REMINDER_ENABLED],
                 reminderMinuteOfDay = p[PreferencesKeys.REMINDER_MINUTE]
             ),
-            goals = json.decodeStoredList(Goal.serializer(), p[PreferencesKeys.SAVED_GOALS]).items.withUniqueGoalIds(),
-            history = json.decodeStoredList(SessionRecord.serializer(), p[PreferencesKeys.SESSION_HISTORY]).items.withUniqueRecordIds()
+            goals = json.decodeStoredList(Goal.serializer(), h[PreferencesKeys.SAVED_GOALS]).items.withUniqueGoalIds(),
+            history = json.decodeStoredList(SessionRecord.serializer(), h[PreferencesKeys.SESSION_HISTORY]).items.withUniqueRecordIds()
         )
     }
 
     /**
-     * Merges [backup] into the stored data in one transaction: sessions and goals are added, or updated
-     * when the ID matches, and the backup's settings are applied (invalid values are ignored).
+     * Merges [backup] into the stored data: sessions and goals are added, or updated when the ID matches
+     * (one transaction), then the backup's settings are applied (invalid values are ignored).
      * Nothing is deleted, so importing twice, or into a phone with newer sessions, is safe.
+     * Runs off the main thread: DataStore runs the transforms in the caller's context.
      */
-    suspend fun importBackup(backup: Backup): ImportResult {
+    suspend fun importBackup(backup: Backup): ImportResult = withContext(Dispatchers.Default) {
         var result = ImportResult(0, 0, 0)
-        context.dataStore.edit { p ->
+        historyMoved.await()
+        context.historyDataStore.edit { p ->
             val history = json.decodeStoredList(SessionRecord.serializer(), p[PreferencesKeys.SESSION_HISTORY])
             val historyIds = history.items.mapTo(HashSet()) { it.id }
             val mergedHistory = BackupCodec.mergeHistory(history.items, backup.history)
@@ -335,6 +409,13 @@ class PreferencesRepository private constructor(private val context: Context) {
                 Goal.serializer(), BackupCodec.mergeGoals(goals.items, backup.goals), goals.unreadable
             )
 
+            result = ImportResult(
+                sessionsAdded = mergedHistory.count { it.id !in historyIds },
+                goalsAdded = backup.goals.count { it.id !in goalIds },
+                goalsUpdated = backup.goals.count { it.id in goalIds }
+            )
+        }
+        context.dataStore.edit { p ->
             with(backup.settings) {
                 when (themeMode) {
                     ThemeMode.LIGHT.name -> p[PreferencesKeys.THEME_MODE] = 0
@@ -351,14 +432,8 @@ class PreferencesRepository private constructor(private val context: Context) {
                 reminderEnabled?.let { p[PreferencesKeys.REMINDER_ENABLED] = it }
                 reminderMinuteOfDay?.takeIf { it in 0 until 24 * 60 }?.let { p[PreferencesKeys.REMINDER_MINUTE] = it }
             }
-
-            result = ImportResult(
-                sessionsAdded = mergedHistory.count { it.id !in historyIds },
-                goalsAdded = backup.goals.count { it.id !in goalIds },
-                goalsUpdated = backup.goals.count { it.id in goalIds }
-            )
         }
-        return result
+        result
     }
 
     // Active session: written on every change while a session runs, cleared when it is saved.

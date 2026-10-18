@@ -9,14 +9,15 @@ SuperChant
 ```
 Distraction-free chanting counter. Use volume buttons to count without looking.
 ```
-(78 characters)
+(79 characters)
 
 ## Full Description (4000 characters max)
 ```
-SuperChant is a minimalist digital mala designed for focused spiritual practice. Count your chants using your phone's volume buttons - no need to look at your screen.
+SuperChant is a minimalist digital mala designed for focused spiritual practice. Count your chants using your phone's volume buttons - no need to look at your screen - or simply tap the screen.
 
 DISTRACTION-FREE COUNTING
 • Press volume up or down to increment your count
+• Or tap anywhere on the counter, with no special permissions
 • Keep your phone in your pocket or face-down
 • Stay focused on your practice, not your screen
 
@@ -42,15 +43,17 @@ THOUGHTFUL DESIGN
 • Light and dark themes
 • Works in background while screen is off
 • Pause and resume sessions anytime
+• Sessions pick up where they left off if Android closes the app
 
 PRIVACY FOCUSED
-• All data stays on your device
+• No servers and no internet access: your data is never sent to us
+• History and goals move to a new phone with Android's device backup
 • No accounts required
 • No analytics or tracking
 • No ads, ever
 
 HOW IT WORKS
-SuperChant uses Android's Accessibility Service to detect volume button presses. This allows the app to count your chants even when the screen is off or you're in another app. The accessibility service ONLY detects button presses and cannot read any content from your screen or other apps.
+For volume-button counting, SuperChant uses Android's Accessibility Service to detect volume button presses. This allows the app to count your chants even when the screen is off or you're in another app. The accessibility service ONLY detects button presses and cannot read any content from your screen or other apps. On-screen counting doesn't need it.
 
 Perfect for:
 • Japa meditation
@@ -85,8 +88,8 @@ Android does not provide any other API to intercept hardware button presses syst
 ### What the Service Does
 ```
 1. Listens for KEYCODE_VOLUME_UP and KEYCODE_VOLUME_DOWN key events
-2. When detected during an active chanting session, increments the counter
-3. Consumes the key event to prevent volume changes during counting
+2. When detected during an active chanting session that counts with volume buttons, increments the counter
+3. Consumes that press (key down and key up) to prevent volume changes during counting; at all other times the keys pass through and change the volume as usual
 ```
 
 ### What the Service Does NOT Do
@@ -122,15 +125,12 @@ Everyone
 ```
 
 ## Contact Email
-```
-(Use your email)
-```
+Set in Play Console (Store settings > Store listing contact details); not kept in this repo.
 
 ## Privacy Policy URL
 ```
-https://github.com/dhruv2mars/superchant/blob/main/PRIVACY_POLICY.md
+https://github.com/Dhruv2mars/superchant/blob/main/PRIVACY_POLICY.md
 ```
-(Update with your actual GitHub username if different)
 
 ---
 

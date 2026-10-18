@@ -1,6 +1,6 @@
 # Privacy Policy for SuperChant
 
-**Last updated:** January 3, 2026
+**Last updated:** October 18, 2026
 
 ## Overview
 
@@ -10,18 +10,32 @@ SuperChant is a chanting/meditation counter app designed with privacy as a core 
 
 **SuperChant does NOT collect, transmit, or share any personal data.**
 
-All information stays on your device and is never sent to any server.
+SuperChant has no servers and no internet permission. The app itself never sends your data anywhere.
+The only copy that can leave your device is Android's own device backup, described below.
 
 ## Data Stored Locally
 
-The following data is stored only on your device:
+The following data is stored on your device:
 
-- **Chanting session history** - Your completed sessions (counts, rounds, duration)
+- **Chanting session history** - Your completed sessions (counts, rounds, duration, goal name)
 - **Goals** - Custom goals you create
-- **Preferences** - Theme setting, vibration preferences
-- **Session state** - Current session progress (for resume functionality)
+- **Preferences** - Theme, vibration and counting-mode settings
+- **Active session** - The progress of a session that is running, so it can resume if Android closes
+  the app. It is deleted when you stop the session.
 
-This data is stored using Android's DataStore and remains entirely on your device.
+This data is stored using Android's DataStore.
+
+## Device Backup
+
+SuperChant allows Android's built-in backup so your history and goals come with you to a new phone.
+If backup is turned on in your Android settings, the data above is included in your device backup:
+
+- **Google backup** - Android uploads it, with the rest of your app data, to your Google account's
+  backup storage, where it is handled under Google's privacy policy. The developer of SuperChant has
+  no access to it.
+- **Device-to-device transfer** - It is copied directly to your new phone when you set it up.
+
+You can turn off backup for your device (or for SuperChant) in Android settings at any time.
 
 ## Accessibility Service
 
@@ -46,7 +60,7 @@ SuperChant uses **no third-party services**:
 - No analytics
 - No crash reporting
 - No advertising
-- No cloud storage
+- No cloud storage of our own (only Android's device backup, if you have it turned on)
 - No social features
 
 ## Data Sharing
@@ -55,9 +69,9 @@ We do not share any data because we do not collect any data.
 
 ## Data Deletion
 
-Since all data is stored locally on your device:
-- Uninstalling the app removes all data
+- Clearing history in the app, or uninstalling the app, removes the data from your device
 - You can clear app data from Android Settings at any time
+- A copy in your Google backup is managed by Google; you can delete it from your Google account's backup settings
 
 ## Children's Privacy
 

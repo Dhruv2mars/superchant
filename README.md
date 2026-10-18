@@ -27,11 +27,12 @@ Built for japa meditation, mantra chanting, prayer counting, and any repetitive 
 ## Features
 
 ### Core
-- Press volume up or down to increment your count
+- Press volume up or down to increment your count, or tap the screen (no permissions needed)
 - 108 counts per round — just like a traditional mala
 - Works with screen off or in any other app
 - Foreground service with persistent notification
 - Pause and resume sessions anytime
+- A running session survives Android closing the app and picks up where it left off
 
 ### Goals & Tracking
 - Create structured goals with multiple mantras
@@ -47,8 +48,11 @@ Built for japa meditation, mantra chanting, prayer counting, and any repetitive 
 - Celebration ringtone on goal completion
 
 ### Privacy
-- 100% local — all data stays on your device
-- No accounts, no sign-up, no internet permission
+- No servers: SuperChant has no internet permission and never sends your data anywhere
+- History, goals and settings are stored on your device and included in Android's own device backup
+  (Google backup and phone-to-phone transfer), so they come with you to a new phone. Turn off backup
+  for SuperChant in Android settings if you'd rather keep them on this device only.
+- No accounts, no sign-up
 - No analytics, no tracking, no ads
 - [Read the privacy policy](PRIVACY_POLICY.md)
 
@@ -80,7 +84,7 @@ cd superchant
 
 ## How It Works
 
-SuperChant uses Android's [AccessibilityService](https://developer.android.com/reference/android/accessibilityservice/AccessibilityService) to intercept volume button presses system-wide. When a session is active, the service consumes the key event so volume doesn't change — it just increments the counter.
+SuperChant uses Android's [AccessibilityService](https://developer.android.com/reference/android/accessibilityservice/AccessibilityService) to intercept volume button presses system-wide. When a session that counts with volume buttons is active, the service consumes each counted press (key down, repeats and key up) so the volume doesn't change and it just increments the counter. When no session is running, it's paused, its goal is complete, or you count on-screen only, the buttons change the volume as usual.
 
 The accessibility service does **not** read screen content (`canRetrieveWindowContent = false`), does not interact with other apps, and only activates during user-initiated sessions.
 

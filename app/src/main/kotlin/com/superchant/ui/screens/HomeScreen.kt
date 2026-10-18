@@ -178,6 +178,15 @@ fun HomeScreen(
 
     KeepScreenOn(enabled = isServiceRunning && touchCounting)
 
+    // A session that volume buttons can't count (restored from an older version, or the service was turned
+    // off) gets touch counting. Keyed on the session and readiness, so switching it off by hand sticks.
+    val sessionId by remember { derivedStateOf { chantStateHolder.value.run { sessionId.takeIf { isActive } } } }
+    LaunchedEffect(sessionId, volumeReady, savedConsent != null) {
+        if (sessionId != null && savedConsent != null && !volumeReady && !chantStateHolder.value.touchCounting) {
+            ChantingService.setTouchCounting(true)
+        }
+    }
+
     // A start waiting on the permission prompt
     var goalToStart by remember { mutableStateOf<Goal?>(null) }
     var startPending by remember { mutableStateOf(false) }

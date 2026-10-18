@@ -1,5 +1,7 @@
 package com.superchant.ui.components
 
+import android.view.WindowManager
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -36,7 +38,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -199,12 +200,15 @@ fun TouchCountingToggle(
     }
 }
 
-/** Keeps the screen on while [enabled] and this UI is visible; the system drops it when the app leaves the foreground. */
+/**
+ * Keeps the screen on while [enabled]; the system ignores it while the app isn't visible. Uses the window
+ * flag directly: after the app had been in the background, clearing View.keepScreenOn left the flag set.
+ */
 @Composable
 fun KeepScreenOn(enabled: Boolean) {
-    val view = LocalView.current
-    DisposableEffect(view, enabled) {
-        view.keepScreenOn = enabled
-        onDispose { view.keepScreenOn = false }
+    val window = LocalActivity.current?.window ?: return
+    DisposableEffect(window, enabled) {
+        if (enabled) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose { window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     }
 }

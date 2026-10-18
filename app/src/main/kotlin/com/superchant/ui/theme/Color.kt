@@ -3,7 +3,11 @@ package com.superchant.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Light Theme - Warm, spiritual, saffron-inspired
-val md_theme_light_primary = Color(0xFFC4956A)           // Warm saffron/amber
+// Primary is used for text and icons (section headers, stats, labels) as well as fills, so it is the
+// lightest shade of the saffron hue that reaches WCAG AA (4.5:1) on every light background the app
+// uses: 5.26 on surface, 4.73 on cards, 4.50 on the goal chip; white text on it is 5.41.
+// The original #C4956A (2.22-2.60 as text, 2.67 under white text) stays as the accent (surfaceTint).
+val md_theme_light_primary = Color(0xFF8C6136)           // Warm saffron/amber, text-safe
 val md_theme_light_onPrimary = Color(0xFFFFFFFF)
 val md_theme_light_primaryContainer = Color(0xFFFFDDB5)  // Soft golden
 val md_theme_light_onPrimaryContainer = Color(0xFF2D1600)
@@ -29,7 +33,7 @@ val md_theme_light_surface = Color(0xFFFFFBF8)
 val md_theme_light_onSurface = Color(0xFF1F1B16)
 val md_theme_light_surfaceVariant = Color(0xFFF2E0D0)    // Warm cream
 val md_theme_light_onSurfaceVariant = Color(0xFF504539)
-val md_theme_light_outline = Color(0xFF827568)
+val md_theme_light_outline = Color(0xFF71665B)          // 5.44:1 on surface for hint text (was #827568, 4.35)
 val md_theme_light_outlineVariant = Color(0xFFD5C4B5)
 
 val md_theme_light_inverseSurface = Color(0xFF352F2B)

@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
 import android.os.IBinder
@@ -58,6 +59,7 @@ class ChantingService : Service() {
     private lateinit var notificationManager: NotificationManager
     private lateinit var vibrator: Vibrator
     private lateinit var preferencesRepository: PreferencesRepository
+    private var ringtone: Ringtone? = null
 
     // Set from the start intent (or the setting on restore), then kept in sync with the setting
     // so mid-session changes apply
@@ -99,6 +101,8 @@ class ChantingService : Service() {
 
     override fun onDestroy() {
         serviceScope.cancel()
+        ringtone?.stop()
+        ringtone = null
         // Normally stopSession() already reset the state. If the service is destroyed mid-session,
         // the persisted copy stays and is restored on the next app launch.
         if (_instance === this) {
@@ -283,7 +287,9 @@ class ChantingService : Service() {
         try {
             val uri = RingtoneManager.getDefaultUri(type)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            RingtoneManager.getRingtone(applicationContext, uri)?.play()
+            // Only one sound at a time; stop() also releases the previous one's player.
+            ringtone?.stop()
+            ringtone = RingtoneManager.getRingtone(applicationContext, uri)?.apply { play() }
         } catch (e: Exception) {
             // Silently fail if sound can't be played
         }

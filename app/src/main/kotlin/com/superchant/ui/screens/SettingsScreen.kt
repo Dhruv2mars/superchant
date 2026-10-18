@@ -1,5 +1,9 @@
 package com.superchant.ui.screens
 
+import android.content.Context
+import android.os.Build
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -61,6 +65,7 @@ fun SettingsScreen(
         accessibilityEnabled = VolumeKeyAccessibilityService.isAccessibilityServiceEnabled(context)
         onPauseOrDispose { }
     }
+    val hasAmplitudeControl = remember { context.vibrator().hasAmplitudeControl() }
     // Loaded at app start, so the stored values (not defaults) are shown from the first frame
     val vibration = preferencesRepository.vibrationSettings.collectAsStateWithLifecycle().value ?: VibrationSettings()
     
@@ -118,15 +123,17 @@ fun SettingsScreen(
                     }
                 )
                 
-                // Count vibration intensity slider
-                SettingsSliderItem(
-                    title = "Count intensity",
-                    value = vibration.countIntensity,
-                    enabled = vibration.countEnabled,
-                    onValueChangeFinished = { intensity ->
-                        preferencesRepository.write { setCountVibrationIntensity(intensity) }
-                    }
-                )
+                // Count vibration intensity slider (only where the vibrator can vary its strength)
+                if (hasAmplitudeControl) {
+                    SettingsSliderItem(
+                        title = "Count intensity",
+                        value = vibration.countIntensity,
+                        enabled = vibration.countEnabled,
+                        onValueChangeFinished = { intensity ->
+                            preferencesRepository.write { setCountVibrationIntensity(intensity) }
+                        }
+                    )
+                }
                 
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 12.dp),
@@ -144,14 +151,23 @@ fun SettingsScreen(
                 )
                 
                 // Round vibration intensity slider
-                SettingsSliderItem(
-                    title = "Round intensity",
-                    value = vibration.roundIntensity,
-                    enabled = vibration.roundEnabled,
-                    onValueChangeFinished = { intensity ->
-                        preferencesRepository.write { setRoundVibrationIntensity(intensity) }
-                    }
-                )
+                if (hasAmplitudeControl) {
+                    SettingsSliderItem(
+                        title = "Round intensity",
+                        value = vibration.roundIntensity,
+                        enabled = vibration.roundEnabled,
+                        onValueChangeFinished = { intensity ->
+                            preferencesRepository.write { setRoundVibrationIntensity(intensity) }
+                        }
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.vibration_strength_unsupported),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
             }
             
             // About section
@@ -338,6 +354,14 @@ private fun SettingsSliderItem(
         )
     }
 }
+
+private fun Context.vibrator(): Vibrator =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+    } else {
+        @Suppress("DEPRECATION")
+        getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    }
 
 private fun getIntensityLabel(intensity: Int): String {
     return when {

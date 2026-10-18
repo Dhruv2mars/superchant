@@ -176,15 +176,20 @@ fun HomeScreen(
         }
     }
 
-    KeepScreenOn(enabled = isServiceRunning && touchCounting)
+    // Awake only while taps can count (the tap surface is showing): not when off, paused or the goal is done
+    KeepScreenOn(enabled = isServiceRunning && touchCounting && !isPaused && !isGoalComplete)
 
     // A session that volume buttons can't count (restored from an older version, or the service was turned
-    // off) gets touch counting. Keyed on the session and readiness, so switching it off by hand sticks.
+    // off) gets touch counting, once per session and readiness change, so switching it off by hand sticks
+    // across navigation and rotation.
     val sessionId by remember { derivedStateOf { chantStateHolder.value.run { sessionId.takeIf { isActive } } } }
+    var autoTouchHandled by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(sessionId, volumeReady, savedConsent != null) {
-        if (sessionId != null && savedConsent != null && !volumeReady && !chantStateHolder.value.touchCounting) {
-            ChantingService.setTouchCounting(true)
-        }
+        if (sessionId == null || savedConsent == null) return@LaunchedEffect
+        val key = "$sessionId:$volumeReady"
+        if (autoTouchHandled == key) return@LaunchedEffect
+        autoTouchHandled = key
+        if (!volumeReady && !chantStateHolder.value.touchCounting) ChantingService.setTouchCounting(true)
     }
 
     // A start waiting on the permission prompt
@@ -514,9 +519,10 @@ private fun SessionControls(
         if (!session.showTouchHint) return@LaunchedEffect
         delay(TOUCH_HINT_DELAY_MS)
         launch { tooltipState.show() }
+        // Seen once it shows, even if the session ends before it fades
+        session.onTouchHintShown()
         delay(TOUCH_HINT_VISIBLE_MS)
         tooltipState.dismiss()
-        session.onTouchHintShown()
     }
     Row(
         modifier = modifier,

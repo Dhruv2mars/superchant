@@ -77,7 +77,7 @@ app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
    disclosure consent) pass through to the system untouched.
    Touch: while touch counting is on, `TapToCountPad` calls `ChantingService.countFromScreen()` (one count per
    touch, extra fingers and repeats under 150 ms ignored) and Home keeps the screen awake (`KeepScreenOn`,
-   a window flag). Off, the pad ignores touches and the screen may sleep.
+   a window flag) unless paused or the goal is complete. Off, the pad ignores touches and the screen may sleep.
 4. Both inputs go through one `incrementCount()`, which applies `ChantCounter.increment` (rounds of 108,
    a milestone every 27 beads, goal mantra advance, no counting after the goal completes) and plays the same
    haptics/sounds (plus the optional bead click). There is no undo; Stop is a single tap.

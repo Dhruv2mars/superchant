@@ -43,7 +43,6 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
@@ -132,11 +131,8 @@ fun TapToCountPad(
             .clearAndSetSemantics {
                 contentDescription = countDescription
                 liveRegion = LiveRegionMode.Polite
-                if (enabled) {
-                    onClick(label = tapActionLabel) { currentOnCount(); true }
-                } else {
-                    disabled()
-                }
+                // Off, the node still reads the count (volume buttons may be counting) but offers no action
+                if (enabled) onClick(label = tapActionLabel) { currentOnCount(); true }
             },
         content = content
     )

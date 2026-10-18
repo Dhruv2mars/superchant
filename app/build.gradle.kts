@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.baselineprofile)
 }
 
 // Release signing keys live in the untracked local.properties.
@@ -65,6 +66,13 @@ android {
     }
 }
 
+// Baseline and startup profiles, generated on a device by :baselineprofile
+// (./gradlew :app:generateReleaseBaselineProfile) and checked in under src/release/generated.
+baselineProfile {
+    // Lays out the startup classes first in the dex, so a cold start touches fewer pages
+    dexLayoutOptimization = true
+}
+
 // buildReleaseApk / buildReleaseBundle: build, then copy to the repo root as SuperChant-v{version}.{apk,aab}.
 mapOf("Apk" to "apk", "Bundle" to "aab").forEach { (kind, ext) ->
     val outDir = layout.buildDirectory.dir("outputs/${if (ext == "apk") "apk" else "bundle"}/release")
@@ -90,6 +98,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.reorderable)
+    // Installs the baseline profile on sideloads and stores without cloud profiles
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
 
     testImplementation(libs.junit)
 }

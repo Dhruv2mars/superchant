@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "SuperChant"
 include(":app")
+include(":baselineprofile")

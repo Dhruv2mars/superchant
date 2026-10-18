@@ -86,6 +86,15 @@
     <string name="undo_description">Undo last count</string>
     <string name="undo_action">Undo</string>
     <string name="stop_hold_hint">Hold to stop</string>
+    <string name="status_pocket_guard">Screen covered. Taps are ignored.</string>
+
+    <!-- Counting feel -->
+    <string name="pocket_guard_title">Pocket guard</string>
+    <string name="pocket_guard_desc">Ignore taps while the screen is covered, so a pocket can\'t count.</string>
+    <string name="bead_click_title">Soft bead click</string>
+    <string name="bead_click_desc">A quiet click on each count. Follows the system sounds volume and silent mode.</string>
+    <string name="milestone_pulse_title">Milestone pulse</string>
+    <string name="milestone_pulse_desc">A fuller pulse every 27 beads (each quarter of a 108 mala).</string>
 
     <!-- Goal progress -->
     <string name="goal_mantra_position">Mantra %1$d of %2$d</string>

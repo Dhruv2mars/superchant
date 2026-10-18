@@ -1,5 +1,9 @@
 package com.superchant.ui.components
 
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
@@ -56,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -70,6 +75,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.superchant.R
@@ -342,6 +348,39 @@ fun InputModeSelector(
             }
         }
     }
+}
+
+/**
+ * True while the proximity sensor reports something close, e.g. the phone is in a pocket or face down
+ * on a cushion. Listens only while [enabled] and the screen is resumed; false without a sensor.
+ */
+@Composable
+fun rememberProximityCovered(enabled: Boolean): Boolean {
+    val context = LocalContext.current
+    var covered by remember { mutableStateOf(false) }
+    LifecycleResumeEffect(enabled) {
+        val sensorManager = context.getSystemService(SensorManager::class.java)
+        val sensor = sensorManager?.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+        if (!enabled || sensor == null) {
+            covered = false
+            return@LifecycleResumeEffect onPauseOrDispose { }
+        }
+        // Most sensors are binary (0 or max range); treat anything nearer than 5 cm as covered.
+        val near = minOf(sensor.maximumRange, 5f)
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                covered = event.values[0] < near
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+        }
+        sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+        onPauseOrDispose {
+            sensorManager.unregisterListener(listener)
+            covered = false
+        }
+    }
+    return covered
 }
 
 /** Keeps the screen on while [enabled] and this UI is visible; the system drops it when the app leaves the foreground. */

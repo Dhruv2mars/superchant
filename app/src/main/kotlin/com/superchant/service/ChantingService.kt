@@ -61,6 +61,8 @@ class ChantingService : Service() {
     private lateinit var vibrator: Vibrator
     private lateinit var preferencesRepository: PreferencesRepository
     private var ringtone: Ringtone? = null
+    // Created on first use, so sessions without the click never open an audio track
+    private var beadClick: BeadClick? = null
 
     // Set from the start intent (or the setting on restore), then kept in sync with the setting
     // so mid-session changes apply
@@ -107,6 +109,7 @@ class ChantingService : Service() {
         serviceScope.cancel()
         ringtone?.stop()
         ringtone = null
+        beadClick?.release()
         // Normally stopSession() already reset the state. If the service is destroyed mid-session,
         // the persisted copy stays and is restored on the next app launch.
         if (_instance === this) {
@@ -247,6 +250,8 @@ class ChantingService : Service() {
     private fun giveFeedback(feedback: CountFeedback, rounds: Int) {
         // Feedback waits for the stored settings rather than guessing defaults.
         val settings = preferencesRepository.vibrationSettings.value
+        val feel = preferencesRepository.countingFeel.value
+        if (feel?.beadClick == true) (beadClick ?: BeadClick().also { beadClick = it }).play()
         when (feedback) {
             CountFeedback.GOAL -> {
                 playSound(RingtoneManager.TYPE_RINGTONE)
@@ -257,6 +262,14 @@ class ChantingService : Service() {
                 if (settings?.roundEnabled == true) vibrateRoundComplete(1, settings.roundIntensity)
             }
             CountFeedback.ROUND -> if (settings?.roundEnabled == true) vibrateRoundComplete(rounds, settings.roundIntensity)
+            CountFeedback.MILESTONE -> if (settings?.countEnabled == true) {
+                if (feel?.milestonePulse == true) {
+                    // Longer and fuller than a count tick, gentler than a round
+                    vibrator.vibrate(VibrationEffect.createOneShot(90, (settings.countIntensity * 3 / 2).coerceIn(100, 255)))
+                } else {
+                    vibrator.vibrate(VibrationEffect.createOneShot(30, settings.countIntensity))
+                }
+            }
             CountFeedback.COUNT -> if (settings?.countEnabled == true) {
                 vibrator.vibrate(VibrationEffect.createOneShot(30, settings.countIntensity))
             }

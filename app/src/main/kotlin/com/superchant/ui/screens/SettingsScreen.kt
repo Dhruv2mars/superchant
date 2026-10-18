@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -40,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.superchant.BuildConfig
 import com.superchant.R
 import com.superchant.data.InputMode
+import com.superchant.data.CountingFeel
 import com.superchant.data.PreferencesRepository
 import com.superchant.data.RoundSize
 import com.superchant.data.VibrationSettings
@@ -70,6 +74,7 @@ fun SettingsScreen(
     // Loaded at app start, so the stored values (not defaults) are shown from the first frame
     val vibration = preferencesRepository.vibrationSettings.collectAsStateWithLifecycle().value ?: VibrationSettings()
     val roundSize = preferencesRepository.roundSize.collectAsStateWithLifecycle().value ?: RoundSize.DEFAULT
+    val feel = preferencesRepository.countingFeel.collectAsStateWithLifecycle().value ?: CountingFeel()
     
     Scaffold(
         topBar = {
@@ -110,6 +115,23 @@ fun SettingsScreen(
                 RoundSizePicker(
                     selected = roundSize,
                     onSelect = { size -> if (size != null) preferencesRepository.write { setRoundSize(size) } }
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                SettingsToggleItem(
+                    title = stringResource(R.string.pocket_guard_title),
+                    subtitle = stringResource(R.string.pocket_guard_desc),
+                    checked = feel.pocketGuard,
+                    onCheckedChange = { enabled -> preferencesRepository.write { setPocketGuard(enabled) } }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                SettingsToggleItem(
+                    title = stringResource(R.string.bead_click_title),
+                    subtitle = stringResource(R.string.bead_click_desc),
+                    checked = feel.beadClick,
+                    onCheckedChange = { enabled -> preferencesRepository.write { setBeadClick(enabled) } }
                 )
             }
             
@@ -155,6 +177,14 @@ fun SettingsScreen(
                         }
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                SettingsToggleItem(
+                    title = stringResource(R.string.milestone_pulse_title),
+                    subtitle = stringResource(R.string.milestone_pulse_desc),
+                    checked = feel.milestonePulse && vibration.countEnabled,
+                    enabled = vibration.countEnabled,
+                    onCheckedChange = { enabled -> preferencesRepository.write { setMilestonePulse(enabled) } }
+                )
                 
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 12.dp),
@@ -283,15 +313,20 @@ private fun SettingsToggleItem(
     title: String,
     subtitle: String? = null,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    // The whole row toggles, so the target is large and TalkBack reads it as one switch
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange)
+            .alpha(if (enabled) 1f else 0.5f),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).padding(end = 12.dp)
         ) {
             Text(
                 text = title,
@@ -308,7 +343,8 @@ private fun SettingsToggleItem(
         }
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange,
+            onCheckedChange = null,
+            enabled = enabled,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.primary,
                 checkedTrackColor = MaterialTheme.colorScheme.primaryContainer

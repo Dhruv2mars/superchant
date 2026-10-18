@@ -101,6 +101,7 @@ import com.superchant.ui.components.InputModeSelector
 import com.superchant.ui.components.KeepScreenOn
 import com.superchant.ui.components.StartStopButton
 import com.superchant.ui.components.TapToCountPad
+import com.superchant.ui.components.rememberProximityCovered
 import com.superchant.ui.theme.FocusBackground
 import com.superchant.ui.theme.FocusText
 import com.superchant.ui.theme.ThemeMode
@@ -191,7 +192,10 @@ fun HomeScreen(
         }
     }
 
-    KeepScreenOn(enabled = isServiceRunning && tapCounting)
+    val pocketGuardOn = preferencesRepository.countingFeel.collectAsStateWithLifecycle().value?.pocketGuard ?: true
+    val pocketCovered = rememberProximityCovered(enabled = isServiceRunning && tapCounting && pocketGuardOn)
+    // Covered: taps are ignored and the screen may time out as usual, instead of burning in a pocket
+    KeepScreenOn(enabled = isServiceRunning && tapCounting && !pocketCovered)
     FocusWindowEffect(enabled = isServiceRunning && focusMode)
     BackHandler(enabled = isServiceRunning && focusMode) { focusMode = false }
 
@@ -289,11 +293,12 @@ fun HomeScreen(
 
     val session = SessionUi(
         state = chantState,
-        tapEnabled = tapCounting && !isPaused && !isGoalComplete,
+        tapEnabled = tapCounting && !isPaused && !isGoalComplete && !pocketCovered,
         statusText = stringResource(
             when {
                 isGoalComplete -> R.string.status_goal_complete
                 isPaused -> R.string.status_paused_hint
+                pocketCovered -> R.string.status_pocket_guard
                 tapCounting && volumeCounting -> R.string.status_both
                 tapCounting -> R.string.status_tap
                 else -> R.string.status_volume

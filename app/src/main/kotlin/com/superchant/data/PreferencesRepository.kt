@@ -34,6 +34,16 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 // Separate small store so the per-count session snapshot doesn't rewrite history and goals.
 private val Context.sessionDataStore: DataStore<Preferences> by preferencesDataStore(name = "active_session")
 
+/** Optional extras around each count. */
+data class CountingFeel(
+    /** A distinct pulse at milestone beads (see [RoundSize.milestoneInterval]). */
+    val milestonePulse: Boolean = true,
+    /** A soft synthesized bead click on each count; plays through the system sounds volume. */
+    val beadClick: Boolean = false,
+    /** Ignore on-screen taps while the proximity sensor is covered, e.g. in a pocket. */
+    val pocketGuard: Boolean = true
+)
+
 data class VibrationSettings(
     val roundEnabled: Boolean = true,
     val countEnabled: Boolean = true,
@@ -61,6 +71,9 @@ class PreferencesRepository private constructor(private val context: Context) {
         val ACTIVE_SESSION = stringPreferencesKey("active_session")
         val INPUT_MODE = stringPreferencesKey("input_mode")
         val ROUND_SIZE = intPreferencesKey("round_size")
+        val MILESTONE_PULSE = booleanPreferencesKey("milestone_pulse")
+        val BEAD_CLICK = booleanPreferencesKey("bead_click")
+        val POCKET_GUARD = booleanPreferencesKey("pocket_guard")
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -153,6 +166,27 @@ class PreferencesRepository private constructor(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.ROUND_VIBRATION_INTENSITY] = intensity.coerceIn(1, 255)
         }
+    }
+
+    val countingFeel: StateFlow<CountingFeel?> = prefs.map { preferences ->
+        val defaults = CountingFeel()
+        CountingFeel(
+            milestonePulse = preferences[PreferencesKeys.MILESTONE_PULSE] ?: defaults.milestonePulse,
+            beadClick = preferences[PreferencesKeys.BEAD_CLICK] ?: defaults.beadClick,
+            pocketGuard = preferences[PreferencesKeys.POCKET_GUARD] ?: defaults.pocketGuard
+        )
+    }.share()
+
+    suspend fun setMilestonePulse(enabled: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.MILESTONE_PULSE] = enabled }
+    }
+
+    suspend fun setBeadClick(enabled: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.BEAD_CLICK] = enabled }
+    }
+
+    suspend fun setPocketGuard(enabled: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.POCKET_GUARD] = enabled }
     }
 
     /** The chosen [InputMode], or null until the user picks one (see [InputMode.default]). */

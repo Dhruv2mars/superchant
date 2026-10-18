@@ -111,6 +111,16 @@ object RoundSize {
 
     /** The size a session uses: the goal's own size if it has a valid one, else the app setting. */
     fun forSession(goal: Goal?, appDefault: Int): Int = sanitize(goal?.roundSize?.takeIf(::isValid) ?: appDefault)
+
+    /**
+     * Counts between milestone pulses within a round, or 0 for none: every 27 beads where the round is
+     * a multiple of 27 (the marker beads on a 108 or 54 mala), else quarters of rounds divisible by 4.
+     */
+    fun milestoneInterval(size: Int): Int = when {
+        size > 27 && size % 27 == 0 -> 27
+        size >= 16 && size % 4 == 0 -> size / 4
+        else -> 0
+    }
 }
 
 sealed interface RestoreAction {

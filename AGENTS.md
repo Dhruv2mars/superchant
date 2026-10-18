@@ -1,12 +1,31 @@
 # AGENTS.md - SuperChant
 
-Kotlin/Jetpack Compose Android app that counts chants (108 per round) with the volume keys and/or on-screen taps. An
-AccessibilityService intercepts volume key presses, a foreground service owns the session state, and
-DataStore Preferences persists settings, goals and history (as JSON via kotlinx.serialization).
+Instructions for coding agents (Codex reads this file; Claude Code reads it through `CLAUDE.md`).
+
+SuperChant is a native Kotlin/Jetpack Compose Android app: a calm, offline digital japa mala. It counts
+chants (108 per round) with the volume keys and/or on-screen taps. An AccessibilityService intercepts
+volume key presses, a foreground service owns the session state, and DataStore Preferences persists
+settings, goals and history (as JSON via kotlinx.serialization).
+
+## Product rules (don't break these)
+
+- **No INTERNET permission, ever.** No network, analytics, crash reporting, ads or accounts. Check the merged
+  release manifest when adding a dependency.
+- **A round is always 108.** There is no round-size setting.
+- **Counting stays simple:** volume buttons count whenever the accessibility service is set up; touch counting
+  is one on/off toggle on the session screen. No input-mode chooser, no undo, no hold-to-stop, no focus mode,
+  no pocket guard (all removed on purpose; see the 2026-10 PR history).
+- **Google Play policy:** the in-app accessibility disclosure (`AccessibilityDisclosureDialog`) must be shown and
+  agreed to before sending anyone to accessibility settings, and volume keys are only consumed with that consent.
+  The service never reads screen content (`canRetrieveWindowContent=false`, no event types). If you change what
+  the service or the `specialUse` foreground service does, the Play Console declarations, `PRIVACY_POLICY.md`
+  and `docs/play-store/STORE_LISTING.md` must be updated to match.
+- Keep it minimal and quiet: add a feature only if it clearly helps someone while they chant.
 
 ## Commands
 
-Needs JDK 17 and the Android SDK (`ANDROID_HOME` or `sdk.dir` in `local.properties`).
+Needs JDK 17 and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.properties`; a fresh worktree has no
+`local.properties`, so write `sdk.dir=$HOME/Library/Android/sdk` on the maintainer's Mac).
 
 ```bash
 ./gradlew assembleDebug assembleRelease lint test   # full check
@@ -26,6 +45,7 @@ signed with the debug key, so it still builds and installs locally.
 |---------|-------|
 | Package / namespace | `com.superchant` |
 | minSdk / targetSdk / compileSdk | 26 / 36 / 37 |
+| Version | `versionName`/`versionCode` in `app/build.gradle.kts` (bump only when a release is approved) |
 | JVM target | 17 |
 | Toolchain | AGP 9 (built-in Kotlin), Gradle 9, Kotlin 2.4 |
 
@@ -53,9 +73,15 @@ app/src/main/kotlin/com/superchant/
 │   └── ChantTileService.kt          # Quick Settings tile: start, or pause/resume with the live count
 ├── reminder/Reminder.kt             # Daily reminder: ReminderTime (pure), inexact alarm scheduler, receivers
 └── ui/
-    ├── components/                  # Shared composables (CounterDisplay ring, TapToCountPad + TouchCountingToggle, Start/Stop
-    │                                #   buttons, AccessibilitySetupDialog incl. the prominent disclosure, Insights, ...)
-    ├── screens/                     # Home, Goals, History, Settings
+    ├── components/
+    │   ├── Common.kt                # AppTopBar, BackButton, EmptyState, ConfirmDestructiveDialog, ...
+    │   ├── CounterDisplay.kt        # The mala ring (beads, meru bead, round glow)
+    │   ├── OnScreenCounter.kt       # TapToCountPad, TouchCountingToggle, KeepScreenOn
+    │   ├── StartStopButton.kt       # StartButton / StopButton
+    │   ├── AccessibilitySetup.kt    # AccessibilitySetupDialog incl. the Play-required disclosure
+    │   ├── Insights.kt              # InsightsCard (streak, heatmap, per-mantra totals), TodayLine
+    │   └── ThemeToggle.kt
+    ├── screens/                     # Home, Goals, History, Settings (+ BackupControls, ReminderControls used by Settings)
     └── theme/                       # Material 3 colors, typography, ThemeMode, Motion (easing tokens, pressScale)
 app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
 ```
@@ -121,9 +147,22 @@ times a round).
 - New persisted data classes need `@Serializable` and defaults for new fields so old JSON still decodes.
   IDs are UUID strings (`newId()`); `LenientIdSerializer` still reads the numeric IDs of v1.1.0 data.
 - Write preferences with `preferencesRepository.write { ... }`, not a screen's coroutine scope.
-- New UI strings go in `res/values/strings.xml` (plurals for counts). Older screens still hardcode some.
+- All UI strings go in `res/values/strings.xml` (plurals for counts); none are hardcoded.
+- Text and icons meet WCAG AA (4.5:1) in both themes; touch targets are at least 48dp.
 
-## Testing on an emulator
+## Verifying changes
+
+Done means verified, not just compiled:
+
+1. `./gradlew assembleDebug assembleRelease lint test` passes. Add JVM tests for logic changes (`app/src/test/...`;
+   counting rules, persistence, backup, stats and reminders all have pure, testable cores).
+2. Exercise the change on an emulator with the **release** APK (R8 can break serialization), and check that
+   `adb logcat -b crash` stays empty. The maintainer's AVD is `Pixel_9_API_35_A`; in T3 Code open it with the
+   device tools (`device_open`) and drive it with the returned agent-device CLI. Pass `-s <serial>` to adb.
+3. For UI changes, take screenshots (light, dark, a small screen such as `adb shell wm size 720x1280`, and reset after).
+4. Only the counter may recompose on each count (Home reads the count lazily). Don't add per-frame work in composition.
+
+### Simulating volume keys
 
 Shell-injected keys (`adb shell input keyevent KEYCODE_VOLUME_UP`) skip the accessibility key filter, so
 they never reach `onKeyEvent`. Use a virtual uinput keyboard so the keys take the real hardware path:
@@ -140,3 +179,13 @@ printf '%s\n' \
   '{"id":1,"command":"inject","events":[1,115,0,0,0,0]}' \
   '{"id":1,"command":"delay","duration":500}' | adb shell uinput -
 ```
+
+## Workflow
+
+- Work on a branch and open a PR against `main`; don't push to `main` directly. Put verification evidence in the
+  PR description. Screenshots go on the orphan `ux-evidence` branch (one folder per PR), never in `main`.
+- Never commit `local.properties`, keystores, APK/AAB files, `TASKS.md` or local agent state (`.claude/settings*.json`).
+- Release builds: `./gradlew buildReleaseBundle` with the upload key in `local.properties`. Play App Signing is on;
+  the app is a draft on Google Play, and a personal developer account needs a closed test (12+ testers, 14 days)
+  before production.
+- For JavaScript tooling (e.g. `bunx skills`), use bun.

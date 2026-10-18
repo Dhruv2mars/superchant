@@ -117,7 +117,8 @@ app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
    each goal session's `SessionRecord.mantras` holds its per-mantra breakdown.
 8. Removed features leave stored data behind: prefs `input_mode`, `round_size`, `pocket_guard` and
    `roundSize`/`inputMode`/`pocketGuard` fields in old sessions and backups are never read (JSON uses
-   `ignoreUnknownKeys`). Don't reuse those keys.
+   `ignoreUnknownKeys`). Don't reuse those keys. A restored active session's rounds and goal progress are
+   recomputed from its count at 108 (`ChantState.normalizedRounds`).
 
 ## Design and motion skills
 

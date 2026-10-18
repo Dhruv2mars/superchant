@@ -98,4 +98,28 @@ class ChantStateTest {
         assertFalse(stored.touchCounting)
         assertTrue(ChantState.start(null, now = 0, touchCounting = true).touchCounting)
     }
+
+    @Test
+    fun olderRoundSizesAreNormalizedTo108OnRestore() {
+        // A 54-bead goal session from an older version: one round done, already on mantra B
+        val legacy = ChantState(isActive = true, count = 54, rounds = 1, activeGoal = goal, currentMantraIndex = 1)
+        val restored = legacy.normalizedRounds()
+        assertEquals(0, restored.rounds)
+        assertEquals(0, restored.currentMantraIndex)
+        assertEquals(0, restored.mantraRoundsCompleted)
+        assertEquals(restored.count, restored.mantraTallies().sumOf { it.counts })
+
+        val far = ChantState(isActive = true, count = 250, activeGoal = goal).normalizedRounds()
+        assertEquals(2, far.rounds)
+        assertEquals(1, far.currentMantraIndex)
+        assertEquals(1, far.mantraRoundsCompleted)
+    }
+
+    @Test
+    fun sessionsCountedAt108AreUnchangedByNormalizing() {
+        val (state, _) = ChantState(isActive = true, activeGoal = goal).press(250)
+        assertEquals(state, state.normalizedRounds())
+        val (free, _) = ChantState(isActive = true).press(230)
+        assertEquals(free, free.normalizedRounds())
+    }
 }

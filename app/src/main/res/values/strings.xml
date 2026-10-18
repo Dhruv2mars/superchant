@@ -66,11 +66,28 @@
     <string name="insights_more">More</string>
     <string name="insights_mantras_title">Lifetime by mantra</string>
     <plurals name="insights_counts">
-        <item quantity="one">%d count</item>
-        <item quantity="other">%d counts</item>
+        <item quantity="one">%,d count</item>
+        <item quantity="other">%,d counts</item>
     </plurals>
     <string name="insights_show_all">Show all</string>
     <string name="insights_show_less">Show less</string>
+
+    <!-- Backup -->
+    <string name="backup_title">Your data</string>
+    <string name="backup_desc">Everything stays on this phone. Export a backup file to keep your history, goals and settings safe or move them to a new phone. Importing adds to what is here and never deletes.</string>
+    <string name="backup_export">Export</string>
+    <string name="backup_import">Import</string>
+    <plurals name="backup_exported">
+        <item quantity="one">Exported %1$d session and %2$d goals</item>
+        <item quantity="other">Exported %1$d sessions and %2$d goals</item>
+    </plurals>
+    <plurals name="backup_imported">
+        <item quantity="one">Imported %1$d new session and %2$d goals</item>
+        <item quantity="other">Imported %1$d new sessions and %2$d goals</item>
+    </plurals>
+    <string name="backup_export_failed">Couldn\'t save the backup</string>
+    <string name="backup_import_failed">Couldn\'t read that file</string>
+    <string name="backup_not_valid">That file isn\'t a SuperChant backup</string>
 
     <!-- Restricted Settings (Android 13+) -->
     <string name="restricted_settings_title">Setup Required</string>

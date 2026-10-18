@@ -26,6 +26,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
@@ -99,10 +101,12 @@ fun SettingsScreen(
         )
     }
     
+    val snackbarHostState = remember { SnackbarHostState() }
     Scaffold(
         topBar = {
             AppTopBar(title = "Settings", navigationIcon = { BackButton(onBackClick) })
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.surface
     ) { paddingValues ->
         Column(
@@ -249,6 +253,10 @@ fun SettingsScreen(
                         modifier = Modifier.padding(top = 12.dp)
                     )
                 }
+            }
+            
+            SettingsSection(title = stringResource(R.string.backup_title)) {
+                BackupControls(preferencesRepository = preferencesRepository, snackbarHostState = snackbarHostState)
             }
             
             // About section

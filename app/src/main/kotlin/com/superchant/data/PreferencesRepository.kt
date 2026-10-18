@@ -283,6 +283,80 @@ class PreferencesRepository private constructor(private val context: Context) {
         }
     }
 
+    /** Everything worth keeping, as a [Backup]. Settings never changed by the user are left out. */
+    suspend fun exportBackup(now: Long): Backup {
+        val p = prefs.first()
+        return Backup(
+            exportedAt = now,
+            settings = BackupSettings(
+                themeMode = when (p[PreferencesKeys.THEME_MODE]) {
+                    0 -> ThemeMode.LIGHT.name
+                    1 -> ThemeMode.DARK.name
+                    2 -> ThemeMode.SYSTEM.name
+                    else -> null
+                },
+                inputMode = p[PreferencesKeys.INPUT_MODE],
+                roundSize = p[PreferencesKeys.ROUND_SIZE],
+                dailyTarget = p[PreferencesKeys.DAILY_TARGET],
+                countVibration = p[PreferencesKeys.COUNT_VIBRATION_ENABLED],
+                countIntensity = p[PreferencesKeys.COUNT_VIBRATION_INTENSITY],
+                roundVibration = p[PreferencesKeys.VIBRATION_ENABLED],
+                roundIntensity = p[PreferencesKeys.ROUND_VIBRATION_INTENSITY],
+                milestonePulse = p[PreferencesKeys.MILESTONE_PULSE],
+                beadClick = p[PreferencesKeys.BEAD_CLICK],
+                pocketGuard = p[PreferencesKeys.POCKET_GUARD]
+            ),
+            goals = json.decodeStoredList(Goal.serializer(), p[PreferencesKeys.SAVED_GOALS]).items.withUniqueGoalIds(),
+            history = json.decodeStoredList(SessionRecord.serializer(), p[PreferencesKeys.SESSION_HISTORY]).items.withUniqueRecordIds()
+        )
+    }
+
+    /**
+     * Merges [backup] into the stored data in one transaction: sessions and goals are added, or updated
+     * when the ID matches, and the backup's settings are applied (invalid values are ignored).
+     * Nothing is deleted, so importing twice, or into a phone with newer sessions, is safe.
+     */
+    suspend fun importBackup(backup: Backup): ImportResult {
+        var result = ImportResult(0, 0, 0)
+        context.dataStore.edit { p ->
+            val history = json.decodeStoredList(SessionRecord.serializer(), p[PreferencesKeys.SESSION_HISTORY])
+            val historyIds = history.items.mapTo(HashSet()) { it.id }
+            val mergedHistory = BackupCodec.mergeHistory(history.items, backup.history)
+            p[PreferencesKeys.SESSION_HISTORY] = json.encodeStoredList(SessionRecord.serializer(), mergedHistory, history.unreadable)
+
+            val goals = json.decodeStoredList(Goal.serializer(), p[PreferencesKeys.SAVED_GOALS])
+            val goalIds = goals.items.mapTo(HashSet()) { it.id }
+            p[PreferencesKeys.SAVED_GOALS] = json.encodeStoredList(
+                Goal.serializer(), BackupCodec.mergeGoals(goals.items, backup.goals), goals.unreadable
+            )
+
+            with(backup.settings) {
+                when (themeMode) {
+                    ThemeMode.LIGHT.name -> p[PreferencesKeys.THEME_MODE] = 0
+                    ThemeMode.DARK.name -> p[PreferencesKeys.THEME_MODE] = 1
+                    ThemeMode.SYSTEM.name -> p[PreferencesKeys.THEME_MODE] = 2
+                }
+                InputMode.fromName(inputMode)?.let { p[PreferencesKeys.INPUT_MODE] = it.name }
+                roundSize?.takeIf(RoundSize::isValid)?.let { p[PreferencesKeys.ROUND_SIZE] = it }
+                dailyTarget?.takeIf { it in 0..PracticeStats.DAILY_TARGET_MAX }?.let { p[PreferencesKeys.DAILY_TARGET] = it }
+                countVibration?.let { p[PreferencesKeys.COUNT_VIBRATION_ENABLED] = it }
+                countIntensity?.takeIf { it in 1..255 }?.let { p[PreferencesKeys.COUNT_VIBRATION_INTENSITY] = it }
+                roundVibration?.let { p[PreferencesKeys.VIBRATION_ENABLED] = it }
+                roundIntensity?.takeIf { it in 1..255 }?.let { p[PreferencesKeys.ROUND_VIBRATION_INTENSITY] = it }
+                milestonePulse?.let { p[PreferencesKeys.MILESTONE_PULSE] = it }
+                beadClick?.let { p[PreferencesKeys.BEAD_CLICK] = it }
+                pocketGuard?.let { p[PreferencesKeys.POCKET_GUARD] = it }
+            }
+
+            result = ImportResult(
+                sessionsAdded = mergedHistory.count { it.id !in historyIds },
+                goalsAdded = backup.goals.count { it.id !in goalIds },
+                goalsUpdated = backup.goals.count { it.id in goalIds }
+            )
+        }
+        return result
+    }
+
     // Active session: written on every change while a session runs, cleared when it is saved.
     suspend fun loadActiveSession(): ChantState? = try {
         context.sessionDataStore.data.first()[PreferencesKeys.ACTIVE_SESSION]

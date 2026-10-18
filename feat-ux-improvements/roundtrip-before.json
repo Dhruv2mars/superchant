@@ -1,0 +1,1823 @@
+{
+    "app": "SuperChant",
+    "format": 1,
+    "exportedAt": 1792326277360,
+    "settings": {
+        "themeMode": "DARK",
+        "inputMode": "ON_SCREEN",
+        "roundSize": 54,
+        "dailyTarget": 8,
+        "countVibration": null,
+        "countIntensity": null,
+        "roundVibration": null,
+        "roundIntensity": null,
+        "milestonePulse": null,
+        "beadClick": true,
+        "pocketGuard": null,
+        "reminderEnabled": null,
+        "reminderMinuteOfDay": null
+    },
+    "goals": [
+        {
+            "id": "goal-morning",
+            "name": "Morning Japa",
+            "mantras": [
+                {
+                    "id": "m-om",
+                    "name": "Om Namah Shivaya",
+                    "targetRounds": 4
+                },
+                {
+                    "id": "m-gay",
+                    "name": "Gayatri Mantra",
+                    "targetRounds": 2
+                }
+            ],
+            "createdAt": 1750000000000,
+            "roundSize": null
+        },
+        {
+            "id": "goal-eve",
+            "name": "Evening Kirtan",
+            "mantras": [
+                {
+                    "id": "m-hk",
+                    "name": "Hare Krishna",
+                    "targetRounds": 16
+                }
+            ],
+            "createdAt": 1750000000001,
+            "roundSize": null
+        },
+        {
+            "id": "goal-wrist",
+            "name": "Travel mala",
+            "mantras": [
+                {
+                    "id": "m-ram",
+                    "name": "Sri Ram Jai Ram",
+                    "targetRounds": 3
+                }
+            ],
+            "createdAt": 1750000000002,
+            "roundSize": 27
+        }
+    ],
+    "history": [
+        {
+            "id": "81e74ef5-e8e2-5d94-0ed9-04759531985d",
+            "startTime": 1792198500000,
+            "endTime": 1792198829000,
+            "totalCounts": 142,
+            "totalRounds": 1,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "d3ac94af-0f21-ddb6-6cad-4a268d116ece",
+            "startTime": 1792107300000,
+            "endTime": 1792111642000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "0becd7b0-3898-d190-f9eb-dacc0cb1e29c",
+            "startTime": 1792026600000,
+            "endTime": 1792026839000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "94e3bf91-1a61-dbe2-2e44-158bae97ba94",
+            "startTime": 1791942960000,
+            "endTime": 1791944857000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "ae2eb154-7f15-0524-34b9-b5df9e7769b1",
+            "startTime": 1791855360000,
+            "endTime": 1791855597000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "3e7d1bfb-c7a2-ea20-b2f1-4c942e05319a",
+            "startTime": 1791814020000,
+            "endTime": 1791818379000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "2a3af4d4-6b0a-18e8-830e-07bc1e398f10",
+            "startTime": 1791598560000,
+            "endTime": 1791604563000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "92b1d3f2-8ede-0d7a-c3ba-ea9e13deef86",
+            "startTime": 1791596340000,
+            "endTime": 1791602302000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "451abd81-f1d6-9ed6-17f5-e837d70820fe",
+            "startTime": 1791512040000,
+            "endTime": 1791513849000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "58d5563d-ab2c-d31e-e315-128862c33a4f",
+            "startTime": 1791418560000,
+            "endTime": 1791420225000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "65dc9f50-3f63-af83-bd05-61e6211c70cf",
+            "startTime": 1791297420000,
+            "endTime": 1791302947000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "26bb7dbd-2d1c-9af0-153e-7c2a26a2c0bd",
+            "startTime": 1791211620000,
+            "endTime": 1791216456000,
+            "totalCounts": 1404,
+            "totalRounds": 13,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 13,
+                    "counts": 1404
+                }
+            ]
+        },
+        {
+            "id": "dd2e1609-6e36-aab0-d1bc-52d9230d977e",
+            "startTime": 1791157200000,
+            "endTime": 1791161625000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "5e8766ed-88da-f401-6b40-13ef254b0c4e",
+            "startTime": 1791072060000,
+            "endTime": 1791072267000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "def88334-e647-cb8f-74e6-9a5d0dd27a65",
+            "startTime": 1790990040000,
+            "endTime": 1790990289000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "fc132d0d-113d-b17d-30cb-c97d0fef7928",
+            "startTime": 1790949300000,
+            "endTime": 1790954526000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "19f9919c-895f-d7b3-26b9-4c7f9118bb16",
+            "startTime": 1790902680000,
+            "endTime": 1790904191000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "7961fd92-5d39-d0a8-9a2e-f80f58ee8571",
+            "startTime": 1790814300000,
+            "endTime": 1790815938000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "b12aa1f6-d42f-ddbb-7a86-f7a243c71b9a",
+            "startTime": 1790690400000,
+            "endTime": 1790692114000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "06ec41ad-ea05-7543-8b0d-590bb0a844e5",
+            "startTime": 1790643780000,
+            "endTime": 1790644444000,
+            "totalCounts": 249,
+            "totalRounds": 2,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "80b0c08b-c770-2420-8aa4-248c8857f9a4",
+            "startTime": 1790554440000,
+            "endTime": 1790556515000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "bb2313f5-5b06-258e-7e26-f36a8483f8b8",
+            "startTime": 1790522460000,
+            "endTime": 1790524076000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "f47aebdd-597a-1ecf-fcf0-0fecb91ee9e5",
+            "startTime": 1790212440000,
+            "endTime": 1790212615000,
+            "totalCounts": 54,
+            "totalRounds": 2,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 2,
+                    "counts": 54
+                }
+            ]
+        },
+        {
+            "id": "d726c86b-9c3a-23cd-e67a-9b75fc394724",
+            "startTime": 1790123760000,
+            "endTime": 1790125592000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "a2c68e45-ca04-c79f-6f15-b6ad2db3997f",
+            "startTime": 1789950180000,
+            "endTime": 1789951432000,
+            "totalCounts": 444,
+            "totalRounds": 4,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "8c74fc1e-27e9-e06f-59b4-4e92effddeea",
+            "startTime": 1789914060000,
+            "endTime": 1789915885000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "973f7986-26b1-cffc-070d-710920859634",
+            "startTime": 1789912500000,
+            "endTime": 1789914093000,
+            "totalCounts": 658,
+            "totalRounds": 6,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "dfb85c0d-d37e-e915-31de-c4f4df2a8b79",
+            "startTime": 1789777260000,
+            "endTime": 1789778774000,
+            "totalCounts": 548,
+            "totalRounds": 5,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "d58dcdb4-6b44-6806-8b5a-b3ee4265bb31",
+            "startTime": 1789692480000,
+            "endTime": 1789692719000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "2179b37d-806c-10b5-e0cf-ab4ceaefc4d2",
+            "startTime": 1789567920000,
+            "endTime": 1789568142000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "b9a6442e-9e7d-6b37-7936-d536243d3570",
+            "startTime": 1789481940000,
+            "endTime": 1789483491000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "831d03bf-9b2b-d6c0-816b-ee06f92e2339",
+            "startTime": 1789221900000,
+            "endTime": 1789222256000,
+            "totalCounts": 136,
+            "totalRounds": 1,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "81f98b52-1905-d591-c5b2-e75a0acd8be1",
+            "startTime": 1789172760000,
+            "endTime": 1789172958000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "e040015c-e064-a114-85f1-115bb2fff17b",
+            "startTime": 1789135320000,
+            "endTime": 1789135597000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "3d9a8079-abd0-d7fb-1292-618550e40d54",
+            "startTime": 1789054020000,
+            "endTime": 1789055190000,
+            "totalCounts": 432,
+            "totalRounds": 4,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 2,
+                    "counts": 216
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "77bd891f-f7b1-03df-2323-1e1ee2015522",
+            "startTime": 1788920400000,
+            "endTime": 1788920970000,
+            "totalCounts": 239,
+            "totalRounds": 2,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "6e7836a4-b4d1-9ec1-2955-d6f03945336b",
+            "startTime": 1788877560000,
+            "endTime": 1788882861000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "70c1dca1-756b-7289-8dd6-3cb95685d624",
+            "startTime": 1788746160000,
+            "endTime": 1788747893000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "c9d22950-eb25-f8a1-fc2e-6a591ce3bc0c",
+            "startTime": 1788738840000,
+            "endTime": 1788741074000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "d97e967b-6c18-d982-d1dc-ec53212a8d9b",
+            "startTime": 1788651960000,
+            "endTime": 1788653613000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "0eba0ea8-4770-a087-16e6-fec353b97377",
+            "startTime": 1788615540000,
+            "endTime": 1788615770000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "9bb183e1-1570-266b-42b3-8755cd37880e",
+            "startTime": 1788532020000,
+            "endTime": 1788533003000,
+            "totalCounts": 325,
+            "totalRounds": 3,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "ea59679a-ed3a-32a8-6af2-57488d959c31",
+            "startTime": 1788402300000,
+            "endTime": 1788403440000,
+            "totalCounts": 432,
+            "totalRounds": 4,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "4e14d571-a0f0-96da-4fde-bbeceea7bb64",
+            "startTime": 1788307380000,
+            "endTime": 1788308432000,
+            "totalCounts": 432,
+            "totalRounds": 4,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 2,
+                    "counts": 216
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "401d68fb-fe97-7c56-04a6-5651cdbde747",
+            "startTime": 1788227880000,
+            "endTime": 1788228086000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "d5a9422a-8bc0-8311-7eb8-6c57a81100a1",
+            "startTime": 1788015600000,
+            "endTime": 1788016586000,
+            "totalCounts": 324,
+            "totalRounds": 3,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 1,
+                    "counts": 108
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "d644de2f-0dec-6823-fb5c-9d5658f92dea",
+            "startTime": 1787877840000,
+            "endTime": 1787879312000,
+            "totalCounts": 540,
+            "totalRounds": 5,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 1,
+                    "counts": 108
+                }
+            ]
+        },
+        {
+            "id": "99498ac4-482c-c78e-f88e-de10aba8b9b3",
+            "startTime": 1787665200000,
+            "endTime": 1787665639000,
+            "totalCounts": 132,
+            "totalRounds": 1,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "fc2325a9-f8fd-d208-5434-8156f637a468",
+            "startTime": 1787529540000,
+            "endTime": 1787531187000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "80b5244a-4767-e1fa-7982-3eb21579da0a",
+            "startTime": 1787444760000,
+            "endTime": 1787446468000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "0aaaaf81-9638-92a7-6646-5d2824d4589c",
+            "startTime": 1787411940000,
+            "endTime": 1787412344000,
+            "totalCounts": 124,
+            "totalRounds": 1,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "98b81c66-e10c-167d-c8b6-eaffb74b589b",
+            "startTime": 1787278200000,
+            "endTime": 1787279849000,
+            "totalCounts": 540,
+            "totalRounds": 5,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 1,
+                    "counts": 108
+                }
+            ]
+        },
+        {
+            "id": "8352bc85-e456-559c-b70a-f5f2d5d5891f",
+            "startTime": 1787233140000,
+            "endTime": 1787234602000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "95850e21-afbc-9ca9-d38f-8c45041dcd94",
+            "startTime": 1787152680000,
+            "endTime": 1787152943000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "738e0b77-d5f8-60c3-606a-0deb1adbce5d",
+            "startTime": 1787009460000,
+            "endTime": 1787010143000,
+            "totalCounts": 256,
+            "totalRounds": 2,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "e5d9fe81-80c2-b5f1-eeb8-9ff1bf8e51aa",
+            "startTime": 1786979580000,
+            "endTime": 1786981677000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "a661f62c-bd65-680c-3b11-85d9348922d7",
+            "startTime": 1786887960000,
+            "endTime": 1786889027000,
+            "totalCounts": 339,
+            "totalRounds": 3,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "32c32444-a48c-1d5c-a1fe-b6249df2025f",
+            "startTime": 1786800840000,
+            "endTime": 1786804292000,
+            "totalCounts": 1080,
+            "totalRounds": 10,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 10,
+                    "counts": 1080
+                }
+            ]
+        },
+        {
+            "id": "03312ead-2229-30ae-9158-d4a89f03bc5a",
+            "startTime": 1786752480000,
+            "endTime": 1786754489000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "fa6672cd-4fc9-e918-3302-0ccd8c90473e",
+            "startTime": 1786715940000,
+            "endTime": 1786721972000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "491961a1-843b-aee9-b578-909c4a7591f2",
+            "startTime": 1786673580000,
+            "endTime": 1786675614000,
+            "totalCounts": 661,
+            "totalRounds": 6,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "f21201e4-eaa3-556c-35b7-e44863087e52",
+            "startTime": 1786541640000,
+            "endTime": 1786541828000,
+            "totalCounts": 54,
+            "totalRounds": 2,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 2,
+                    "counts": 54
+                }
+            ]
+        },
+        {
+            "id": "823d11ed-a1b5-01d6-d1f9-bdfe9a762d54",
+            "startTime": 1786458900000,
+            "endTime": 1786460628000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "7ddfcbc9-f330-8ce5-00eb-4e1128b88073",
+            "startTime": 1786326240000,
+            "endTime": 1786330926000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "bd6a996d-e6cd-10f1-0300-3005b688b661",
+            "startTime": 1786242180000,
+            "endTime": 1786248062000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "c0301b21-5315-8ce4-0072-1f8454d1ac6b",
+            "startTime": 1786241760000,
+            "endTime": 1786243287000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "dab07929-4670-9312-c172-b2986d94dd6d",
+            "startTime": 1786146900000,
+            "endTime": 1786147764000,
+            "totalCounts": 324,
+            "totalRounds": 3,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 3,
+                    "counts": 324
+                }
+            ]
+        },
+        {
+            "id": "e25f4b1c-6d80-de7c-f4c7-3f2bc8ff1c38",
+            "startTime": 1785890700000,
+            "endTime": 1785892776000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "23797d45-c0ae-d9c5-9d6b-023f736b96a0",
+            "startTime": 1785769500000,
+            "endTime": 1785771542000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "4c3ac6fc-4820-8231-57fa-49e56a34b371",
+            "startTime": 1785722460000,
+            "endTime": 1785723787000,
+            "totalCounts": 548,
+            "totalRounds": 5,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "133e6153-2962-59c8-a4a9-15d02ad64ce9",
+            "startTime": 1785679860000,
+            "endTime": 1785681617000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "173910e3-3e7c-6567-3141-97758c3ba859",
+            "startTime": 1785595440000,
+            "endTime": 1785599904000,
+            "totalCounts": 1620,
+            "totalRounds": 15,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 15,
+                    "counts": 1620
+                }
+            ]
+        },
+        {
+            "id": "33bf9157-91d2-77f2-cf32-1d634223b8aa",
+            "startTime": 1785545460000,
+            "endTime": 1785545663000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "45619fc0-17b4-834c-3749-5c5ed93ff716",
+            "startTime": 1785509580000,
+            "endTime": 1785511671000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "470b4fad-7f86-7d5f-0fe3-21ecc08a58d7",
+            "startTime": 1785506160000,
+            "endTime": 1785506366000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "05955fb9-f7d1-7ebd-df75-c883d07884b7",
+            "startTime": 1785420660000,
+            "endTime": 1785425162000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "7d652135-9651-32d6-f7e1-47fd79281c19",
+            "startTime": 1785371520000,
+            "endTime": 1785377333000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "f1058667-1be0-3df0-ae9c-78bdf8cd9ec3",
+            "startTime": 1785246300000,
+            "endTime": 1785246839000,
+            "totalCounts": 225,
+            "totalRounds": 2,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "eb7fe26b-91c3-098c-3b8a-27ba202ab6fa",
+            "startTime": 1785245700000,
+            "endTime": 1785245878000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "f18bde0e-8641-7b60-4ce3-b0cc1202952f",
+            "startTime": 1785031380000,
+            "endTime": 1785035433000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "a64f7613-b464-2ea4-696c-63d6f5ead065",
+            "startTime": 1784945460000,
+            "endTime": 1784947093000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "f57d1709-4752-9194-75ef-d233ff125eb4",
+            "startTime": 1784943840000,
+            "endTime": 1784944074000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "3a0ea6e1-5ec6-9be3-ecd7-570b6ca06496",
+            "startTime": 1784854860000,
+            "endTime": 1784859173000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "114340ff-813f-b5cd-d85b-bb6bbd37929d",
+            "startTime": 1784814780000,
+            "endTime": 1784820372000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "9fa40dd6-f3b1-7af0-1be7-f3cf4b80b828",
+            "startTime": 1784686740000,
+            "endTime": 1784688806000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "0dea6e4e-64b9-cb1c-ec03-2e6b25795c18",
+            "startTime": 1784595660000,
+            "endTime": 1784596401000,
+            "totalCounts": 216,
+            "totalRounds": 2,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "bb93c8eb-506f-68ac-e232-8994b647e8a8",
+            "startTime": 1784554380000,
+            "endTime": 1784555051000,
+            "totalCounts": 241,
+            "totalRounds": 2,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "5b4c0d73-6150-2dee-3518-5376c2410ad1",
+            "startTime": 1784159520000,
+            "endTime": 1784160785000,
+            "totalCounts": 432,
+            "totalRounds": 4,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 4,
+                    "counts": 432
+                }
+            ]
+        },
+        {
+            "id": "47a164e4-1407-ab33-00bc-22cb1be4a5db",
+            "startTime": 1784159340000,
+            "endTime": 1784162636000,
+            "totalCounts": 1188,
+            "totalRounds": 11,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 11,
+                    "counts": 1188
+                }
+            ]
+        },
+        {
+            "id": "316a2a12-7243-d47c-eb64-c5c48aa1a59c",
+            "startTime": 1784122500000,
+            "endTime": 1784124164000,
+            "totalCounts": 678,
+            "totalRounds": 6,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "5cebe213-56cd-42d2-9b09-ab55e6077d79",
+            "startTime": 1784036040000,
+            "endTime": 1784037105000,
+            "totalCounts": 336,
+            "totalRounds": 3,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "08ec379a-6025-33dc-0a68-013d679f2d9e",
+            "startTime": 1783987800000,
+            "endTime": 1783993006000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "f24d04fd-a24c-8407-ce3f-a028ea9d18b2",
+            "startTime": 1783909020000,
+            "endTime": 1783910738000,
+            "totalCounts": 540,
+            "totalRounds": 5,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 3,
+                    "counts": 324
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "40449aa0-ca30-4218-62f2-a21bc6bf4fa2",
+            "startTime": 1783816560000,
+            "endTime": 1783821407000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "b12e1de2-d2a0-169d-4da6-0990bd0d8cfe",
+            "startTime": 1783733340000,
+            "endTime": 1783738944000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "830ae19e-143a-5180-9880-e88bc841721e",
+            "startTime": 1783732080000,
+            "endTime": 1783733810000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        },
+        {
+            "id": "faf20ac0-2923-22d3-5364-e64d8b6bfeae",
+            "startTime": 1783644960000,
+            "endTime": 1783646797000,
+            "totalCounts": 650,
+            "totalRounds": 6,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 108,
+            "mantras": []
+        },
+        {
+            "id": "f8dca309-b5b3-9023-fd09-e37c7f9c1321",
+            "startTime": 1783554360000,
+            "endTime": 1783554548000,
+            "totalCounts": 81,
+            "totalRounds": 3,
+            "goalId": "goal-wrist",
+            "goalName": "Travel mala",
+            "roundSize": 27,
+            "mantras": [
+                {
+                    "name": "Sri Ram Jai Ram",
+                    "rounds": 3,
+                    "counts": 81
+                }
+            ]
+        },
+        {
+            "id": "c61c96db-d8d4-250d-89df-5e79bf7b6c6c",
+            "startTime": 1783472160000,
+            "endTime": 1783477475000,
+            "totalCounts": 1728,
+            "totalRounds": 16,
+            "goalId": "goal-eve",
+            "goalName": "Evening Kirtan",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Hare Krishna",
+                    "rounds": 16,
+                    "counts": 1728
+                }
+            ]
+        },
+        {
+            "id": "2f8c6c08-3f57-83ea-707c-5f3d32fe1f36",
+            "startTime": 1783388880000,
+            "endTime": 1783390927000,
+            "totalCounts": 648,
+            "totalRounds": 6,
+            "goalId": "goal-morning",
+            "goalName": "Morning Japa",
+            "roundSize": 108,
+            "mantras": [
+                {
+                    "name": "Om Namah Shivaya",
+                    "rounds": 4,
+                    "counts": 432
+                },
+                {
+                    "name": "Gayatri Mantra",
+                    "rounds": 2,
+                    "counts": 216
+                }
+            ]
+        }
+    ]
+}

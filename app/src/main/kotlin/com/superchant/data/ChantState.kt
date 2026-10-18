@@ -25,8 +25,8 @@ data class ChantState(
     val isActive: Boolean = false,
     val isPaused: Boolean = false,
     val sessionStartTime: Long = 0L,
-    /** Beads per round for this session, fixed when it starts (see [RoundSize]). */
-    val roundSize: Int = RoundSize.DEFAULT,
+    /** Whether on-screen taps count. Volume buttons count either way (when the service is enabled). */
+    val touchCounting: Boolean = false,
     // Goal-related state
     val activeGoal: Goal? = null,
     val currentMantraIndex: Int = 0,
@@ -36,10 +36,10 @@ data class ChantState(
     val lastUpdatedAt: Long = 0L
 ) {
     val progress: Float
-        get() = currentRoundCount.toFloat() / roundSize
+        get() = currentRoundCount.toFloat() / ROUND_SIZE
 
     val currentRoundCount: Int
-        get() = count % roundSize
+        get() = count % ROUND_SIZE
 
     // Get current mantra from goal, if any
     val currentMantra: MantraGoal?
@@ -68,7 +68,6 @@ data class ChantState(
         totalRounds = rounds,
         goalId = activeGoal?.id,
         goalName = activeGoal?.name,
-        roundSize = roundSize,
         mantras = mantraTallies()
     )
 
@@ -82,7 +81,7 @@ data class ChantState(
                 else -> 0
             }
             val partial = if (index == currentMantraIndex) currentRoundCount else 0
-            val counts = rounds * roundSize + partial
+            val counts = rounds * ROUND_SIZE + partial
             if (counts > 0) MantraTally(mantra.name, rounds, counts) else null
         }
     }
@@ -102,40 +101,20 @@ data class ChantState(
     companion object {
         const val STALE_AFTER_MS = 3 * 60 * 60 * 1000L
 
-        fun start(goal: Goal?, now: Long, roundSize: Int = RoundSize.DEFAULT) = ChantState(
+        /** Beads per round: a traditional mala. */
+        const val ROUND_SIZE = 108
+
+        /** A milestone pulse every 27 beads, the marker beads that quarter a 108 mala. */
+        const val MILESTONE_INTERVAL = 27
+
+        fun start(goal: Goal?, now: Long, touchCounting: Boolean = false) = ChantState(
             isActive = true,
             sessionStartTime = now,
-            roundSize = RoundSize.sanitize(roundSize),
+            touchCounting = touchCounting,
             activeGoal = goal,
             sessionId = newId(),
             lastUpdatedAt = now
         )
-    }
-}
-
-/** Beads per round. Traditional malas have 108 beads; wrist and travel malas often have 54 or 27. */
-object RoundSize {
-    const val DEFAULT = 108
-    const val MIN = 1
-    const val MAX = 1008
-    val PRESETS = listOf(27, 54, 108)
-
-    fun isValid(size: Int): Boolean = size in MIN..MAX
-
-    /** Out-of-range values (e.g. from an edited backup) fall back to the default. */
-    fun sanitize(size: Int?): Int = size?.takeIf(::isValid) ?: DEFAULT
-
-    /** The size a session uses: the goal's own size if it has a valid one, else the app setting. */
-    fun forSession(goal: Goal?, appDefault: Int): Int = sanitize(goal?.roundSize?.takeIf(::isValid) ?: appDefault)
-
-    /**
-     * Counts between milestone pulses within a round, or 0 for none: every 27 beads where the round is
-     * a multiple of 27 (the marker beads on a 108 or 54 mala), else quarters of rounds divisible by 4.
-     */
-    fun milestoneInterval(size: Int): Int = when {
-        size > 27 && size % 27 == 0 -> 27
-        size >= 16 && size % 4 == 0 -> size / 4
-        else -> 0
     }
 }
 
@@ -178,9 +157,7 @@ data class Goal(
     val id: String = newId(),
     val name: String,
     val mantras: List<MantraGoal>,
-    val createdAt: Long = System.currentTimeMillis(),
-    /** Beads per round for this goal; null follows the app setting. */
-    val roundSize: Int? = null
+    val createdAt: Long = System.currentTimeMillis()
 ) {
     val totalRounds: Int
         get() = mantras.sumOf { it.targetRounds }
@@ -208,7 +185,6 @@ data class SessionRecord(
     @Serializable(with = LenientIdSerializer::class)
     val goalId: String? = null,
     val goalName: String? = null,
-    val roundSize: Int = RoundSize.DEFAULT,
     /** Per-mantra breakdown for goal sessions; empty for free sessions and older records. */
     val mantras: List<MantraTally> = emptyList()
 ) {

@@ -17,7 +17,7 @@ import androidx.core.net.toUri
  * - Captures KEYCODE_VOLUME_UP and KEYCODE_VOLUME_DOWN
  * - Consumes a press (DOWN, repeats and UP) only when ChantingService counted it
  * - Passes keys through when no session is running, it is paused, its goal is complete, or the
- *   session counts on-screen only ([ChantingService.acceptsVolumeKeys])
+ *   user hasn't agreed to the accessibility disclosure
  */
 class VolumeKeyAccessibilityService : AccessibilityService() {
 

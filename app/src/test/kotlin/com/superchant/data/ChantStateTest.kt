@@ -86,4 +86,16 @@ class ChantStateTest {
         assertEquals(state, restored)
         assertEquals(1, restored.currentMantraIndex)
     }
+
+    @Test
+    fun sessionPersistedByAnOlderVersionStillLoads() {
+        val json = Json { ignoreUnknownKeys = true }
+        val stored = json.decodeFromString(
+            ChantState.serializer(),
+            """{"count":30,"rounds":1,"isActive":true,"sessionStartTime":5,"roundSize":27,"sessionId":"s","lastUpdatedAt":9}"""
+        )
+        assertEquals(30, stored.currentRoundCount)
+        assertFalse(stored.touchCounting)
+        assertTrue(ChantState.start(null, now = 0, touchCounting = true).touchCounting)
+    }
 }

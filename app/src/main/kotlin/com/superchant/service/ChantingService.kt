@@ -28,6 +28,7 @@ import com.superchant.data.Goal
 import com.superchant.data.InputMode
 import com.superchant.data.PreferencesRepository
 import com.superchant.data.RestoreAction
+import com.superchant.data.RoundSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -60,6 +61,8 @@ class ChantingService : Service() {
     private lateinit var vibrator: Vibrator
     private lateinit var preferencesRepository: PreferencesRepository
     private var ringtone: Ringtone? = null
+    // Created on first use, so sessions without the click never open an audio track
+    private var beadClick: BeadClick? = null
 
     // Set from the start intent (or the setting on restore), then kept in sync with the setting
     // so mid-session changes apply
@@ -85,9 +88,12 @@ class ChantingService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         InputMode.fromName(intent?.getStringExtra(EXTRA_INPUT_MODE))?.let { inputMode = it }
         when (intent?.action) {
-            ACTION_START -> startSession(intent.getStringExtra(EXTRA_GOAL)?.let { goalJson ->
-                runCatching { Json.decodeFromString(Goal.serializer(), goalJson) }.getOrNull()
-            })
+            ACTION_START -> startSession(
+                goal = intent.getStringExtra(EXTRA_GOAL)?.let { goalJson ->
+                    runCatching { Json.decodeFromString(Goal.serializer(), goalJson) }.getOrNull()
+                },
+                roundSize = intent.getIntExtra(EXTRA_ROUND_SIZE, RoundSize.DEFAULT)
+            )
             ACTION_STOP -> stopSession()
             ACTION_PAUSE -> setPaused(true)
             ACTION_RESUME -> setPaused(false)
@@ -103,6 +109,7 @@ class ChantingService : Service() {
         serviceScope.cancel()
         ringtone?.stop()
         ringtone = null
+        beadClick?.release()
         // Normally stopSession() already reset the state. If the service is destroyed mid-session,
         // the persisted copy stays and is restored on the next app launch.
         if (_instance === this) {
@@ -121,15 +128,22 @@ class ChantingService : Service() {
         if (newState.isActive) preferencesRepository.write { saveActiveSession(newState) }
     }
 
-    private fun startSession(goal: Goal?) {
+    private fun startSession(goal: Goal?, roundSize: Int) {
         val now = System.currentTimeMillis()
         // Starting over a running session (e.g. a goal from the Goals screen) saves it first.
         val previous = state
         if (previous.isActive && previous.count > 0) {
             preferencesRepository.write { addSessionRecord(previous.toRecord(now)) }
         }
+        // A session persisted by a dead process and not restored yet (e.g. the tile started a new one
+        // first) is saved to history instead of being overwritten. Queued before the new state's write.
+        val previousId = previous.sessionId.takeIf { previous.isActive }
+        preferencesRepository.write {
+            loadActiveSession()?.takeIf { it.isActive && it.count > 0 && it.sessionId != previousId }
+                ?.let { addSessionRecord(it.toRecord(maxOf(it.lastUpdatedAt, it.sessionStartTime))) }
+        }
 
-        setState(ChantState.start(goal, now))
+        setState(ChantState.start(goal, now, roundSize))
         _instance = this
         if (!enterForeground()) abandonSession()
     }
@@ -243,6 +257,8 @@ class ChantingService : Service() {
     private fun giveFeedback(feedback: CountFeedback, rounds: Int) {
         // Feedback waits for the stored settings rather than guessing defaults.
         val settings = preferencesRepository.vibrationSettings.value
+        val feel = preferencesRepository.countingFeel.value
+        if (feel?.beadClick == true) (beadClick ?: BeadClick().also { beadClick = it }).play()
         when (feedback) {
             CountFeedback.GOAL -> {
                 playSound(RingtoneManager.TYPE_RINGTONE)
@@ -253,6 +269,14 @@ class ChantingService : Service() {
                 if (settings?.roundEnabled == true) vibrateRoundComplete(1, settings.roundIntensity)
             }
             CountFeedback.ROUND -> if (settings?.roundEnabled == true) vibrateRoundComplete(rounds, settings.roundIntensity)
+            CountFeedback.MILESTONE -> if (settings?.countEnabled == true) {
+                if (feel?.milestonePulse == true) {
+                    // Longer and fuller than a count tick, gentler than a round
+                    vibrator.vibrate(VibrationEffect.createOneShot(90, (settings.countIntensity * 3 / 2).coerceIn(100, 255)))
+                } else {
+                    vibrator.vibrate(VibrationEffect.createOneShot(30, settings.countIntensity))
+                }
+            }
             CountFeedback.COUNT -> if (settings?.countEnabled == true) {
                 vibrator.vibrate(VibrationEffect.createOneShot(30, settings.countIntensity))
             }
@@ -343,7 +367,7 @@ class ChantingService : Service() {
         val title = when {
             state.isPaused -> getString(R.string.notification_paused)
             state.isGoalComplete -> getString(R.string.notification_goal_complete)
-            else -> "${state.currentRoundCount} / ${ChantState.COUNTS_PER_ROUND}"
+            else -> "${state.currentRoundCount} / ${state.roundSize}"
         }
 
         val goal = state.activeGoal
@@ -359,7 +383,7 @@ class ChantingService : Service() {
 
         builder.setContentTitle(title)
         builder.setContentText(text)
-        builder.setProgress(ChantState.COUNTS_PER_ROUND, state.currentRoundCount, false)
+        builder.setProgress(state.roundSize, state.currentRoundCount, false)
 
         if (actionsPaused != state.isPaused) {
             actionsPaused = state.isPaused
@@ -418,6 +442,7 @@ class ChantingService : Service() {
         private const val ACTION_RESTORE = "com.superchant.action.RESTORE"
         private const val EXTRA_GOAL = "com.superchant.extra.GOAL"
         private const val EXTRA_INPUT_MODE = "com.superchant.extra.INPUT_MODE"
+        private const val EXTRA_ROUND_SIZE = "com.superchant.extra.ROUND_SIZE"
 
         @Volatile
         private var _instance: ChantingService? = null
@@ -451,23 +476,30 @@ class ChantingService : Service() {
             _instance?.undoCount()
         }
 
+        /** Pauses or resumes the running session, same as the notification actions. Call on the main thread. */
+        fun setPaused(paused: Boolean) {
+            _instance?.setPaused(paused)
+        }
+
         private fun intent(context: Context, action: String) =
             Intent(context, ChantingService::class.java).setAction(action)
 
-        private fun startIntent(context: Context, inputMode: InputMode) =
-            intent(context, ACTION_START).putExtra(EXTRA_INPUT_MODE, inputMode.name)
+        private fun startIntent(context: Context, inputMode: InputMode, roundSize: Int) =
+            intent(context, ACTION_START)
+                .putExtra(EXTRA_INPUT_MODE, inputMode.name)
+                .putExtra(EXTRA_ROUND_SIZE, roundSize)
 
-        fun start(context: Context, inputMode: InputMode) {
-            context.startForegroundService(startIntent(context, inputMode))
+        fun start(context: Context, inputMode: InputMode, roundSize: Int) {
+            context.startForegroundService(startIntent(context, inputMode, roundSize))
         }
 
         fun stop(context: Context) {
             context.startService(intent(context, ACTION_STOP))
         }
 
-        fun startWithGoal(context: Context, goal: Goal, inputMode: InputMode) {
+        fun startWithGoal(context: Context, goal: Goal, inputMode: InputMode, roundSize: Int) {
             context.startForegroundService(
-                startIntent(context, inputMode).putExtra(EXTRA_GOAL, Json.encodeToString(Goal.serializer(), goal))
+                startIntent(context, inputMode, roundSize).putExtra(EXTRA_GOAL, Json.encodeToString(Goal.serializer(), goal))
             )
         }
 

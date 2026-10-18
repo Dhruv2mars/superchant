@@ -17,13 +17,28 @@ The only copy that can leave your device is Android's own device backup, describ
 
 The following data is stored on your device:
 
-- **Chanting session history** - Your completed sessions (counts, rounds, duration, goal name)
+- **Chanting session history** - Your completed sessions (counts, rounds, round size, duration, goal
+  name and how many rounds of each of its mantras)
 - **Goals** - Custom goals you create
-- **Preferences** - Theme, vibration and counting-mode settings
+- **Preferences** - Theme, vibration, counting, daily target and reminder settings, and whether you
+  agreed to the accessibility disclosure
 - **Active session** - The progress of a session that is running, so it can resume if Android closes
   the app. It is deleted when you stop the session.
 
 This data is stored using Android's DataStore.
+
+## Export and Import
+
+You can export your history, goals and settings to a file. You choose where the file is saved with
+Android's file picker (for example your phone's storage or a cloud drive app you use); SuperChant
+itself never uploads it. Importing reads a file you pick and adds its contents to the app.
+
+## Daily Reminder
+
+If you turn on the optional daily reminder, Android's alarm service wakes SuperChant once a day at the
+time you chose to show a local notification. It is computed on your device from your local history;
+nothing is sent anywhere. SuperChant asks to start at boot (`RECEIVE_BOOT_COMPLETED`) only to set
+this alarm again after your phone restarts.
 
 ## Device Backup
 
@@ -40,6 +55,9 @@ You can turn off backup for your device (or for SuperChant) in Android settings 
 ## Accessibility Service
 
 SuperChant uses Android's Accessibility Service **solely** to detect volume button presses during active chanting sessions. This allows you to count without looking at your screen.
+
+Before you're sent to Android's accessibility settings, SuperChant shows this disclosure in the app and
+asks you to agree.
 
 **What the Accessibility Service does:**
 - Detects when volume up/down buttons are pressed

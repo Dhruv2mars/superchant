@@ -34,6 +34,22 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 // Separate small store so the per-count session snapshot doesn't rewrite history and goals.
 private val Context.sessionDataStore: DataStore<Preferences> by preferencesDataStore(name = "active_session")
 
+/** Optional extras around each count. */
+data class CountingFeel(
+    /** A distinct pulse at milestone beads (see [RoundSize.milestoneInterval]). */
+    val milestonePulse: Boolean = true,
+    /** A soft synthesized bead click on each count; plays through the system sounds volume. */
+    val beadClick: Boolean = false,
+    /** Ignore on-screen taps while the proximity sensor is covered, e.g. in a pocket. */
+    val pocketGuard: Boolean = true
+)
+
+/** The optional daily reminder; [minuteOfDay] is local time (e.g. 360 = 6:00). */
+data class ReminderSettings(
+    val enabled: Boolean = false,
+    val minuteOfDay: Int = 6 * 60
+)
+
 data class VibrationSettings(
     val roundEnabled: Boolean = true,
     val countEnabled: Boolean = true,
@@ -60,6 +76,14 @@ class PreferencesRepository private constructor(private val context: Context) {
         val SAVED_GOALS = stringPreferencesKey("saved_goals")
         val ACTIVE_SESSION = stringPreferencesKey("active_session")
         val INPUT_MODE = stringPreferencesKey("input_mode")
+        val ROUND_SIZE = intPreferencesKey("round_size")
+        val MILESTONE_PULSE = booleanPreferencesKey("milestone_pulse")
+        val BEAD_CLICK = booleanPreferencesKey("bead_click")
+        val POCKET_GUARD = booleanPreferencesKey("pocket_guard")
+        val ACCESSIBILITY_CONSENT = booleanPreferencesKey("accessibility_consent")
+        val DAILY_TARGET = intPreferencesKey("daily_target")
+        val REMINDER_ENABLED = booleanPreferencesKey("reminder_enabled")
+        val REMINDER_MINUTE = intPreferencesKey("reminder_minute")
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -154,6 +178,58 @@ class PreferencesRepository private constructor(private val context: Context) {
         }
     }
 
+    val countingFeel: StateFlow<CountingFeel?> = prefs.map { preferences ->
+        val defaults = CountingFeel()
+        CountingFeel(
+            milestonePulse = preferences[PreferencesKeys.MILESTONE_PULSE] ?: defaults.milestonePulse,
+            beadClick = preferences[PreferencesKeys.BEAD_CLICK] ?: defaults.beadClick,
+            pocketGuard = preferences[PreferencesKeys.POCKET_GUARD] ?: defaults.pocketGuard
+        )
+    }.share()
+
+    suspend fun setMilestonePulse(enabled: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.MILESTONE_PULSE] = enabled }
+    }
+
+    suspend fun setBeadClick(enabled: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.BEAD_CLICK] = enabled }
+    }
+
+    suspend fun setPocketGuard(enabled: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.POCKET_GUARD] = enabled }
+    }
+
+    /** Rounds per day to aim for; 0 means no target. */
+    val dailyTarget: StateFlow<Int?> = prefs.map {
+        (it[PreferencesKeys.DAILY_TARGET] ?: 0).coerceIn(0, PracticeStats.DAILY_TARGET_MAX)
+    }.share()
+
+    suspend fun setDailyTarget(rounds: Int) {
+        context.dataStore.edit { it[PreferencesKeys.DAILY_TARGET] = rounds.coerceIn(0, PracticeStats.DAILY_TARGET_MAX) }
+    }
+
+    val reminder: StateFlow<ReminderSettings?> = prefs.map {
+        val defaults = ReminderSettings()
+        ReminderSettings(
+            enabled = it[PreferencesKeys.REMINDER_ENABLED] ?: defaults.enabled,
+            minuteOfDay = it[PreferencesKeys.REMINDER_MINUTE]?.takeIf { m -> m in 0 until 24 * 60 } ?: defaults.minuteOfDay
+        )
+    }.share()
+
+    suspend fun setReminder(settings: ReminderSettings) {
+        context.dataStore.edit {
+            it[PreferencesKeys.REMINDER_ENABLED] = settings.enabled
+            it[PreferencesKeys.REMINDER_MINUTE] = settings.minuteOfDay.coerceIn(0, 24 * 60 - 1)
+        }
+    }
+
+    /** Whether the user agreed to the accessibility service disclosure. */
+    val accessibilityConsent: StateFlow<Boolean?> = prefs.map { it[PreferencesKeys.ACCESSIBILITY_CONSENT] ?: false }.share()
+
+    suspend fun setAccessibilityConsent(agreed: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.ACCESSIBILITY_CONSENT] = agreed }
+    }
+
     /** The chosen [InputMode], or null until the user picks one (see [InputMode.default]). */
     val inputModeFlow: Flow<InputMode?> = prefs.map { preferences ->
         InputMode.fromName(preferences[PreferencesKeys.INPUT_MODE])
@@ -165,6 +241,17 @@ class PreferencesRepository private constructor(private val context: Context) {
         }
     }
     
+    /** Default beads per round for sessions without a goal-specific size. */
+    val roundSize: StateFlow<Int?> = prefs.map { preferences ->
+        RoundSize.sanitize(preferences[PreferencesKeys.ROUND_SIZE])
+    }.share()
+
+    suspend fun setRoundSize(size: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ROUND_SIZE] = RoundSize.sanitize(size)
+        }
+    }
+
     // Session history. Decoded only when the stored JSON changes, not on every preference write.
     val sessionHistory: StateFlow<List<SessionRecord>?> = prefs.map { it[PreferencesKeys.SESSION_HISTORY] }
         .distinctUntilChanged()
@@ -219,10 +306,90 @@ class PreferencesRepository private constructor(private val context: Context) {
         }
     }
 
+    /** Everything worth keeping, as a [Backup]. Settings never changed by the user are left out. */
+    suspend fun exportBackup(now: Long): Backup {
+        val p = prefs.first()
+        return Backup(
+            exportedAt = now,
+            settings = BackupSettings(
+                themeMode = when (p[PreferencesKeys.THEME_MODE]) {
+                    0 -> ThemeMode.LIGHT.name
+                    1 -> ThemeMode.DARK.name
+                    2 -> ThemeMode.SYSTEM.name
+                    else -> null
+                },
+                inputMode = p[PreferencesKeys.INPUT_MODE],
+                roundSize = p[PreferencesKeys.ROUND_SIZE],
+                dailyTarget = p[PreferencesKeys.DAILY_TARGET],
+                countVibration = p[PreferencesKeys.COUNT_VIBRATION_ENABLED],
+                countIntensity = p[PreferencesKeys.COUNT_VIBRATION_INTENSITY],
+                roundVibration = p[PreferencesKeys.VIBRATION_ENABLED],
+                roundIntensity = p[PreferencesKeys.ROUND_VIBRATION_INTENSITY],
+                milestonePulse = p[PreferencesKeys.MILESTONE_PULSE],
+                beadClick = p[PreferencesKeys.BEAD_CLICK],
+                pocketGuard = p[PreferencesKeys.POCKET_GUARD],
+                reminderEnabled = p[PreferencesKeys.REMINDER_ENABLED],
+                reminderMinuteOfDay = p[PreferencesKeys.REMINDER_MINUTE]
+            ),
+            goals = json.decodeStoredList(Goal.serializer(), p[PreferencesKeys.SAVED_GOALS]).items.withUniqueGoalIds(),
+            history = json.decodeStoredList(SessionRecord.serializer(), p[PreferencesKeys.SESSION_HISTORY]).items.withUniqueRecordIds()
+        )
+    }
+
+    /**
+     * Merges [backup] into the stored data in one transaction: sessions and goals are added, or updated
+     * when the ID matches, and the backup's settings are applied (invalid values are ignored).
+     * Nothing is deleted, so importing twice, or into a phone with newer sessions, is safe.
+     */
+    suspend fun importBackup(backup: Backup): ImportResult {
+        var result = ImportResult(0, 0, 0)
+        context.dataStore.edit { p ->
+            val history = json.decodeStoredList(SessionRecord.serializer(), p[PreferencesKeys.SESSION_HISTORY])
+            val historyIds = history.items.mapTo(HashSet()) { it.id }
+            val mergedHistory = BackupCodec.mergeHistory(history.items, backup.history)
+            p[PreferencesKeys.SESSION_HISTORY] = json.encodeStoredList(SessionRecord.serializer(), mergedHistory, history.unreadable)
+
+            val goals = json.decodeStoredList(Goal.serializer(), p[PreferencesKeys.SAVED_GOALS])
+            val goalIds = goals.items.mapTo(HashSet()) { it.id }
+            p[PreferencesKeys.SAVED_GOALS] = json.encodeStoredList(
+                Goal.serializer(), BackupCodec.mergeGoals(goals.items, backup.goals), goals.unreadable
+            )
+
+            with(backup.settings) {
+                when (themeMode) {
+                    ThemeMode.LIGHT.name -> p[PreferencesKeys.THEME_MODE] = 0
+                    ThemeMode.DARK.name -> p[PreferencesKeys.THEME_MODE] = 1
+                    ThemeMode.SYSTEM.name -> p[PreferencesKeys.THEME_MODE] = 2
+                }
+                InputMode.fromName(inputMode)?.let { p[PreferencesKeys.INPUT_MODE] = it.name }
+                roundSize?.takeIf(RoundSize::isValid)?.let { p[PreferencesKeys.ROUND_SIZE] = it }
+                dailyTarget?.takeIf { it in 0..PracticeStats.DAILY_TARGET_MAX }?.let { p[PreferencesKeys.DAILY_TARGET] = it }
+                countVibration?.let { p[PreferencesKeys.COUNT_VIBRATION_ENABLED] = it }
+                countIntensity?.takeIf { it in 1..255 }?.let { p[PreferencesKeys.COUNT_VIBRATION_INTENSITY] = it }
+                roundVibration?.let { p[PreferencesKeys.VIBRATION_ENABLED] = it }
+                roundIntensity?.takeIf { it in 1..255 }?.let { p[PreferencesKeys.ROUND_VIBRATION_INTENSITY] = it }
+                milestonePulse?.let { p[PreferencesKeys.MILESTONE_PULSE] = it }
+                beadClick?.let { p[PreferencesKeys.BEAD_CLICK] = it }
+                pocketGuard?.let { p[PreferencesKeys.POCKET_GUARD] = it }
+                reminderEnabled?.let { p[PreferencesKeys.REMINDER_ENABLED] = it }
+                reminderMinuteOfDay?.takeIf { it in 0 until 24 * 60 }?.let { p[PreferencesKeys.REMINDER_MINUTE] = it }
+            }
+
+            result = ImportResult(
+                sessionsAdded = mergedHistory.count { it.id !in historyIds },
+                goalsAdded = backup.goals.count { it.id !in goalIds },
+                goalsUpdated = backup.goals.count { it.id in goalIds }
+            )
+        }
+        return result
+    }
+
     // Active session: written on every change while a session runs, cleared when it is saved.
     suspend fun loadActiveSession(): ChantState? = try {
         context.sessionDataStore.data.first()[PreferencesKeys.ACTIVE_SESSION]
             ?.let { json.decodeFromString(ChantState.serializer(), it) }
+            // A bad size (e.g. 0) would divide by zero on every count and every launch
+            ?.let { it.copy(roundSize = RoundSize.sanitize(it.roundSize)) }
     } catch (e: Exception) {
         Log.e(TAG, "Reading the active session failed", e)
         null

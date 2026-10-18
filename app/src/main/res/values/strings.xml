@@ -10,7 +10,7 @@
     <!-- Accessibility Service -->
     <string name="accessibility_service_label">SuperChant Volume Counter</string>
     <string name="accessibility_service_summary">Allows volume buttons to count chants without changing volume</string>
-    <string name="accessibility_service_description">SuperChant uses this accessibility service to detect volume button presses during your chanting session.\n\nWhen enabled, pressing volume up or down will increment your count instead of changing the volume.\n\nThis service only activates when you start a chanting session and has no access to your screen content or other apps.</string>
+    <string name="accessibility_service_description">SuperChant uses this accessibility service only to count volume button presses while a chanting session is running.\n\nDuring a session, volume up or down adds a count instead of changing the volume. At all other times the buttons work as usual.\n\nThe service cannot see your screen, what you type, or other apps. It collects and shares nothing, and SuperChant has no internet access.</string>
     
     <!-- Accessibility Setup -->
     <string name="accessibility_setup_title">Enable Volume Counter</string>
@@ -18,6 +18,109 @@
     <string name="accessibility_setup_instructions">1. Tap \"Open Settings\" below\n2. Find \"SuperChant Volume Counter\"\n3. Toggle it ON\n4. Return to the app</string>
     <string name="open_settings">Open Settings</string>
     
+    <!-- Accessibility prominent disclosure -->
+    <string name="disclosure_title">Before you turn on volume counting</string>
+    <string name="disclosure_intro">To count with the volume buttons, even with the screen off, SuperChant uses an Android accessibility service. Please read what it does.</string>
+    <string name="disclosure_does_title">What it does</string>
+    <string name="disclosure_does_1">Detects volume up and down presses, only while a chanting session is running and not paused.</string>
+    <string name="disclosure_does_2">Turns those presses into counts instead of changing the volume. At all other times the buttons work as usual.</string>
+    <string name="disclosure_never_title">What it never does</string>
+    <string name="disclosure_never_1">Never reads your screen, what you type, or anything in other apps.</string>
+    <string name="disclosure_never_2">Never collects, stores, or shares any data. SuperChant has no internet access.</string>
+    <string name="disclosure_never_3">Never performs actions for you or changes your settings.</string>
+    <string name="disclosure_turn_off">You can turn it off at any time in Settings › Accessibility. On-screen counting works without it.</string>
+    <string name="disclosure_agree">I agree</string>
+    <string name="disclosure_decline">Not now</string>
+
+    <!-- Practice: daily target, streak, insights -->
+    <string name="settings_practice">Practice</string>
+    <string name="daily_target_title">Daily target</string>
+    <string name="daily_target_desc">Rounds to aim for each day. Days that reach it build your streak.</string>
+    <string name="daily_target_off">Off</string>
+    <string name="daily_target_decrease">Lower daily target</string>
+    <string name="daily_target_increase">Raise daily target</string>
+    <plurals name="today_rounds">
+        <item quantity="one">Today: %d round</item>
+        <item quantity="other">Today: %d rounds</item>
+    </plurals>
+    <plurals name="today_rounds_of_target">
+        <item quantity="one">Today: %1$d of %2$d round</item>
+        <item quantity="other">Today: %1$d of %2$d rounds</item>
+    </plurals>
+    <plurals name="streak_days">
+        <item quantity="one">%d-day streak</item>
+        <item quantity="other">%d-day streak</item>
+    </plurals>
+    <string name="insights_title">Your practice</string>
+    <plurals name="insights_streak_days">
+        <item quantity="one">Day streak</item>
+        <item quantity="other">Day streak</item>
+    </plurals>
+    <string name="insights_best_streak">Best streak</string>
+    <string name="insights_rounds_today">Rounds today</string>
+    <plurals name="insights_heatmap_summary">
+        <item quantity="one">Practiced %1$d of the last %2$d day</item>
+        <item quantity="other">Practiced %1$d of the last %2$d days</item>
+    </plurals>
+    <string name="insights_less">Less</string>
+    <string name="insights_more">More</string>
+    <string name="insights_mantras_title">Lifetime by mantra</string>
+    <plurals name="insights_counts">
+        <item quantity="one">%,d count</item>
+        <item quantity="other">%,d counts</item>
+    </plurals>
+    <string name="insights_show_all">Show all</string>
+    <string name="insights_show_less">Show less</string>
+
+    <!-- Daily reminder -->
+    <string name="reminder_setting_title">Daily reminder</string>
+    <string name="reminder_setting_desc">A gentle nudge at %1$s, skipped once today\'s practice is done.</string>
+    <string name="reminder_time">Reminder time</string>
+    <string name="reminder_needs_notifications">Allow notifications to get the reminder</string>
+    <string name="reminder_channel_name">Daily reminder</string>
+    <string name="reminder_channel_description">One gentle reminder a day, only if you haven\'t practiced yet</string>
+    <string name="reminder_title">Time for your practice</string>
+    <string name="reminder_text">A few quiet minutes with your mala.</string>
+    <plurals name="reminder_text_streak">
+        <item quantity="one">Keep your %d-day streak going.</item>
+        <item quantity="other">Keep your %d-day streak going.</item>
+    </plurals>
+    <plurals name="reminder_text_target">
+        <item quantity="one">%1$d of %2$d round so far today.</item>
+        <item quantity="other">%1$d of %2$d rounds so far today.</item>
+    </plurals>
+
+    <!-- Polish -->
+    <string name="session_saved">Session saved</string>
+    <plurals name="minutes_short">
+        <item quantity="one">%d min</item>
+        <item quantity="other">%d min</item>
+    </plurals>
+    <string name="goals_create_first">Create a goal</string>
+
+    <!-- Fast access -->
+    <string name="shortcut_start_short">Start counting</string>
+    <string name="shortcut_start_long">Start a chanting session</string>
+    <string name="shortcut_start_goal">Start %1$s</string>
+    <string name="tile_start">Tap to start</string>
+
+    <!-- Backup -->
+    <string name="backup_title">Your data</string>
+    <string name="backup_desc">Everything stays on this phone. Export a backup file to keep your history, goals and settings safe or move them to a new phone. Importing adds to what is here and never deletes.</string>
+    <string name="backup_export">Export</string>
+    <string name="backup_import">Import</string>
+    <plurals name="backup_exported">
+        <item quantity="one">Exported %1$d session and %2$d goals</item>
+        <item quantity="other">Exported %1$d sessions and %2$d goals</item>
+    </plurals>
+    <plurals name="backup_imported">
+        <item quantity="one">Imported %1$d new session and %2$d goals</item>
+        <item quantity="other">Imported %1$d new sessions and %2$d goals</item>
+    </plurals>
+    <string name="backup_export_failed">Couldn\'t save the backup</string>
+    <string name="backup_import_failed">Couldn\'t read that file</string>
+    <string name="backup_not_valid">That file isn\'t a SuperChant backup</string>
+
     <!-- Restricted Settings (Android 13+) -->
     <string name="restricted_settings_title">Setup Required</string>
     <string name="restricted_settings_message">Since this app was installed outside the Play Store, you may need to allow restricted settings before enabling accessibility.</string>
@@ -48,9 +151,28 @@
     <string name="input_mode_set_up">Set up</string>
     <string name="count_by_tapping">Count by tapping instead</string>
     <string name="settings_counting">Counting</string>
+    <string name="ok">OK</string>
+
+    <!-- Round size -->
+    <string name="round_size_title">Beads per round</string>
+    <string name="round_size_desc">A round completes after this many counts. Match your mala.</string>
+    <string name="round_size_default">Default (%d)</string>
+    <string name="round_size_custom">Custom</string>
+    <string name="round_size_custom_value">Custom: %d</string>
+    <string name="round_size_custom_title">Custom round size</string>
+    <string name="round_size_range">From %1$d to %2$d</string>
+    <plurals name="round_size_each_round">
+        <item quantity="one">Each round = %d count</item>
+        <item quantity="other">Each round = %d counts</item>
+    </plurals>
+    <plurals name="round_size_beads_per_round">
+        <item quantity="one">%d bead/round</item>
+        <item quantity="other">%d beads/round</item>
+    </plurals>
 
     <!-- Session -->
     <string name="status_paused">Paused</string>
+    <string name="status_paused_hint">Paused. Tap ▶ to continue.</string>
     <string name="status_tap">Tap anywhere here to count</string>
     <string name="status_volume">Press a volume button to count</string>
     <string name="status_both">Tap here or press a volume button to count</string>
@@ -72,6 +194,16 @@
     <string name="undo_hold_hint">Hold to undo</string>
     <string name="undo_description">Undo last count</string>
     <string name="undo_action">Undo</string>
+    <string name="stop_hold_hint">Hold to stop</string>
+    <string name="status_pocket_guard">Screen covered. Taps are ignored.</string>
+
+    <!-- Counting feel -->
+    <string name="pocket_guard_title">Pocket guard</string>
+    <string name="pocket_guard_desc">Ignore taps while the screen is covered, so a pocket can\'t count.</string>
+    <string name="bead_click_title">Soft bead click</string>
+    <string name="bead_click_desc">A quiet click on each count. Follows the system sounds volume and silent mode.</string>
+    <string name="milestone_pulse_title">Milestone pulse</string>
+    <string name="milestone_pulse_desc">A fuller pulse every 27 beads (each quarter of a 108 mala).</string>
 
     <!-- Goal progress -->
     <string name="goal_mantra_position">Mantra %1$d of %2$d</string>
@@ -116,4 +248,88 @@
         <item quantity="one">count</item>
         <item quantity="other">counts</item>
     </plurals>
+
+    <!-- Common -->
+    <string name="common_back">Back</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_save">Save</string>
+    <string name="common_add">Add</string>
+    <string name="theme_light">Light theme</string>
+    <string name="theme_system">System theme</string>
+    <string name="theme_dark">Dark theme</string>
+
+    <!-- Settings -->
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_vibration">Vibration</string>
+    <string name="settings_vibrate_count_title">Vibrate on each count</string>
+    <string name="settings_vibrate_count_desc">Quick haptic feedback for every button press</string>
+    <string name="settings_count_intensity">Count intensity</string>
+    <string name="settings_vibrate_round_title">Vibrate on round complete</string>
+    <string name="settings_vibrate_round_desc">Stronger vibration when you finish a round</string>
+    <string name="settings_round_intensity">Round intensity</string>
+    <string name="settings_intensity_very_light">Very Light</string>
+    <string name="settings_intensity_light">Light</string>
+    <string name="settings_intensity_medium">Medium</string>
+    <string name="settings_intensity_strong">Strong</string>
+    <string name="settings_intensity_very_strong">Very Strong</string>
+    <string name="settings_about">About</string>
+    <string name="settings_about_tagline">A distraction-free digital mala for your spiritual practice</string>
+    <string name="settings_version">Version %1$s</string>
+
+    <!-- History -->
+    <string name="history_clear">Clear history</string>
+    <string name="history_empty_title">No sessions yet</string>
+    <string name="history_empty_message">Your chanting history will appear here</string>
+    <string name="history_today">Today</string>
+    <string name="history_this_week">This Week</string>
+    <string name="history_this_month">This Month</string>
+    <string name="history_older">Older</string>
+    <string name="history_clear_title">Clear History</string>
+    <string name="history_clear_message">Are you sure you want to clear all session history? This cannot be undone.</string>
+    <string name="history_clear_confirm">Clear</string>
+    <string name="history_all_time_stats">All Time Stats</string>
+    <string name="history_stat_counts">Counts</string>
+    <string name="history_stat_rounds">Rounds</string>
+    <string name="history_stat_sessions">Sessions</string>
+    <string name="history_total_time">Total time: %1$s</string>
+    <string name="history_less_than_minute">Less than a minute</string>
+    <!-- Compact durations: hours and minutes, minutes and seconds, seconds -->
+    <string name="history_duration_hm">%1$dh %2$dm</string>
+    <string name="history_duration_ms">%1$dm %2$ds</string>
+    <string name="history_duration_s">%1$ds</string>
+
+    <!-- Goals -->
+    <string name="goals_create_goal">Create Goal</string>
+    <string name="goals_edit_goal">Edit Goal</string>
+    <string name="goals_empty_title">No goals yet</string>
+    <string name="goals_empty_message">Create a goal to track multiple mantras\nin a single session</string>
+    <string name="goals_delete_title">Delete Goal</string>
+    <string name="goals_delete_message">Are you sure you want to delete \"%1$s\"? This action cannot be undone.</string>
+    <string name="goals_options">Options</string>
+    <plurals name="goals_more_mantras">
+        <item quantity="one">+%d more</item>
+        <item quantity="other">+%d more</item>
+    </plurals>
+    <string name="goals_start_session">Start Session</string>
+    <string name="goals_name_label">Goal Name</string>
+    <string name="goals_name_placeholder">e.g., Morning Practice</string>
+    <string name="goals_mantras">Mantras</string>
+    <string name="goals_reorder_hint">Long press to drag and reorder</string>
+    <string name="goals_no_mantras">No mantras added</string>
+    <string name="goals_no_mantras_hint">Add mantras to create your goal</string>
+    <string name="goals_total">Total</string>
+    <string name="goals_discard_title">Discard changes?</string>
+    <string name="goals_discard_message">Your changes to this goal will be lost.</string>
+    <string name="goals_discard_confirm">Discard</string>
+    <string name="goals_drag_to_reorder">Drag to reorder</string>
+    <string name="goals_add_mantra">Add Mantra</string>
+    <string name="goals_edit_mantra">Edit Mantra</string>
+    <string name="goals_mantra_name_label">Mantra Name</string>
+    <string name="goals_mantra_name_placeholder">e.g., Om Namah Shivaya</string>
+    <string name="goals_target_rounds_label">Target Rounds</string>
 </resources>

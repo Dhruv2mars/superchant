@@ -35,9 +35,12 @@ All versions live in `gradle/libs.versions.toml`.
 
 ```
 app/src/main/kotlin/com/superchant/
-├── MainActivity.kt                  # NavHost: home, settings, history, goals
+├── MainActivity.kt                  # NavHost: home, settings, history, goals; handles START_COUNTING intents
+├── AppShortcuts.kt                  # Launcher shortcuts (static + per goal) and the START_COUNTING intent
 ├── data/
-│   ├── ChantState.kt                # ChantState (session, persisted while active), Goal, MantraGoal, SessionRecord; String IDs
+│   ├── ChantState.kt                # ChantState (session, persisted while active), Goal, MantraGoal, SessionRecord, RoundSize; String IDs
+│   ├── PracticeStats.kt             # Daily totals, streak, per-mantra totals, heatmap levels (pure)
+│   ├── Backup.kt                    # Export/import JSON format, lenient decode, merge rules
 │   ├── StoredList.kt                # Fail-safe JSON list decode/encode (keeps unreadable elements), ID dedupe
 │   ├── HistoryBuckets.kt            # Today / This Week / This Month / Older grouping
 │   ├── ChantCounter.kt              # Pure increment/undo rules shared by all inputs; CountDebouncer
@@ -46,9 +49,13 @@ app/src/main/kotlin/com/superchant/
 ├── service/
 │   ├── ChantingService.kt           # Foreground service; owns ChantState via a companion StateFlow
 │   ├── VolumeKeyAccessibilityService.kt  # onKeyEvent -> VolumeKeyFilter -> ChantingService.onVolumeKeyPressed
-│   └── VolumeKeyFilter.kt           # Which key events to consume (whole press, never repeats)
+│   ├── VolumeKeyFilter.kt           # Which key events to consume (whole press, never repeats)
+│   ├── BeadClick.kt                 # Synthesized bead click (static AudioTrack, no asset)
+│   └── ChantTileService.kt          # Quick Settings tile: start, or pause/resume with the live count
+├── reminder/Reminder.kt             # Daily reminder: ReminderTime (pure), inexact alarm scheduler, receivers
 └── ui/
-    ├── components/                  # Shared composables (AppTopBar, CounterDisplay, TapToCountPad, HoldToUndoButton, ...)
+    ├── components/                  # Shared composables (CounterDisplay ring, TapToCountPad, HoldButton, RoundSizePicker,
+    │                                #   AccessibilitySetupDialog incl. the prominent disclosure, Insights, ...)
     ├── screens/                     # Home, Goals, History, Settings
     └── theme/                       # Material 3 colors, typography, ThemeMode
 app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
@@ -58,21 +65,27 @@ app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
 
 1. The input mode (`InputMode`, persisted; Home and Settings) decides how to count. Starting in on-screen
    mode needs neither the accessibility service nor the notification permission (it is requested, not
-   required). Volume mode requires both. Goals started from the Goals screen go through Home's checks.
-2. `ChantingService.start()/startWithGoal()` starts the foreground service with the mode and marks the
-   session active.
+   required). Volume mode requires both, and the accessibility disclosure must be agreed to first.
+   Starts from the Goals screen, launcher shortcuts and the Quick Settings tile arrive as a `StartRequest`
+   and go through Home's checks.
+2. `ChantingService.start()/startWithGoal()` starts the foreground service with the mode and the round size
+   (`RoundSize.forSession`: the goal's own size, else the setting), fixed into `ChantState.roundSize`.
 3. Volume: `VolumeKeyAccessibilityService.onKeyEvent` (main thread) passes key events to `VolumeKeyFilter`, which
    offers each new press (DOWN, repeatCount 0) to `ChantingService.onVolumeKeyPressed()`. A counted press is
    consumed whole (DOWN, repeats, UP); presses that aren't counted (no session, paused, goal complete, or
    on-screen-only mode, see `acceptsVolumeKeys`) pass through to the system untouched.
    On-screen: `TapToCountPad` calls `ChantingService.countFromScreen()` (one count per touch, extra fingers
    and repeats under 150 ms ignored). `ChantingService.undo()` removes the last count.
-4. Both inputs go through one `incrementCount()`, which applies `ChantCounter.increment` (108 per round, goal
-   mantra advance, no counting after the goal completes) and plays the same haptics/sounds.
+4. Both inputs go through one `incrementCount()`, which applies `ChantCounter.increment` (rounds of `roundSize`,
+   milestones every 27 beads where they divide the round, goal mantra advance, no counting after the goal
+   completes) and plays the same haptics/sounds (plus the optional bead click).
 5. Every change to an active session is written to the `active_session` DataStore. After process death the
    service restores it (START_STICKY restart, or `MainActivity.onStart`), and stopping saves it to history
    under its `sessionId`, so a session is recorded once. Sessions idle for 3+ hours are saved instead of resumed.
-6. UI screens collect `ChantingService.chantStateFlow`. There are no ViewModels.
+6. UI screens collect `ChantingService.chantStateFlow`. There are no ViewModels. Home reads the count lazily
+   (`SessionUi.state` is a lambda) so only the counter recomposes per count; keep it that way.
+7. Insights (streak, heatmap, per-mantra totals) are computed from the stored history by `PracticeStats`;
+   each goal session's `SessionRecord.mantras` holds its per-mantra breakdown.
 
 ## Conventions
 

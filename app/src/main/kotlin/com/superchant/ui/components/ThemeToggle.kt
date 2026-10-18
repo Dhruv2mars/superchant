@@ -24,8 +24,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.superchant.R
 import com.superchant.ui.theme.ThemeMode
 
 @Composable
@@ -49,19 +51,19 @@ fun ThemeToggle(
         ) {
             ThemeOption(
                 icon = Icons.Outlined.LightMode,
-                contentDescription = "Light theme",
+                contentDescription = stringResource(R.string.theme_light),
                 isSelected = currentMode == ThemeMode.LIGHT,
                 onClick = { onModeSelected(ThemeMode.LIGHT) }
             )
             ThemeOption(
                 icon = Icons.Outlined.SettingsBrightness,
-                contentDescription = "System theme",
+                contentDescription = stringResource(R.string.theme_system),
                 isSelected = currentMode == ThemeMode.SYSTEM,
                 onClick = { onModeSelected(ThemeMode.SYSTEM) }
             )
             ThemeOption(
                 icon = Icons.Outlined.DarkMode,
-                contentDescription = "Dark theme",
+                contentDescription = stringResource(R.string.theme_dark),
                 isSelected = currentMode == ThemeMode.DARK,
                 onClick = { onModeSelected(ThemeMode.DARK) }
             )

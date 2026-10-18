@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -76,6 +77,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -84,15 +86,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.superchant.R
-import com.superchant.data.ChantState
 import com.superchant.data.Goal
 import com.superchant.data.MantraGoal
 import com.superchant.data.PreferencesRepository
+import com.superchant.data.RoundSize
 import com.superchant.data.newId
 import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.BackButton
 import com.superchant.ui.components.ConfirmDestructiveDialog
 import com.superchant.ui.components.EmptyState
+import com.superchant.ui.components.RoundSizePicker
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -123,6 +126,7 @@ fun GoalsScreen(
 ) {
     // null until loaded, so the empty state doesn't flash before the data arrives
     val loadedGoals by preferencesRepository.goals.collectAsStateWithLifecycle()
+    val appRoundSize = preferencesRepository.roundSize.collectAsStateWithLifecycle().value ?: RoundSize.DEFAULT
     val goals = loadedGoals ?: emptyList()
     
     // Screen states (saveable, so rotation keeps an open editor and its draft)
@@ -133,7 +137,7 @@ fun GoalsScreen(
         // Main goals list
         Scaffold(
             topBar = {
-                AppTopBar(title = "Goals", navigationIcon = { BackButton(onBackClick) })
+                AppTopBar(title = stringResource(R.string.goals), navigationIcon = { BackButton(onBackClick) })
             },
             floatingActionButton = {
                 FloatingActionButton(
@@ -142,7 +146,7 @@ fun GoalsScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = "Create Goal"
+                        contentDescription = stringResource(R.string.goals_create_goal)
                     )
                 }
             },
@@ -151,11 +155,18 @@ fun GoalsScreen(
             if (loadedGoals?.isEmpty() == true) {
                 EmptyState(
                     icon = Icons.Outlined.Flag,
-                    title = "No goals yet",
-                    message = "Create a goal to track multiple mantras\nin a single session",
+                    title = stringResource(R.string.goals_empty_title),
+                    message = stringResource(R.string.goals_empty_message),
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
+                        .padding(paddingValues),
+                    action = {
+                        Button(onClick = { editor = EditorRequest() }) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.goals_create_first))
+                        }
+                    }
                 )
             } else {
                 LazyColumn(
@@ -193,6 +204,7 @@ fun GoalsScreen(
             if (request != null) {
                 GoalEditorScreen(
                     request = request,
+                    appRoundSize = appRoundSize,
                     isActive = editor?.key == request.key,
                     onSave = { goal ->
                         preferencesRepository.write { saveGoal(goal) }
@@ -206,9 +218,9 @@ fun GoalsScreen(
         // Delete Confirmation Dialog
         goals.find { it.id == goalToDeleteId }?.let { goal ->
             ConfirmDestructiveDialog(
-                title = "Delete Goal",
-                text = "Are you sure you want to delete \"${goal.name}\"? This action cannot be undone.",
-                confirmLabel = "Delete",
+                title = stringResource(R.string.goals_delete_title),
+                text = stringResource(R.string.goals_delete_message, goal.name),
+                confirmLabel = stringResource(R.string.common_delete),
                 onConfirm = {
                     preferencesRepository.write { deleteGoal(goal.id) }
                     goalToDeleteId = null
@@ -259,7 +271,8 @@ private fun GoalCard(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = pluralStringResource(R.plurals.mantras_count, goal.mantras.size, goal.mantras.size) +
-                            " • " + pluralStringResource(R.plurals.rounds_total, goal.totalRounds, goal.totalRounds),
+                            " • " + pluralStringResource(R.plurals.rounds_total, goal.totalRounds, goal.totalRounds) +
+                            (goal.roundSize?.let { " • " + pluralStringResource(R.plurals.round_size_beads_per_round, it, it) } ?: ""),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -269,7 +282,7 @@ private fun GoalCard(
                     IconButton(onClick = { showMenu = true }) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Options",
+                            contentDescription = stringResource(R.string.goals_options),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -278,7 +291,7 @@ private fun GoalCard(
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Edit") },
+                            text = { Text(stringResource(R.string.common_edit)) },
                             onClick = {
                                 showMenu = false
                                 onEdit()
@@ -288,7 +301,7 @@ private fun GoalCard(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                            text = { Text(stringResource(R.string.common_delete), color = MaterialTheme.colorScheme.error) },
                             onClick = {
                                 showMenu = false
                                 onDelete()
@@ -341,7 +354,7 @@ private fun GoalCard(
             
             if (goal.mantras.size > 3) {
                 Text(
-                    text = "+${goal.mantras.size - 3} more",
+                    text = (goal.mantras.size - 3).let { pluralStringResource(R.plurals.goals_more_mantras, it, it) },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp, start = 18.dp)
@@ -370,7 +383,7 @@ private fun GoalCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Start Session",
+                        text = stringResource(R.string.goals_start_session),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onPrimary
                     )
@@ -387,6 +400,7 @@ private fun GoalCard(
 @Composable
 private fun GoalEditorScreen(
     request: EditorRequest,
+    appRoundSize: Int,
     isActive: Boolean,
     onSave: (Goal) -> Unit,
     onClose: () -> Unit
@@ -396,13 +410,14 @@ private fun GoalEditorScreen(
     val initialName = existingGoal?.name ?: ""
     val initialMantras = existingGoal?.mantras ?: emptyList()
     var goalName by rememberSaveable { mutableStateOf(initialName) }
+    var roundSize by rememberSaveable { mutableStateOf(existingGoal?.roundSize) }
     val mantras = rememberSaveable(saver = mantraListSaver) { initialMantras.toMutableStateList() }
     var editingMantraIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     var showAddMantra by rememberSaveable { mutableStateOf(false) }
     var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
     
     val isValid = goalName.isNotBlank() && mantras.isNotEmpty()
-    val isDirty = goalName != initialName || mantras.toList() != initialMantras
+    val isDirty = goalName != initialName || mantras.toList() != initialMantras || roundSize != existingGoal?.roundSize
     val requestClose = {
         if (isDirty) showDiscardDialog = true else onClose()
     }
@@ -423,12 +438,12 @@ private fun GoalEditorScreen(
         Scaffold(
             topBar = {
                 AppTopBar(
-                    title = if (isEditing) "Edit Goal" else "Create Goal",
+                    title = stringResource(if (isEditing) R.string.goals_edit_goal else R.string.goals_create_goal),
                     navigationIcon = {
                         IconButton(onClick = requestClose, enabled = isActive) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Cancel"
+                                contentDescription = stringResource(R.string.cancel)
                             )
                         }
                     },
@@ -442,7 +457,8 @@ private fun GoalEditorScreen(
                                             id = existingGoal?.id ?: request.key,
                                             name = goalName.trim(),
                                             mantras = mantras.toList(),
-                                            createdAt = existingGoal?.createdAt ?: System.currentTimeMillis()
+                                            createdAt = existingGoal?.createdAt ?: System.currentTimeMillis(),
+                                            roundSize = roundSize
                                         )
                                     )
                                 }
@@ -451,7 +467,7 @@ private fun GoalEditorScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Check,
-                                contentDescription = "Save",
+                                contentDescription = stringResource(R.string.common_save),
                                 tint = if (isValid) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
@@ -472,8 +488,8 @@ private fun GoalEditorScreen(
                 OutlinedTextField(
                     value = goalName,
                     onValueChange = { goalName = it },
-                    label = { Text("Goal Name") },
-                    placeholder = { Text("e.g., Morning Practice") },
+                    label = { Text(stringResource(R.string.goals_name_label)) },
+                    placeholder = { Text(stringResource(R.string.goals_name_placeholder)) },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -485,6 +501,19 @@ private fun GoalEditorScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
                 
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                    Text(
+                        text = stringResource(R.string.round_size_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    RoundSizePicker(
+                        selected = roundSize,
+                        onSelect = { roundSize = it },
+                        defaultSize = appRoundSize
+                    )
+                }
+                
                 // Mantras Section Header
                 Row(
                     modifier = Modifier
@@ -495,13 +524,13 @@ private fun GoalEditorScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Mantras",
+                            text = stringResource(R.string.goals_mantras),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
                         if (mantras.isNotEmpty()) {
                             Text(
-                                text = "Long press to drag and reorder",
+                                text = stringResource(R.string.goals_reorder_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -514,7 +543,7 @@ private fun GoalEditorScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Add")
+                        Text(stringResource(R.string.common_add))
                     }
                 }
                 
@@ -530,13 +559,13 @@ private fun GoalEditorScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "No mantras added",
+                                text = stringResource(R.string.goals_no_mantras),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Add mantras to create your goal",
+                                text = stringResource(R.string.goals_no_mantras_hint),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -583,7 +612,7 @@ private fun GoalEditorScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Total",
+                            text = stringResource(R.string.goals_total),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -603,6 +632,7 @@ private fun GoalEditorScreen(
         if (showAddMantra) {
             MantraEditorDialog(
                 existingMantra = null,
+                roundSize = roundSize ?: appRoundSize,
                 onSave = { mantra ->
                     mantras.add(mantra)
                     showAddMantra = false
@@ -615,6 +645,7 @@ private fun GoalEditorScreen(
         editingMantraIndex?.let { index ->
             MantraEditorDialog(
                 existingMantra = mantras.getOrNull(index),
+                roundSize = roundSize ?: appRoundSize,
                 onSave = { mantra ->
                     mantras[index] = mantra
                     editingMantraIndex = null
@@ -625,9 +656,9 @@ private fun GoalEditorScreen(
         
         if (showDiscardDialog) {
             ConfirmDestructiveDialog(
-                title = "Discard changes?",
-                text = "Your changes to this goal will be lost.",
-                confirmLabel = "Discard",
+                title = stringResource(R.string.goals_discard_title),
+                text = stringResource(R.string.goals_discard_message),
+                confirmLabel = stringResource(R.string.goals_discard_confirm),
                 onConfirm = {
                     showDiscardDialog = false
                     onClose()
@@ -670,7 +701,7 @@ private fun MantraListItem(
             // Drag handle
             Icon(
                 imageVector = Icons.Default.DragHandle,
-                contentDescription = "Drag to reorder",
+                contentDescription = stringResource(R.string.goals_drag_to_reorder),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(24.dp)
             )
@@ -714,7 +745,7 @@ private fun MantraListItem(
             IconButton(onClick = onEdit) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit",
+                    contentDescription = stringResource(R.string.common_edit),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp)
                 )
@@ -724,7 +755,7 @@ private fun MantraListItem(
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.common_delete),
                     tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
                     modifier = Modifier.size(18.dp)
                 )
@@ -736,6 +767,7 @@ private fun MantraListItem(
 @Composable
 private fun MantraEditorDialog(
     existingMantra: MantraGoal?,
+    roundSize: Int,
     onSave: (MantraGoal) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -768,7 +800,7 @@ private fun MantraEditorDialog(
     AlertDialog(
         onDismissRequest = onCancel,
         title = { 
-            Text(if (isEditing) "Edit Mantra" else "Add Mantra") 
+            Text(stringResource(if (isEditing) R.string.goals_edit_mantra else R.string.goals_add_mantra)) 
         },
         text = {
             Column(
@@ -777,8 +809,8 @@ private fun MantraEditorDialog(
                 OutlinedTextField(
                     value = mantraName,
                     onValueChange = { mantraName = it },
-                    label = { Text("Mantra Name") },
-                    placeholder = { Text("e.g., Om Namah Shivaya") },
+                    label = { Text(stringResource(R.string.goals_mantra_name_label)) },
+                    placeholder = { Text(stringResource(R.string.goals_mantra_name_placeholder)) },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -794,7 +826,7 @@ private fun MantraEditorDialog(
                             targetRounds = it
                         }
                     },
-                    label = { Text("Target Rounds") },
+                    label = { Text(stringResource(R.string.goals_target_rounds_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(
@@ -809,19 +841,19 @@ private fun MantraEditorDialog(
                     ),
                     shape = RoundedCornerShape(12.dp),
                     supportingText = {
-                        Text("Each round = ${ChantState.COUNTS_PER_ROUND} counts")
+                        Text(pluralStringResource(R.plurals.round_size_each_round, roundSize, roundSize))
                     }
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = submit, enabled = isValid) {
-                Text(if (isEditing) "Save" else "Add")
+                Text(stringResource(if (isEditing) R.string.common_save else R.string.common_add))
             }
         },
         dismissButton = {
             TextButton(onClick = onCancel) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

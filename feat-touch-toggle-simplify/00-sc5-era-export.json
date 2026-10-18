@@ -1,0 +1,34 @@
+{
+    "app": "SuperChant",
+    "format": 1,
+    "exportedAt": 1792331260807,
+    "settings": {
+        "themeMode": null,
+        "inputMode": "ON_SCREEN",
+        "roundSize": 54,
+        "dailyTarget": 2,
+        "countVibration": null,
+        "countIntensity": null,
+        "roundVibration": null,
+        "roundIntensity": null,
+        "milestonePulse": null,
+        "beadClick": null,
+        "pocketGuard": false,
+        "reminderEnabled": null,
+        "reminderMinuteOfDay": null
+    },
+    "goals": [],
+    "history": [
+        {
+            "id": "6f14abed-96de-4729-98a4-3f87b1c13bac",
+            "startTime": 1792331171753,
+            "endTime": 1792331207339,
+            "totalCounts": 60,
+            "totalRounds": 1,
+            "goalId": null,
+            "goalName": null,
+            "roundSize": 54,
+            "mantras": []
+        }
+    ]
+}

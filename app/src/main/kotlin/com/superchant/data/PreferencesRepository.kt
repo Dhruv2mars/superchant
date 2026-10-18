@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.superchant.PerfTrace
 import com.superchant.ui.theme.ThemeMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -88,11 +89,16 @@ class PreferencesRepository private constructor(private val context: Context) {
 
     init {
         scope.launch {
+            var cookie = 0
             for (block in writes) {
+                val id = ++cookie
+                PerfTrace.beginAsync("SC.write", id)
                 try {
                     block()
                 } catch (e: Exception) {
                     Log.e(TAG, "Write failed", e)
+                } finally {
+                    PerfTrace.endAsync("SC.write", id)
                 }
             }
         }

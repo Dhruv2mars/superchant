@@ -20,6 +20,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.superchant.MainActivity
+import com.superchant.PerfTrace
 import com.superchant.R
 import com.superchant.data.ChantCounter
 import com.superchant.data.ChantState
@@ -222,12 +223,13 @@ class ChantingService : Service() {
     }
 
     /** The single increment path for every input source. Returns false if nothing was counted. */
-    private fun incrementCount(): Boolean {
-        val result = ChantCounter.increment(state) ?: return false
-        setState(result.state.copy(lastUpdatedAt = System.currentTimeMillis()))
-        updateNotification()
-        giveFeedback(result.feedback, result.state.rounds)
-        return true
+    private fun incrementCount(): Boolean = PerfTrace.section("SC.increment") {
+        val result = ChantCounter.increment(state) ?: return@section false
+        PerfTrace.countTaken(result.state.count)
+        PerfTrace.section("SC.setState") { setState(result.state.copy(lastUpdatedAt = System.currentTimeMillis())) }
+        PerfTrace.section("SC.updateNotification") { updateNotification() }
+        PerfTrace.section("SC.feedback") { giveFeedback(result.feedback, result.state.rounds) }
+        true
     }
 
     private fun setTouchCounting(on: Boolean) {
@@ -397,7 +399,7 @@ class ChantingService : Service() {
         val wait = NOTIFICATION_INTERVAL_MS - (SystemClock.uptimeMillis() - lastNotifiedAt)
         pendingNotification = serviceScope.launch {
             if (wait > 0) delay(wait)
-            if (_instance === this@ChantingService) {
+            if (_instance === this@ChantingService) PerfTrace.section("SC.notify") {
                 notificationManager.notify(NOTIFICATION_ID, buildNotification())
                 lastNotifiedAt = SystemClock.uptimeMillis()
             }

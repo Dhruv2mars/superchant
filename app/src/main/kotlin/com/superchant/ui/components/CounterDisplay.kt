@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
+import com.superchant.PerfTrace
 import com.superchant.data.ChantState
 import com.superchant.ui.theme.CounterGold
 import com.superchant.ui.theme.CounterGoldDark
@@ -111,7 +112,9 @@ fun CounterDisplay(
                 .size(availableSize)
                 .aspectRatio(1f)
         ) {
+            val drawnCount = state.count
             Canvas(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                PerfTrace.countDrawn(drawnCount)
                 val outer = size.minDimension / 2
                 val geometry = MalaGeometry.forRing(outerRadius = outer, density = density)
                 val center = Offset(size.width / 2, size.height / 2)

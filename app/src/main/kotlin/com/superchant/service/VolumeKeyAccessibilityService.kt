@@ -10,6 +10,7 @@ import android.provider.Settings
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.net.toUri
+import com.superchant.PerfTrace
 
 /**
  * AccessibilityService that intercepts volume key presses for chanting counter.
@@ -101,8 +102,9 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
     }
 
     // Runs on the main thread, like ChantingService, so counting happens synchronously here.
-    override fun onKeyEvent(event: KeyEvent): Boolean =
+    override fun onKeyEvent(event: KeyEvent): Boolean = PerfTrace.section("SC.onKeyEvent") {
         keyFilter.onKey(event.keyCode, event.action, event.repeatCount)
+    }
 
     // Only key events are used; the config subscribes to no accessibility events.
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit

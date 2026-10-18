@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -154,6 +155,8 @@ fun HomeScreen(
     // null until loaded; Start waits for it so a session never starts on a guess
     val savedConsent by preferencesRepository.accessibilityConsent.collectAsStateWithLifecycle()
     val accessibilityConsent = savedConsent == true
+    // Fully drawn (reportFullyDrawn) once the stored settings Start needs are in; idle Home also waits for TodayLine
+    ReportDrawnWhen { savedConsent != null }
     val volumeReady = isAccessibilityEnabled && accessibilityConsent
     var showAccessibilityDialog by remember { mutableStateOf(false) }
 
@@ -332,6 +335,7 @@ fun HomeScreen(
                 val sessions = preferencesRepository.sessionHistory.collectAsStateWithLifecycle().value
                 val target = preferencesRepository.dailyTarget.collectAsStateWithLifecycle().value
                 if (sessions != null && target != null) TodayLine(sessions = sessions, dailyTarget = target)
+                ReportDrawnWhen { sessions != null && target != null }
                 StartButton(onClick = onStart, modifier = Modifier.fillMaxWidth(0.7f))
             }
         }

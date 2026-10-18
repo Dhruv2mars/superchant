@@ -94,6 +94,8 @@ fun HistoryScreen(
     val categorizedSessions = remember(sessionHistory, now) {
         bucketSessions(sessionHistory, now)
     }
+    // One pair for the whole list: building SimpleDateFormats per row (as rows scroll in) is costly
+    val formats = remember { SessionFormats() }
     
     Scaffold(
         topBar = {
@@ -158,7 +160,7 @@ fun HistoryScreen(
                             SectionHeader(title = stringResource(R.string.history_today))
                         }
                         items(categorizedSessions.today, key = { it.id }) { session ->
-                            SessionCard(session = session, showDate = false)
+                            SessionCard(session = session, showDate = false, formats = formats)
                         }
                     }
                     
@@ -168,7 +170,7 @@ fun HistoryScreen(
                             SectionHeader(title = stringResource(R.string.history_this_week))
                         }
                         items(categorizedSessions.thisWeek, key = { it.id }) { session ->
-                            SessionCard(session = session, showDate = true)
+                            SessionCard(session = session, showDate = true, formats = formats)
                         }
                     }
                     
@@ -178,7 +180,7 @@ fun HistoryScreen(
                             SectionHeader(title = stringResource(R.string.history_this_month))
                         }
                         items(categorizedSessions.thisMonth, key = { it.id }) { session ->
-                            SessionCard(session = session, showDate = true)
+                            SessionCard(session = session, showDate = true, formats = formats)
                         }
                     }
                     
@@ -188,7 +190,7 @@ fun HistoryScreen(
                             SectionHeader(title = stringResource(R.string.history_older))
                         }
                         items(categorizedSessions.older, key = { it.id }) { session ->
-                            SessionCard(session = session, showDate = true)
+                            SessionCard(session = session, showDate = true, formats = formats)
                         }
                     }
                     
@@ -307,10 +309,16 @@ private fun StatItem(value: String, label: String) {
     }
 }
 
+/** Date and time formats for session rows; main thread only (SimpleDateFormat isn't thread-safe). */
+private class SessionFormats {
+    val date = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
+    val time = SimpleDateFormat("h:mm a", Locale.getDefault())
+}
+
 @Composable
-private fun SessionCard(session: SessionRecord, showDate: Boolean) {
-    val dateFormat = remember { SimpleDateFormat("EEE, MMM d", Locale.getDefault()) }
-    val timeFormat = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+private fun SessionCard(session: SessionRecord, showDate: Boolean, formats: SessionFormats) {
+    val dateFormat = formats.date
+    val timeFormat = formats.time
     
     Card(
         modifier = Modifier.fillMaxWidth(),

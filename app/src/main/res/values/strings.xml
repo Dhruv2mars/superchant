@@ -48,6 +48,18 @@
     <string name="input_mode_set_up">Set up</string>
     <string name="count_by_tapping">Count by tapping instead</string>
     <string name="settings_counting">Counting</string>
+    <string name="ok">OK</string>
+
+    <!-- Round size -->
+    <string name="round_size_title">Beads per round</string>
+    <string name="round_size_desc">A round completes after this many counts. Match your mala.</string>
+    <string name="round_size_default">Default (%d)</string>
+    <string name="round_size_custom">Custom</string>
+    <string name="round_size_custom_value">Custom: %d</string>
+    <string name="round_size_custom_title">Custom round size</string>
+    <string name="round_size_range">From %1$d to %2$d</string>
+    <string name="round_size_each_round">Each round = %d counts</string>
+    <string name="round_size_beads_per_round">%d beads/round</string>
 
     <!-- Session -->
     <string name="status_paused">Paused</string>

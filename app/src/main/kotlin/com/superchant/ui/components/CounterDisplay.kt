@@ -41,7 +41,7 @@ import kotlin.math.sin
 
 /**
  * Progress ring with the count of the current round. The ring and text scale with the space given.
- * [footer] is an optional line under "/ 108" (e.g. rounds); [dimmed] renders the low-glare focus palette.
+ * [footer] is an optional line under "/ 108" (the round size) (e.g. rounds); [dimmed] renders the low-glare focus palette.
  */
 @Composable
 fun CounterDisplay(
@@ -176,7 +176,7 @@ fun CounterDisplay(
                     }
                 )
                 Text(
-                    text = "/ ${ChantState.COUNTS_PER_ROUND}",
+                    text = "/ ${state.roundSize}",
                     style = if (availableSize < 220.dp) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall,
                     color = secondaryColor
                 )

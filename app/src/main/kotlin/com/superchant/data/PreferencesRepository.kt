@@ -60,6 +60,7 @@ class PreferencesRepository private constructor(private val context: Context) {
         val SAVED_GOALS = stringPreferencesKey("saved_goals")
         val ACTIVE_SESSION = stringPreferencesKey("active_session")
         val INPUT_MODE = stringPreferencesKey("input_mode")
+        val ROUND_SIZE = intPreferencesKey("round_size")
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -165,6 +166,17 @@ class PreferencesRepository private constructor(private val context: Context) {
         }
     }
     
+    /** Default beads per round for sessions without a goal-specific size. */
+    val roundSize: StateFlow<Int?> = prefs.map { preferences ->
+        RoundSize.sanitize(preferences[PreferencesKeys.ROUND_SIZE])
+    }.share()
+
+    suspend fun setRoundSize(size: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ROUND_SIZE] = RoundSize.sanitize(size)
+        }
+    }
+
     // Session history. Decoded only when the stored JSON changes, not on every preference write.
     val sessionHistory: StateFlow<List<SessionRecord>?> = prefs.map { it[PreferencesKeys.SESSION_HISTORY] }
         .distinctUntilChanged()

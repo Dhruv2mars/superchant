@@ -39,14 +39,15 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.superchant.BuildConfig
 import com.superchant.R
-import com.superchant.data.ChantState
 import com.superchant.data.InputMode
 import com.superchant.data.PreferencesRepository
+import com.superchant.data.RoundSize
 import com.superchant.data.VibrationSettings
 import com.superchant.service.VolumeKeyAccessibilityService
 import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.BackButton
 import com.superchant.ui.components.InputModeSelector
+import com.superchant.ui.components.RoundSizePicker
 import com.superchant.ui.components.ThemeToggle
 import com.superchant.ui.theme.ThemeMode
 import kotlin.math.roundToInt
@@ -68,6 +69,7 @@ fun SettingsScreen(
     val hasAmplitudeControl = remember { context.vibrator().hasAmplitudeControl() }
     // Loaded at app start, so the stored values (not defaults) are shown from the first frame
     val vibration = preferencesRepository.vibrationSettings.collectAsStateWithLifecycle().value ?: VibrationSettings()
+    val roundSize = preferencesRepository.roundSize.collectAsStateWithLifecycle().value ?: RoundSize.DEFAULT
     
     Scaffold(
         topBar = {
@@ -89,6 +91,25 @@ fun SettingsScreen(
                     onSelect = { mode -> preferencesRepository.write { setInputMode(mode) } },
                     accessibilityEnabled = accessibilityEnabled,
                     onSetUpAccessibility = { VolumeKeyAccessibilityService.openAccessibilitySettings(context) }
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                Text(
+                    text = stringResource(R.string.round_size_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(R.string.round_size_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                RoundSizePicker(
+                    selected = roundSize,
+                    onSelect = { size -> if (size != null) preferencesRepository.write { setRoundSize(size) } }
                 )
             }
             
@@ -143,7 +164,7 @@ fun SettingsScreen(
                 // Round complete vibration toggle
                 SettingsToggleItem(
                     title = "Vibrate on round complete",
-                    subtitle = "Stronger vibration when you finish ${ChantState.COUNTS_PER_ROUND} counts",
+                    subtitle = "Stronger vibration when you finish a round",
                     checked = vibration.roundEnabled,
                     onCheckedChange = { enabled ->
                         preferencesRepository.write { setVibrationEnabled(enabled) }

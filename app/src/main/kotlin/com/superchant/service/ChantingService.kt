@@ -28,6 +28,7 @@ import com.superchant.data.Goal
 import com.superchant.data.InputMode
 import com.superchant.data.PreferencesRepository
 import com.superchant.data.RestoreAction
+import com.superchant.data.RoundSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -85,9 +86,12 @@ class ChantingService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         InputMode.fromName(intent?.getStringExtra(EXTRA_INPUT_MODE))?.let { inputMode = it }
         when (intent?.action) {
-            ACTION_START -> startSession(intent.getStringExtra(EXTRA_GOAL)?.let { goalJson ->
-                runCatching { Json.decodeFromString(Goal.serializer(), goalJson) }.getOrNull()
-            })
+            ACTION_START -> startSession(
+                goal = intent.getStringExtra(EXTRA_GOAL)?.let { goalJson ->
+                    runCatching { Json.decodeFromString(Goal.serializer(), goalJson) }.getOrNull()
+                },
+                roundSize = intent.getIntExtra(EXTRA_ROUND_SIZE, RoundSize.DEFAULT)
+            )
             ACTION_STOP -> stopSession()
             ACTION_PAUSE -> setPaused(true)
             ACTION_RESUME -> setPaused(false)
@@ -121,7 +125,7 @@ class ChantingService : Service() {
         if (newState.isActive) preferencesRepository.write { saveActiveSession(newState) }
     }
 
-    private fun startSession(goal: Goal?) {
+    private fun startSession(goal: Goal?, roundSize: Int) {
         val now = System.currentTimeMillis()
         // Starting over a running session (e.g. a goal from the Goals screen) saves it first.
         val previous = state
@@ -129,7 +133,7 @@ class ChantingService : Service() {
             preferencesRepository.write { addSessionRecord(previous.toRecord(now)) }
         }
 
-        setState(ChantState.start(goal, now))
+        setState(ChantState.start(goal, now, roundSize))
         _instance = this
         if (!enterForeground()) abandonSession()
     }
@@ -343,7 +347,7 @@ class ChantingService : Service() {
         val title = when {
             state.isPaused -> getString(R.string.notification_paused)
             state.isGoalComplete -> getString(R.string.notification_goal_complete)
-            else -> "${state.currentRoundCount} / ${ChantState.COUNTS_PER_ROUND}"
+            else -> "${state.currentRoundCount} / ${state.roundSize}"
         }
 
         val goal = state.activeGoal
@@ -359,7 +363,7 @@ class ChantingService : Service() {
 
         builder.setContentTitle(title)
         builder.setContentText(text)
-        builder.setProgress(ChantState.COUNTS_PER_ROUND, state.currentRoundCount, false)
+        builder.setProgress(state.roundSize, state.currentRoundCount, false)
 
         if (actionsPaused != state.isPaused) {
             actionsPaused = state.isPaused
@@ -418,6 +422,7 @@ class ChantingService : Service() {
         private const val ACTION_RESTORE = "com.superchant.action.RESTORE"
         private const val EXTRA_GOAL = "com.superchant.extra.GOAL"
         private const val EXTRA_INPUT_MODE = "com.superchant.extra.INPUT_MODE"
+        private const val EXTRA_ROUND_SIZE = "com.superchant.extra.ROUND_SIZE"
 
         @Volatile
         private var _instance: ChantingService? = null
@@ -459,20 +464,22 @@ class ChantingService : Service() {
         private fun intent(context: Context, action: String) =
             Intent(context, ChantingService::class.java).setAction(action)
 
-        private fun startIntent(context: Context, inputMode: InputMode) =
-            intent(context, ACTION_START).putExtra(EXTRA_INPUT_MODE, inputMode.name)
+        private fun startIntent(context: Context, inputMode: InputMode, roundSize: Int) =
+            intent(context, ACTION_START)
+                .putExtra(EXTRA_INPUT_MODE, inputMode.name)
+                .putExtra(EXTRA_ROUND_SIZE, roundSize)
 
-        fun start(context: Context, inputMode: InputMode) {
-            context.startForegroundService(startIntent(context, inputMode))
+        fun start(context: Context, inputMode: InputMode, roundSize: Int) {
+            context.startForegroundService(startIntent(context, inputMode, roundSize))
         }
 
         fun stop(context: Context) {
             context.startService(intent(context, ACTION_STOP))
         }
 
-        fun startWithGoal(context: Context, goal: Goal, inputMode: InputMode) {
+        fun startWithGoal(context: Context, goal: Goal, inputMode: InputMode, roundSize: Int) {
             context.startForegroundService(
-                startIntent(context, inputMode).putExtra(EXTRA_GOAL, Json.encodeToString(Goal.serializer(), goal))
+                startIntent(context, inputMode, roundSize).putExtra(EXTRA_GOAL, Json.encodeToString(Goal.serializer(), goal))
             )
         }
 

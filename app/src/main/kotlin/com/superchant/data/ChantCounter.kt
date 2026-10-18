@@ -11,12 +11,12 @@ data class CountResult(val state: ChantState, val feedback: CountFeedback)
  */
 object ChantCounter {
 
-    /** Adds one count, rolling rounds at 108 and advancing goal mantras. Null when counting isn't allowed. */
+    /** Adds one count, rolling rounds every [ChantState.roundSize] beads and advancing goal mantras. Null when counting isn't allowed. */
     fun increment(state: ChantState): CountResult? {
         if (!state.isActive || state.isPaused || state.isGoalComplete) return null
 
         val newCount = state.count + 1
-        val newRounds = newCount / ChantState.COUNTS_PER_ROUND
+        val newRounds = newCount / state.roundSize
         val roundCompleted = newRounds > state.rounds
 
         val goal = state.activeGoal
@@ -57,7 +57,7 @@ object ChantCounter {
         if (!state.isActive || state.isPaused || state.count <= 0) return null
 
         val newCount = state.count - 1
-        val newRounds = newCount / ChantState.COUNTS_PER_ROUND
+        val newRounds = newCount / state.roundSize
 
         val goal = state.activeGoal
         var mantraIndex = state.currentMantraIndex

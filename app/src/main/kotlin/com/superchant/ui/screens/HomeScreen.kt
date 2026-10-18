@@ -89,6 +89,7 @@ import com.superchant.data.ChantState
 import com.superchant.data.Goal
 import com.superchant.data.InputMode
 import com.superchant.data.PreferencesRepository
+import com.superchant.data.RoundSize
 import com.superchant.service.ChantingService
 import com.superchant.service.VolumeKeyAccessibilityService
 import com.superchant.ui.components.AppTopBar
@@ -150,9 +151,12 @@ fun HomeScreen(
     }
 
     // Saved input mode; `loaded` guards against starting before DataStore has been read
-    val (savedInputMode, inputModeLoaded) = remember(preferencesRepository) {
+    val (savedInputMode, inputModeFlowLoaded) = remember(preferencesRepository) {
         preferencesRepository.inputModeFlow.map { it to true }
     }.collectAsState(initial = null to false).value
+    val savedRoundSize by preferencesRepository.roundSize.collectAsStateWithLifecycle()
+    val appRoundSize = savedRoundSize ?: RoundSize.DEFAULT
+    val inputModeLoaded = inputModeFlowLoaded && savedRoundSize != null
     val inputMode = savedInputMode ?: InputMode.default(isAccessibilityEnabled)
     val setInputMode: (InputMode) -> Unit = { mode -> preferencesRepository.write { setInputMode(mode) } }
 
@@ -202,7 +206,12 @@ fun HomeScreen(
         modeToStart = null
         // Lock in the default on first use so it doesn't flip if accessibility is enabled later
         if (savedInputMode == null) setInputMode(mode)
-        if (goal != null) ChantingService.startWithGoal(context, goal, mode) else ChantingService.start(context, mode)
+        val roundSize = RoundSize.forSession(goal, appRoundSize)
+        if (goal != null) {
+            ChantingService.startWithGoal(context, goal, mode, roundSize)
+        } else {
+            ChantingService.start(context, mode, roundSize)
+        }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -360,6 +369,7 @@ fun HomeScreen(
                 CounterArea(
                     session = session,
                     isActive = isServiceRunning,
+                    idleRoundSize = appRoundSize,
                     isDarkTheme = isDarkTheme,
                     modifier = Modifier
                         .weight(1.5f)
@@ -396,6 +406,7 @@ fun HomeScreen(
                 CounterArea(
                     session = session,
                     isActive = isServiceRunning,
+                    idleRoundSize = appRoundSize,
                     isDarkTheme = isDarkTheme,
                     modifier = Modifier
                         .weight(1f)
@@ -433,7 +444,7 @@ private data class SessionUi(
 private fun countDescription(state: ChantState): String = stringResource(
     R.string.count_description,
     state.currentRoundCount,
-    ChantState.COUNTS_PER_ROUND,
+    state.roundSize,
     pluralStringResource(R.plurals.rounds_count, state.rounds, state.rounds)
 )
 
@@ -442,11 +453,12 @@ private fun countDescription(state: ChantState): String = stringResource(
 private fun CounterArea(
     session: SessionUi,
     isActive: Boolean,
+    idleRoundSize: Int,
     isDarkTheme: Boolean,
     modifier: Modifier = Modifier
 ) {
     if (!isActive) {
-        CounterDisplay(state = ChantState(), isDarkTheme = isDarkTheme, modifier = modifier)
+        CounterDisplay(state = ChantState(roundSize = idleRoundSize), isDarkTheme = isDarkTheme, modifier = modifier)
         return
     }
     val state = session.state()

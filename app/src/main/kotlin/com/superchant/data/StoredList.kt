@@ -1,6 +1,7 @@
 package com.superchant.data
 
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -19,6 +20,12 @@ class StoredList<T>(
 
 fun <T> Json.decodeStoredList(serializer: KSerializer<T>, stored: String?): StoredList<T> {
     if (stored == null) return StoredList(emptyList())
+    // Fast path: one streaming pass, no JsonElement tree. Anything it rejects gets the lenient pass below.
+    try {
+        return StoredList(decodeFromString(ListSerializer(serializer), stored))
+    } catch (e: Exception) {
+        // fall through
+    }
     val array = try {
         parseToJsonElement(stored).jsonArray
     } catch (e: Exception) {
@@ -38,7 +45,11 @@ fun <T> Json.decodeStoredList(serializer: KSerializer<T>, stored: String?): Stor
 
 /** Encodes [items] followed by the preserved [unreadable] elements. */
 fun <T> Json.encodeStoredList(serializer: KSerializer<T>, items: List<T>, unreadable: List<JsonElement>): String =
-    encodeToString(JsonArray.serializer(), JsonArray(items.map { encodeToJsonElement(serializer, it) } + unreadable))
+    if (unreadable.isEmpty()) {
+        encodeToString(ListSerializer(serializer), items)
+    } else {
+        encodeToString(JsonArray.serializer(), JsonArray(items.map { encodeToJsonElement(serializer, it) } + unreadable))
+    }
 
 /**
  * Gives every item a unique ID. Data from v1.1.0 used currentTimeMillis IDs, which could collide

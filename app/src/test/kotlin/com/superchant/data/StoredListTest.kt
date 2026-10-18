@@ -121,4 +121,30 @@ class StoredListTest {
         assertEquals(records, decoded)
         assertTrue("$bytesPerRecord bytes per session", bytesPerRecord < 220)
     }
+
+    @Test
+    fun fastPathsMatchTheLenientTreePaths() {
+        val records = listOf(
+            SessionRecord(id = "a", startTime = 1, endTime = 2, totalCounts = 216, totalRounds = 2, goalId = "g", goalName = "G \"quoted\" ü",
+                mantras = listOf(MantraTally("Hare Krishna", 2, 216))),
+            SessionRecord(id = "b", startTime = Long.MAX_VALUE - 1, endTime = Long.MAX_VALUE, totalCounts = 1, totalRounds = 0)
+        )
+        // Streaming encode writes exactly what the JsonElement tree encode did
+        val tree = json.encodeToString(
+            kotlinx.serialization.json.JsonArray.serializer(),
+            kotlinx.serialization.json.JsonArray(records.map { json.encodeToJsonElement(SessionRecord.serializer(), it) })
+        )
+        assertEquals(tree, json.encodeStoredList(SessionRecord.serializer(), records, emptyList()))
+        // Streaming decode reads what the per-element decode did, legacy numeric IDs included
+        val decoded = json.decodeStoredList(SessionRecord.serializer(), legacyHistory)
+        assertEquals(listOf("1700000000000", "1700000000000"), decoded.items.map { it.id })
+        assertTrue(decoded.unreadable.isEmpty())
+        assertFalse(decoded.corrupt)
+        assertEquals(records, json.decodeStoredList(SessionRecord.serializer(), tree).items)
+        // Null elements, unknown keys and wrong types fall back to the lenient path
+        val mixed = """[null,{"id":"x","startTime":1,"endTime":2,"totalCounts":1,"totalRounds":0,"extra":true},{"id":"y","startTime":"bad"}]"""
+        val lenient = json.decodeStoredList(SessionRecord.serializer(), mixed)
+        assertEquals(listOf("x"), lenient.items.map { it.id })
+        assertEquals(2, lenient.unreadable.size)
+    }
 }

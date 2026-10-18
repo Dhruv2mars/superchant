@@ -51,6 +51,7 @@
 
     <!-- Session -->
     <string name="status_paused">Paused</string>
+    <string name="status_paused_hint">Paused. Tap ▶ to continue.</string>
     <string name="status_tap">Tap anywhere here to count</string>
     <string name="status_volume">Press a volume button to count</string>
     <string name="status_both">Tap here or press a volume button to count</string>
@@ -72,6 +73,7 @@
     <string name="undo_hold_hint">Hold to undo</string>
     <string name="undo_description">Undo last count</string>
     <string name="undo_action">Undo</string>
+    <string name="stop_hold_hint">Hold to stop</string>
 
     <!-- Goal progress -->
     <string name="goal_mantra_position">Mantra %1$d of %2$d</string>

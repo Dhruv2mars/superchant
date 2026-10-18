@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -23,16 +24,21 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Undo
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,7 +54,9 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -68,7 +76,6 @@ import com.superchant.R
 import com.superchant.data.CountDebouncer
 import com.superchant.data.InputMode
 import com.superchant.ui.theme.FocusText
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -136,83 +143,148 @@ fun TapToCountPad(
 }
 
 /**
- * Undo that must be pressed and held for [holdMillis], so a stray touch can't remove counts.
- * A fill sweeps across while holding; a short tap shows a "Hold to undo" hint. TalkBack users
- * get a normal double-tap action since their activation is already deliberate.
+ * Undo that must be pressed and held, so a stray touch can't remove counts. TalkBack users get a normal
+ * double-tap action since their activation is already deliberate.
  */
 @Composable
 fun HoldToUndoButton(
     enabled: Boolean,
     onUndo: () -> Unit,
     modifier: Modifier = Modifier,
-    dimmed: Boolean = false,
-    holdMillis: Int = 450
+    dimmed: Boolean = false
 ) {
-    val currentOnUndo by rememberUpdatedState(onUndo)
-    val scope = rememberCoroutineScope()
-    val progress = remember { Animatable(0f) }
-    var showHint by remember { mutableStateOf(false) }
-    LaunchedEffect(showHint) {
-        if (showHint) {
-            delay(1600)
-            showHint = false
-        }
-    }
-
-    val container = if (dimmed) Color.White.copy(alpha = 0.06f) else MaterialTheme.colorScheme.secondaryContainer
-    val content = if (dimmed) FocusText else MaterialTheme.colorScheme.onSecondaryContainer
-    val fill = if (dimmed) FocusText.copy(alpha = 0.25f) else MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f)
-    val description = stringResource(R.string.undo_description)
-    val actionLabel = stringResource(R.string.undo_action)
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-        modifier = modifier
-            .heightIn(min = 48.dp)
-            .widthIn(min = 112.dp)
-            .alpha(if (enabled) 1f else 0.38f)
-            .clip(RoundedCornerShape(24.dp))
-            .background(container)
-            .drawBehind {
-                if (progress.value > 0f) drawRect(fill, size = Size(size.width * progress.value, size.height))
-            }
-            .pointerInput(enabled) {
-                if (!enabled) return@pointerInput
-                detectTapGestures(onPress = {
-                    var fired = false
-                    val hold = scope.launch {
-                        progress.animateTo(1f, tween(holdMillis, easing = LinearEasing))
-                        fired = true
-                        currentOnUndo()
-                    }
-                    tryAwaitRelease()
-                    if (!fired) {
-                        hold.cancel()
-                        showHint = true
-                    }
-                    scope.launch { progress.animateTo(0f, tween(150)) }
-                })
-            }
-            .clearAndSetSemantics {
-                role = Role.Button
-                contentDescription = description
-                if (enabled) onClick(label = actionLabel) { currentOnUndo(); true } else disabled()
-            }
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
+    HoldButton(
+        enabled = enabled,
+        onConfirm = onUndo,
+        hint = stringResource(R.string.undo_hold_hint),
+        description = stringResource(R.string.undo_description),
+        actionLabel = stringResource(R.string.undo_action),
+        containerColor = if (dimmed) Color.White.copy(alpha = 0.06f) else MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = if (dimmed) FocusText else MaterialTheme.colorScheme.onSecondaryContainer,
+        fillColor = if (dimmed) FocusText.copy(alpha = 0.25f) else MaterialTheme.colorScheme.secondary.copy(alpha = 0.35f),
+        modifier = modifier.widthIn(min = 96.dp)
+    ) { color ->
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.Undo,
             contentDescription = null,
-            tint = content,
+            tint = color,
             modifier = Modifier.size(20.dp)
         )
         Text(
-            text = stringResource(if (showHint) R.string.undo_hold_hint else R.string.undo_label),
+            text = stringResource(R.string.undo_label),
             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-            color = content,
+            color = color,
             modifier = Modifier.padding(start = 8.dp)
         )
+    }
+}
+
+/**
+ * Stop for a running session. Once anything has been counted it must be held, so a brush of the thumb
+ * can't end a long session; with nothing counted a tap stops at once.
+ */
+@Composable
+fun HoldToStopButton(
+    holdRequired: Boolean,
+    onStop: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    HoldButton(
+        enabled = true,
+        holdRequired = holdRequired,
+        holdMillis = 700,
+        onConfirm = onStop,
+        hint = stringResource(R.string.stop_hold_hint),
+        description = stringResource(R.string.action_stop),
+        actionLabel = stringResource(R.string.action_stop),
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        fillColor = MaterialTheme.colorScheme.error.copy(alpha = 0.28f),
+        modifier = modifier.widthIn(min = 88.dp)
+    ) { color ->
+        Text(
+            text = stringResource(R.string.action_stop),
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = color
+        )
+    }
+}
+
+/**
+ * Pill button that fires only after being pressed for [holdMillis] (unless [holdRequired] is false).
+ * A fill sweeps across while holding and a haptic tick confirms. A short tap shows [hint] in a tooltip
+ * instead of changing the label, so the button never changes size. TalkBack activates it directly.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HoldButton(
+    enabled: Boolean,
+    onConfirm: () -> Unit,
+    hint: String,
+    description: String,
+    actionLabel: String,
+    containerColor: Color,
+    contentColor: Color,
+    fillColor: Color,
+    modifier: Modifier = Modifier,
+    holdRequired: Boolean = true,
+    holdMillis: Int = 450,
+    content: @Composable RowScope.(contentColor: Color) -> Unit
+) {
+    val currentOnConfirm by rememberUpdatedState(onConfirm)
+    val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+    val progress = remember { Animatable(0f) }
+    val tooltipState = rememberTooltipState()
+
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+        tooltip = { PlainTooltip { Text(hint) } },
+        state = tooltipState,
+        enableUserInput = false
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = modifier
+                .heightIn(min = 48.dp)
+                .alpha(if (enabled) 1f else 0.38f)
+                .clip(RoundedCornerShape(24.dp))
+                .background(containerColor)
+                .drawBehind {
+                    if (progress.value > 0f) drawRect(fillColor, size = Size(size.width * progress.value, size.height))
+                }
+                .pointerInput(enabled, holdRequired) {
+                    if (!enabled) return@pointerInput
+                    if (!holdRequired) {
+                        detectTapGestures(onTap = { currentOnConfirm() })
+                        return@pointerInput
+                    }
+                    detectTapGestures(onPress = {
+                        var fired = false
+                        val hold = scope.launch {
+                            progress.animateTo(1f, tween(holdMillis, easing = LinearEasing))
+                            fired = true
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            currentOnConfirm()
+                        }
+                        tryAwaitRelease()
+                        if (!fired) {
+                            hold.cancel()
+                            scope.launch { tooltipState.show() }
+                        }
+                        scope.launch { progress.animateTo(0f, tween(150)) }
+                    })
+                }
+                .clearAndSetSemantics {
+                    role = Role.Button
+                    contentDescription = description
+                    if (enabled) onClick(label = actionLabel) { currentOnConfirm(); true } else disabled()
+                }
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            content(contentColor)
+        }
     }
 }
 

@@ -451,6 +451,11 @@ class ChantingService : Service() {
             _instance?.undoCount()
         }
 
+        /** Pauses or resumes the running session, same as the notification actions. Call on the main thread. */
+        fun setPaused(paused: Boolean) {
+            _instance?.setPaused(paused)
+        }
+
         private fun intent(context: Context, action: String) =
             Intent(context, ChantingService::class.java).setAction(action)
 

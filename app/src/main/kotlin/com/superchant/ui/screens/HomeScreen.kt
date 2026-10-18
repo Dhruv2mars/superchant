@@ -39,6 +39,8 @@ import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.NightsStay
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -92,6 +94,7 @@ import com.superchant.service.VolumeKeyAccessibilityService
 import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.CounterDisplay
 import com.superchant.ui.components.FocusWindowEffect
+import com.superchant.ui.components.HoldToStopButton
 import com.superchant.ui.components.HoldToUndoButton
 import com.superchant.ui.components.InputModeSelector
 import com.superchant.ui.components.KeepScreenOn
@@ -135,6 +138,7 @@ fun HomeScreen(
     val isGoalComplete by remember { derivedStateOf { chantStateHolder.value.isGoalComplete } }
     val rounds by remember { derivedStateOf { chantStateHolder.value.rounds } }
     val canUndo by remember { derivedStateOf { chantStateHolder.value.count > 0 && !chantStateHolder.value.isPaused } }
+    val hasCounts by remember { derivedStateOf { chantStateHolder.value.count > 0 } }
     // Goal progress without the per-press fields, so the goal strip only changes at round boundaries
     val goalProgress by remember {
         derivedStateOf { chantStateHolder.value.copy(count = 0, rounds = 0, lastUpdatedAt = 0L) }
@@ -280,7 +284,7 @@ fun HomeScreen(
         statusText = stringResource(
             when {
                 isGoalComplete -> R.string.status_goal_complete
-                isPaused -> R.string.status_paused
+                isPaused -> R.string.status_paused_hint
                 tapCounting && volumeCounting -> R.string.status_both
                 tapCounting -> R.string.status_tap
                 else -> R.string.status_volume
@@ -289,7 +293,11 @@ fun HomeScreen(
         roundsText = if (rounds > 0) pluralStringResource(R.plurals.rounds_count, rounds, rounds) else null,
         canUndo = canUndo,
         onCount = ChantingService::countFromScreen,
-        onUndo = ChantingService::undo
+        onUndo = ChantingService::undo,
+        onPauseToggle = { ChantingService.setPaused(!chantStateHolder.value.isPaused) },
+        isPaused = isPaused,
+        isGoalComplete = isGoalComplete,
+        hasCounts = hasCounts
     )
 
     if (isServiceRunning && focusMode) {
@@ -413,7 +421,11 @@ private data class SessionUi(
     val roundsText: String?,
     val canUndo: Boolean,
     val onCount: () -> Unit,
-    val onUndo: () -> Unit
+    val onUndo: () -> Unit,
+    val onPauseToggle: () -> Unit,
+    val isPaused: Boolean,
+    val isGoalComplete: Boolean,
+    val hasCounts: Boolean
 )
 
 /** TalkBack description of the count, e.g. "Count 42 of 108. 3 rounds". */
@@ -468,7 +480,7 @@ private fun CounterArea(
     }
 }
 
-/** Session controls, kept at the top away from the thumb that taps the pad: hold-to-undo, focus, Stop. */
+/** Session controls, kept at the top away from the thumb that taps the pad: hold-to-undo, pause, focus, hold-to-Stop. */
 @Composable
 private fun SessionControls(
     session: SessionUi,
@@ -483,10 +495,21 @@ private fun SessionControls(
     ) {
         HoldToUndoButton(enabled = session.canUndo, onUndo = session.onUndo)
         Spacer(modifier = Modifier.weight(1f))
+        val paused = session.isPaused
+        FilledTonalIconButton(
+            onClick = session.onPauseToggle,
+            enabled = !session.isGoalComplete,
+            modifier = Modifier.size(48.dp)
+        ) {
+            Icon(
+                imageVector = if (paused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
+                contentDescription = stringResource(if (paused) R.string.action_resume else R.string.action_pause)
+            )
+        }
         FilledTonalIconButton(onClick = onFocus, modifier = Modifier.size(48.dp)) {
             Icon(imageVector = Icons.Outlined.NightsStay, contentDescription = stringResource(R.string.focus_enter))
         }
-        StartStopButton(isActive = true, onClick = onStop)
+        HoldToStopButton(holdRequired = session.hasCounts, onStop = onStop)
     }
 }
 
@@ -572,7 +595,9 @@ private fun FocusContent(session: SessionUi, onExit: () -> Unit) {
                 )
                 val mantra = state.currentMantra
                 Text(
-                    text = if (mantra != null && !state.isGoalComplete) {
+                    text = if (state.isPaused) {
+                        stringResource(R.string.status_paused)
+                    } else if (mantra != null && !state.isGoalComplete) {
                         "${mantra.name} · " + pluralStringResource(
                             R.plurals.goal_mantra_progress,
                             mantra.targetRounds,

@@ -23,14 +23,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -45,12 +43,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -58,13 +54,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -76,24 +69,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.superchant.data.Goal
 import com.superchant.data.MantraGoal
 import com.superchant.data.PreferencesRepository
+import com.superchant.ui.components.AppTopBar
+import com.superchant.ui.components.BackButton
+import com.superchant.ui.components.ConfirmDestructiveDialog
+import com.superchant.ui.components.EmptyState
 import kotlinx.coroutines.launch
-import org.burnoutcrew.reorderable.ReorderableItem
-import org.burnoutcrew.reorderable.detectReorderAfterLongPress
-import org.burnoutcrew.reorderable.rememberReorderableLazyListState
-import org.burnoutcrew.reorderable.reorderable
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GoalsScreen(
     preferencesRepository: PreferencesRepository,
@@ -112,27 +105,7 @@ fun GoalsScreen(
         // Main goals list
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "Goals",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back"
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                )
+                AppTopBar(title = "Goals", navigationIcon = { BackButton(onBackClick) })
             },
             floatingActionButton = {
                 FloatingActionButton(
@@ -148,7 +121,10 @@ fun GoalsScreen(
             containerColor = MaterialTheme.colorScheme.surface
         ) { paddingValues ->
             if (goals.isEmpty()) {
-                EmptyGoalsState(
+                EmptyState(
+                    icon = Icons.Outlined.Flag,
+                    title = "No goals yet",
+                    message = "Create a goal to track multiple mantras\nin a single session",
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
@@ -195,68 +171,19 @@ fun GoalsScreen(
         
         // Delete Confirmation Dialog
         goalToDelete?.let { goal ->
-            AlertDialog(
-                onDismissRequest = { goalToDelete = null },
-                title = { Text("Delete Goal") },
-                text = { 
-                    Text("Are you sure you want to delete \"${goal.name}\"? This action cannot be undone.") 
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            scope.launch {
-                                preferencesRepository.deleteGoal(goal.id)
-                            }
-                            goalToDelete = null
-                        }
-                    ) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
+            ConfirmDestructiveDialog(
+                title = "Delete Goal",
+                text = "Are you sure you want to delete \"${goal.name}\"? This action cannot be undone.",
+                confirmLabel = "Delete",
+                onConfirm = {
+                    scope.launch {
+                        preferencesRepository.deleteGoal(goal.id)
                     }
+                    goalToDelete = null
                 },
-                dismissButton = {
-                    TextButton(onClick = { goalToDelete = null }) {
-                        Text("Cancel")
-                    }
-                }
+                onDismiss = { goalToDelete = null }
             )
         }
-    }
-}
-
-@Composable
-private fun EmptyGoalsState(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.Flag,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "No goals yet",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Create a goal to track multiple mantras\nin a single session",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
     }
 }
 
@@ -420,7 +347,6 @@ private fun GoalCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GoalEditorScreen(
     existingGoal: Goal?,
@@ -438,13 +364,10 @@ private fun GoalEditorScreen(
     val isValid = goalName.isNotBlank() && mantras.isNotEmpty()
     
     // Reorderable state
-    val reorderableState = rememberReorderableLazyListState(
-        onMove = { from, to ->
-            mantras.apply {
-                add(to.index, removeAt(from.index))
-            }
-        }
-    )
+    val listState = rememberLazyListState()
+    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+        mantras.add(to.index, mantras.removeAt(from.index))
+    }
     
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -452,15 +375,8 @@ private fun GoalEditorScreen(
     ) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = if (isEditing) "Edit Goal" else "Create Goal",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        )
-                    },
+                AppTopBar(
+                    title = if (isEditing) "Edit Goal" else "Create Goal",
                     navigationIcon = {
                         IconButton(onClick = onCancel) {
                             Icon(
@@ -495,10 +411,7 @@ private fun GoalEditorScreen(
                                 }
                             )
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+                    }
                 )
             }
         ) { paddingValues ->
@@ -584,19 +497,15 @@ private fun GoalEditorScreen(
                 } else {
                     // Mantras list with drag reorder
                     LazyColumn(
-                        state = reorderableState.listState,
+                        state = listState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
-                            .reorderable(reorderableState),
+                            .weight(1f),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         itemsIndexed(mantras, key = { _, item -> item.id }) { index, mantra ->
-                            ReorderableItem(
-                                reorderableState = reorderableState,
-                                key = mantra.id
-                            ) { isDragging ->
+                            ReorderableItem(reorderableState, key = mantra.id) { isDragging ->
                                 val elevation by animateDpAsState(
                                     targetValue = if (isDragging) 8.dp else 0.dp,
                                     label = "elevation"
@@ -609,7 +518,7 @@ private fun GoalEditorScreen(
                                     elevation = elevation,
                                     onEdit = { editingMantraIndex = index },
                                     onDelete = { mantras.removeAt(index) },
-                                    modifier = Modifier.detectReorderAfterLongPress(reorderableState)
+                                    modifier = Modifier.longPressDraggableHandle()
                                 )
                             }
                         }
@@ -673,7 +582,7 @@ private fun MantraListItem(
     index: Int,
     mantra: MantraGoal,
     isDragging: Boolean,
-    elevation: androidx.compose.ui.unit.Dp,
+    elevation: Dp,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
@@ -777,6 +686,17 @@ private fun MantraEditorDialog(
     val focusManager = LocalFocusManager.current
     
     val isValid = mantraName.isNotBlank() && (targetRounds.toIntOrNull() ?: 0) > 0
+    val submit = {
+        if (isValid) {
+            onSave(
+                MantraGoal(
+                    id = existingMantra?.id ?: System.currentTimeMillis(),
+                    name = mantraName.trim(),
+                    targetRounds = targetRounds.toIntOrNull() ?: 1
+                )
+            )
+        }
+    }
     
     LaunchedEffect(Unit) {
         if (!isEditing) {
@@ -823,15 +743,7 @@ private fun MantraEditorDialog(
                     keyboardActions = KeyboardActions(
                         onDone = {
                             focusManager.clearFocus()
-                            if (isValid) {
-                                onSave(
-                                    MantraGoal(
-                                        id = existingMantra?.id ?: System.currentTimeMillis(),
-                                        name = mantraName.trim(),
-                                        targetRounds = targetRounds.toIntOrNull() ?: 1
-                                    )
-                                )
-                            }
+                            submit()
                         }
                     ),
                     shape = RoundedCornerShape(12.dp),
@@ -842,20 +754,7 @@ private fun MantraEditorDialog(
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    if (isValid) {
-                        onSave(
-                            MantraGoal(
-                                id = existingMantra?.id ?: System.currentTimeMillis(),
-                                name = mantraName.trim(),
-                                targetRounds = targetRounds.toIntOrNull() ?: 1
-                            )
-                        )
-                    }
-                },
-                enabled = isValid
-            ) {
+            TextButton(onClick = submit, enabled = isValid) {
                 Text(if (isEditing) "Save" else "Add")
             }
         },

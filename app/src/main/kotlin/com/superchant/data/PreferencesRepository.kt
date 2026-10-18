@@ -11,7 +11,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.superchant.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "superchant_prefs")
@@ -96,28 +95,12 @@ class PreferencesRepository(private val context: Context) {
     
     // Session history
     val sessionHistoryFlow: Flow<List<SessionRecord>> = context.dataStore.data.map { preferences ->
-        val historyJson = preferences[PreferencesKeys.SESSION_HISTORY] ?: "[]"
-        try {
-            json.decodeFromString<List<SessionRecord>>(historyJson)
-        } catch (e: Exception) {
-            emptyList()
-        }
+        decodeList<SessionRecord>(preferences[PreferencesKeys.SESSION_HISTORY])
     }
     
     suspend fun addSessionRecord(record: SessionRecord) {
-        context.dataStore.edit { preferences ->
-            val currentJson = preferences[PreferencesKeys.SESSION_HISTORY] ?: "[]"
-            val currentList = try {
-                json.decodeFromString<List<SessionRecord>>(currentJson).toMutableList()
-            } catch (e: Exception) {
-                mutableListOf()
-            }
-            // Add new record at the beginning (most recent first)
-            currentList.add(0, record)
-            // Keep only last 100 sessions
-            val trimmedList = currentList.take(100)
-            preferences[PreferencesKeys.SESSION_HISTORY] = json.encodeToString(trimmedList)
-        }
+        // Most recent first; keep only the last 100 sessions
+        updateList<SessionRecord>(PreferencesKeys.SESSION_HISTORY) { (listOf(record) + it).take(100) }
     }
     
     suspend fun clearSessionHistory() {
@@ -128,43 +111,34 @@ class PreferencesRepository(private val context: Context) {
     
     // Goals
     val goalsFlow: Flow<List<Goal>> = context.dataStore.data.map { preferences ->
-        val goalsJson = preferences[PreferencesKeys.SAVED_GOALS] ?: "[]"
-        try {
-            json.decodeFromString<List<Goal>>(goalsJson)
-        } catch (e: Exception) {
-            emptyList()
-        }
+        decodeList<Goal>(preferences[PreferencesKeys.SAVED_GOALS])
     }
     
+    /** Replaces the goal with the same ID, or adds it at the top. */
     suspend fun saveGoal(goal: Goal) {
-        context.dataStore.edit { preferences ->
-            val currentJson = preferences[PreferencesKeys.SAVED_GOALS] ?: "[]"
-            val currentList = try {
-                json.decodeFromString<List<Goal>>(currentJson).toMutableList()
-            } catch (e: Exception) {
-                mutableListOf()
-            }
-            // Check if goal with same ID exists, replace it; otherwise add
-            val existingIndex = currentList.indexOfFirst { it.id == goal.id }
-            if (existingIndex >= 0) {
-                currentList[existingIndex] = goal
-            } else {
-                currentList.add(0, goal)
-            }
-            preferences[PreferencesKeys.SAVED_GOALS] = json.encodeToString(currentList)
+        updateList<Goal>(PreferencesKeys.SAVED_GOALS) { goals ->
+            if (goals.any { it.id == goal.id }) goals.map { if (it.id == goal.id) goal else it } else listOf(goal) + goals
         }
     }
     
     suspend fun deleteGoal(goalId: Long) {
+        updateList<Goal>(PreferencesKeys.SAVED_GOALS) { goals -> goals.filterNot { it.id == goalId } }
+    }
+    
+    /** Decodes a JSON list, treating missing or unreadable data as empty. */
+    private inline fun <reified T> decodeList(stored: String?): List<T> =
+        try {
+            json.decodeFromString<List<T>>(stored ?: "[]")
+        } catch (e: Exception) {
+            emptyList()
+        }
+    
+    private suspend inline fun <reified T> updateList(
+        key: Preferences.Key<String>,
+        crossinline transform: (List<T>) -> List<T>
+    ) {
         context.dataStore.edit { preferences ->
-            val currentJson = preferences[PreferencesKeys.SAVED_GOALS] ?: "[]"
-            val currentList = try {
-                json.decodeFromString<List<Goal>>(currentJson).toMutableList()
-            } catch (e: Exception) {
-                mutableListOf()
-            }
-            currentList.removeAll { it.id == goalId }
-            preferences[PreferencesKeys.SAVED_GOALS] = json.encodeToString(currentList)
+            preferences[key] = json.encodeToString(transform(decodeList<T>(preferences[key])))
         }
     }
 }

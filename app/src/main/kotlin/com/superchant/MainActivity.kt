@@ -12,12 +12,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.superchant.data.Goal
 import com.superchant.data.PreferencesRepository
 import com.superchant.service.ChantingService
 import com.superchant.ui.screens.GoalsScreen
@@ -83,7 +81,6 @@ class MainActivity : ComponentActivity() {
                             SettingsScreen(
                                 preferencesRepository = preferencesRepository,
                                 themeMode = themeMode,
-                                onThemeModeChange = { /* State is handled by flow */ },
                                 onBackClick = { navController.popBackStack() }
                             )
                         }

@@ -1,170 +1,84 @@
-# AGENTS.md - SuperChant Codebase Guide
+# AGENTS.md - SuperChant
 
-This document provides guidance for AI coding agents working on the SuperChant Android app.
+Kotlin/Jetpack Compose Android app that counts chants with the volume keys. An AccessibilityService
+intercepts volume key presses, a foreground service owns the session state, and DataStore Preferences
+persists settings, goals and history (as JSON via kotlinx.serialization).
 
-## Project Overview
+## Commands
 
-SuperChant is a Kotlin/Jetpack Compose Android app for tracking chanting/meditation sessions. It uses volume keys to increment counts via an AccessibilityService, runs as a foreground service, and persists data using DataStore Preferences.
-
-## Build Commands
+Needs JDK 17 and the Android SDK (`ANDROID_HOME` or `sdk.dir` in `local.properties`).
 
 ```bash
-# Build
-./gradlew assembleDebug          # Debug APK
-./gradlew assembleRelease        # Release APK
-./gradlew bundleRelease          # Release AAB (for Play Store)
-./gradlew installDebug           # Install debug on device
-./gradlew clean                  # Clean build
-
-# Custom tasks (output to project root)
-./gradlew buildReleaseApk        # Build & copy APK as SuperChant-v{version}.apk
-./gradlew buildReleaseBundle     # Build & copy AAB as SuperChant-v{version}.aab
-
-# Testing
-./gradlew test                                                    # All unit tests
-./gradlew test --tests "com.superchant.ExampleTest"              # Single test class
-./gradlew test --tests "com.superchant.ExampleTest.testMethod"   # Single test method
-./gradlew connectedAndroidTest                                    # Instrumentation tests
-./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.superchant.ExampleTest
-
-# Lint
-./gradlew lint
+./gradlew assembleDebug assembleRelease lint test   # full check
+./gradlew installDebug                              # install on a device/emulator
+./gradlew test --tests "com.superchant.data.ChantStateTest"
+./gradlew buildReleaseApk                           # assembleRelease, copied to ./SuperChant-v{version}.apk
+./gradlew buildReleaseBundle                        # bundleRelease, copied to ./SuperChant-v{version}.aab
 ```
 
-## Project Configuration
+Release signing reads `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS` and
+`RELEASE_KEY_PASSWORD` from the untracked `local.properties`. Without them the release build is
+signed with the debug key, so it still builds and installs locally.
+
+## Configuration
 
 | Setting | Value |
 |---------|-------|
-| Namespace | `com.superchant` |
-| Min SDK | 26 (Android 8.0) |
-| Target/Compile SDK | 35 |
-| Java/Kotlin Target | 17 |
-| Kotlin Version | 2.0.21 |
-| Compose BOM | 2024.12.01 |
+| Package / namespace | `com.superchant` |
+| minSdk / targetSdk / compileSdk | 26 / 36 / 37 |
+| JVM target | 17 |
+| Toolchain | AGP 9 (built-in Kotlin), Gradle 9, Kotlin 2.4 |
 
-## Code Style Guidelines
+All versions live in `gradle/libs.versions.toml`.
 
-### Import Order
-1. Android imports (`android.*`, `androidx.*`)
-2. Third-party imports (`kotlinx.*`, `org.*`)
-3. Project imports (`com.superchant.*`)
-
-### Naming Conventions
-| Type | Convention | Example |
-|------|------------|---------|
-| Classes | PascalCase | `ChantingService`, `PreferencesRepository` |
-| Functions | camelCase | `incrementCount()`, `startSession()` |
-| Composables | PascalCase | `HomeScreen`, `CounterDisplay` |
-| Constants | SCREAMING_SNAKE_CASE | `NOTIFICATION_ID`, `COUNTS_PER_ROUND` |
-| Private backing fields | Underscore prefix | `_sharedChantState`, `_instance` |
-| Flow properties | `*Flow` suffix | `themeModeFlow`, `goalsFlow` |
-| Boolean getters | `is*` prefix | `isRunning`, `isGoalComplete` |
-
-### Formatting
-- 4-space indentation (no tabs)
-- Trailing lambda style for Compose DSL
-- `when` expressions preferred over if-else chains
-- Extension properties for computed values: `val progress: Float get() = ...`
-- `@Serializable` annotation for JSON-serialized data classes
-- Composable modifier parameter: always last with default `modifier: Modifier = Modifier`
-
-### Error Handling
-```kotlin
-// Silent failure for non-critical operations
-try {
-    ringtone?.play()
-} catch (e: Exception) {
-    // Silently fail
-}
-
-// Safe fallbacks for JSON parsing
-val items = try {
-    Json.decodeFromString<List<Item>>(jsonString)
-} catch (e: Exception) {
-    emptyList()
-}
-```
-
-### Threading & Concurrency
-```kotlin
-// Service scope with SupervisorJob
-private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
-// Thread-safe singleton access
-@Volatile private var _instance: Service? = null
-
-// Synchronous persistence in lifecycle methods
-override fun onDestroy() {
-    runBlocking { repository.saveData(data) }
-}
-```
-
-### Android SDK Compatibility
-```kotlin
-if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-    // Use new API
-} else {
-    @Suppress("DEPRECATION")
-    // Use deprecated fallback
-}
-```
-
-## Architecture
-
-### State Management
-- `ChantState`: Immutable data class as single source of truth
-- `StateFlow` for reactive state, collected via `collectAsState()` in UI
-- State owned by foreground service, not ViewModels
-
-### Service Architecture
-- `ChantingService`: Foreground service with `START_STICKY`
-- `VolumeKeyAccessibilityService`: Intercepts volume keys
-- Static companion methods: `start()`, `stop()`, `pause()`, `resume()`
-
-### Data Layer
-- `PreferencesRepository`: DataStore operations with Flow-based API
-- JSON serialization via kotlinx.serialization
-
-### Navigation
-- String routes: `"home"`, `"settings"`, `"history"`, `"goals"`
-- Animated transitions: `fadeIn/fadeOut` + `slideIntoContainer`
-
-## Package Structure
+## Layout
 
 ```
-com.superchant/
-├── MainActivity.kt              # Entry point, navigation host
-├── SuperChantApplication.kt     # Application class
+app/src/main/kotlin/com/superchant/
+├── MainActivity.kt                  # NavHost: home, settings, history, goals
 ├── data/
-│   ├── ChantState.kt           # State models (ChantState, Goal, SessionRecord)
-│   └── PreferencesRepository.kt # DataStore persistence
+│   ├── ChantState.kt                # ChantState (session), Goal, MantraGoal, SessionRecord
+│   └── PreferencesRepository.kt     # DataStore flows + setters
 ├── service/
-│   ├── ChantingService.kt      # Foreground counting service
-│   └── VolumeKeyAccessibilityService.kt
+│   ├── ChantingService.kt           # Foreground service; owns ChantState via a companion StateFlow
+│   └── VolumeKeyAccessibilityService.kt  # onKeyEvent -> SharedFlow consumed by ChantingService
 └── ui/
-    ├── components/             # Reusable composables
-    ├── screens/                # Screen-level composables
-    └── theme/                  # Material 3 theming (Color, Theme, Type)
+    ├── components/                  # Shared composables (AppTopBar, EmptyState, CounterDisplay, ...)
+    ├── screens/                     # Home, Goals, History, Settings
+    └── theme/                       # Material 3 colors, typography, ThemeMode
+app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
 ```
 
-## Key Dependencies
+## How counting works
 
-- **Compose**: UI, Material3, Navigation, Animation
-- **Lifecycle**: Runtime KTX, ViewModel Compose, Service
-- **DataStore**: Preferences for persistence
-- **Kotlinx**: Serialization JSON, Coroutines Android
-- **Reorderable**: `org.burnoutcrew.composereorderable:reorderable:0.9.6`
+1. `ChantingService.start()/startWithGoal()` starts the foreground service and marks the session active.
+2. `VolumeKeyAccessibilityService.onKeyEvent` consumes `VOLUME_UP/DOWN` key-downs only while a session is
+   active and not paused, and emits them on a `SharedFlow`.
+3. `ChantingService` increments `count`; a round is `ChantState.COUNTS_PER_ROUND` (108) counts. In goal
+   mode it advances through the goal's mantras and stops counting when the goal is complete.
+4. UI screens collect `ChantingService.chantStateFlow`. There are no ViewModels.
 
-## Testing
+## Conventions
 
-- Unit tests: `app/src/test/kotlin/com/superchant/`
-- Instrumentation tests: `app/src/androidTest/kotlin/com/superchant/`
-- Frameworks: JUnit 4, Espresso, Compose UI Test
+- 4-space indent, trailing-lambda Compose style.
+- Reuse `ui/components` (e.g. `AppTopBar`, `BackButton`, `EmptyState`, `ConfirmDestructiveDialog`) instead of copying UI.
+- New persisted data classes need `@Serializable` and defaults for new fields so old JSON still decodes.
+- Most UI strings are hardcoded in composables today; `res/values/strings.xml` holds the rest.
 
-## Important Notes
+## Testing on an emulator
 
-1. All user-facing strings must be in `res/values/strings.xml`
-2. ProGuard rules in `app/proguard-rules.pro` preserve serialization
-3. Release signing config loaded from `local.properties` (gitignored)
-4. Accessibility service config in `res/xml/accessibility_service_config.xml`
-5. App distributed via Google Play Store Internal Testing (bypasses Restricted Settings)
+Shell-injected keys (`adb shell input keyevent KEYCODE_VOLUME_UP`) skip the accessibility key filter, so
+they never reach `onKeyEvent`. Use a virtual uinput keyboard so the keys take the real hardware path:
+
+```bash
+adb shell settings put secure enabled_accessibility_services com.superchant/com.superchant.service.VolumeKeyAccessibilityService
+adb shell settings put secure accessibility_enabled 1
+adb shell pm grant com.superchant android.permission.POST_NOTIFICATIONS
+# Register a device with KEY_VOLUMEDOWN/UP (114/115), then press VOLUME_UP once (EV_KEY=1).
+printf '%s\n' \
+  '{"id":1,"command":"register","name":"Volume Keys","vid":4660,"pid":22136,"bus":"usb","configuration":[{"type":"UI_SET_EVBIT","data":[1]},{"type":"UI_SET_KEYBIT","data":[114,115]}]}' \
+  '{"id":1,"command":"delay","duration":1500}' \
+  '{"id":1,"command":"inject","events":[1,115,1,0,0,0]}' \
+  '{"id":1,"command":"inject","events":[1,115,0,0,0,0]}' \
+  '{"id":1,"command":"delay","duration":500}' | adb shell uinput -
+```

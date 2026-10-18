@@ -17,8 +17,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.superchant.MainActivity
 import com.superchant.R
+import com.superchant.data.ChantCounter
 import com.superchant.data.ChantState
+import com.superchant.data.CountFeedback
 import com.superchant.data.Goal
+import com.superchant.data.InputMode
 import com.superchant.data.PreferencesRepository
 import com.superchant.data.SessionRecord
 import kotlinx.coroutines.CoroutineScope
@@ -35,8 +38,9 @@ import kotlinx.coroutines.runBlocking
 /**
  * Foreground service that manages the chanting session.
  * 
- * Listens to volume key events from VolumeKeyAccessibilityService and:
- * - Increments the count
+ * Counts volume key events from VolumeKeyAccessibilityService and on-screen taps (via [countFromScreen])
+ * through one increment path, and:
+ * - Increments the count (or undoes the last one)
  * - Triggers vibration feedback
  * - Updates the notification
  * - Persists session data
@@ -57,6 +61,9 @@ class ChantingService : Service() {
     @Volatile private var cachedCountVibrationEnabled: Boolean = true
     @Volatile private var cachedCountVibrationIntensity: Int = 80
     @Volatile private var cachedRoundVibrationIntensity: Int = 255
+    
+    // Set from the start intent, then kept in sync with the setting so mid-session changes apply
+    @Volatile private var inputMode: InputMode = InputMode.VOLUME
     
     override fun onCreate() {
         super.onCreate()
@@ -83,10 +90,12 @@ class ChantingService : Service() {
             serviceScope.launch { countVibrationEnabledFlow.collect { cachedCountVibrationEnabled = it } }
             serviceScope.launch { countVibrationIntensityFlow.collect { cachedCountVibrationIntensity = it } }
             serviceScope.launch { roundVibrationIntensityFlow.collect { cachedRoundVibrationIntensity = it } }
+            serviceScope.launch { inputModeFlow.collect { mode -> if (mode != null) inputMode = mode } }
         }
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        InputMode.fromName(intent?.getStringExtra(EXTRA_INPUT_MODE))?.let { inputMode = it }
         when (intent?.action) {
             ACTION_START -> startSession()
             ACTION_START_WITH_GOAL -> {
@@ -233,78 +242,46 @@ class ChantingService : Service() {
         updateNotification()
     }
     
+    /** The single increment path for every input source. */
     private fun incrementCount() {
-        val currentState = _sharedChantState.value
-        if (!currentState.isActive || currentState.isPaused) return
-        
-        // Check if goal is already complete - don't allow more counting
-        if (currentState.isGoalComplete) return
-        
-        val newCount = currentState.count + 1
-        val newRounds = newCount / ChantState.COUNTS_PER_ROUND
-        val previousRounds = currentState.rounds
-        
-        // Goal-based tracking
-        val goal = currentState.activeGoal
-        var newMantraIndex = currentState.currentMantraIndex
-        var newMantraRoundsCompleted = currentState.mantraRoundsCompleted
-        var sectionCompleted = false
-        var goalCompleted = false
-        
-        if (goal != null && newRounds > previousRounds) {
-            // A round was completed
-            newMantraRoundsCompleted++
-            
-            val currentMantra = goal.mantras.getOrNull(newMantraIndex)
-            if (currentMantra != null && newMantraRoundsCompleted >= currentMantra.targetRounds) {
-                // Current mantra section is complete
-                if (newMantraIndex < goal.mantras.size - 1) {
-                    // Move to next mantra
-                    sectionCompleted = true
-                    newMantraIndex++
-                    newMantraRoundsCompleted = 0
-                } else {
-                    // This was the last mantra - goal complete!
-                    goalCompleted = true
-                }
-            }
-        }
+        val result = ChantCounter.increment(_sharedChantState.value) ?: return
         
         // Update state immediately for fastest UI response
-        _sharedChantState.value = currentState.copy(
-            count = newCount,
-            rounds = newRounds,
-            currentMantraIndex = newMantraIndex,
-            mantraRoundsCompleted = newMantraRoundsCompleted
-        )
+        _sharedChantState.value = result.state
         
         // Update notification IMMEDIATELY on main thread (no coroutine delay)
         // This ensures lock screen and notification panel update as fast as possible
         updateNotification()
         
         // Handle sounds and vibrations - count and round vibrations are independent
-        if (goalCompleted) {
-            // Goal complete! Play celebration sound and vibration
-            playSound(RingtoneManager.TYPE_RINGTONE)
-            vibrateGoalComplete()
-        } else if (sectionCompleted) {
-            playSound(RingtoneManager.TYPE_NOTIFICATION)
-            if (cachedVibrationEnabled) {
-                vibrateRoundComplete(1)
+        when (result.feedback) {
+            CountFeedback.GOAL -> {
+                playSound(RingtoneManager.TYPE_RINGTONE)
+                vibrateGoalComplete()
             }
-        } else if (newRounds > previousRounds) {
-            // Regular round completed - vibrate if enabled
-            if (cachedVibrationEnabled) {
-                vibrateRoundComplete(newRounds)
+            CountFeedback.SECTION -> {
+                playSound(RingtoneManager.TYPE_NOTIFICATION)
+                if (cachedVibrationEnabled) vibrateRoundComplete(1)
             }
-        } else if (cachedCountVibrationEnabled) {
-            // Regular count - soft quick vibration (independent of round vibration)
-            vibrateCount()
+            CountFeedback.ROUND -> if (cachedVibrationEnabled) vibrateRoundComplete(result.state.rounds)
+            CountFeedback.COUNT -> if (cachedCountVibrationEnabled) vibrateCount()
         }
+    }
+    
+    private fun undoCount() {
+        _sharedChantState.value = ChantCounter.undo(_sharedChantState.value) ?: return
+        updateNotification()
+        if (cachedCountVibrationEnabled) vibrateUndo()
     }
     
     private fun vibrateCount() {
         vibrator.vibrate(VibrationEffect.createOneShot(30, cachedCountVibrationIntensity))
+    }
+    
+    /** Two quick ticks, distinct from the single count tick. */
+    private fun vibrateUndo() {
+        val amplitude = cachedCountVibrationIntensity
+        vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 20, 70, 20), intArrayOf(0, amplitude, 0, amplitude), -1))
     }
     
     /** Vibrates once per completed round (capped at 10): 150ms on, 100ms off. */
@@ -451,6 +428,7 @@ class ChantingService : Service() {
         private const val ACTION_STOP = "com.superchant.action.STOP"
         private const val ACTION_PAUSE = "com.superchant.action.PAUSE"
         private const val ACTION_RESUME = "com.superchant.action.RESUME"
+        private const val EXTRA_INPUT_MODE = "com.superchant.extra.INPUT_MODE"
         
         @Volatile
         private var _instance: ChantingService? = null
@@ -473,20 +451,37 @@ class ChantingService : Service() {
         val currentState: ChantState?
             get() = if (_instance != null) _sharedChantState.value else null
         
+        /** Whether the running session counts volume keys; false in on-screen-only mode so they change volume. */
+        val acceptsVolumeKeys: Boolean
+            get() = _instance?.inputMode?.usesVolumeKeys == true
+        
+        /** Counts one on-screen tap through the same path as a volume press. Call on the main thread. */
+        fun countFromScreen() {
+            _instance?.takeIf { it.inputMode.usesScreen }?.incrementCount()
+        }
+        
+        /** Removes the last count, if any. Call on the main thread. */
+        fun undo() {
+            _instance?.undoCount()
+        }
+        
         private fun intent(context: Context, action: String) =
             Intent(context, ChantingService::class.java).setAction(action)
         
-        fun start(context: Context) {
-            context.startForegroundService(intent(context, ACTION_START))
+        private fun startIntent(context: Context, action: String, inputMode: InputMode) =
+            intent(context, action).putExtra(EXTRA_INPUT_MODE, inputMode.name)
+        
+        fun start(context: Context, inputMode: InputMode) {
+            context.startForegroundService(startIntent(context, ACTION_START, inputMode))
         }
         
         fun stop(context: Context) {
             context.startService(intent(context, ACTION_STOP))
         }
         
-        fun startWithGoal(context: Context, goal: Goal) {
+        fun startWithGoal(context: Context, goal: Goal, inputMode: InputMode) {
             _pendingGoalForStart = goal
-            context.startForegroundService(intent(context, ACTION_START_WITH_GOAL))
+            context.startForegroundService(startIntent(context, ACTION_START_WITH_GOAL, inputMode))
         }
     }
 }

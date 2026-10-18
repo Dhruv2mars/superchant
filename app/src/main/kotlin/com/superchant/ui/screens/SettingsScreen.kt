@@ -23,14 +23,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.superchant.BuildConfig
+import com.superchant.R
+import com.superchant.data.InputMode
 import com.superchant.data.PreferencesRepository
+import com.superchant.service.VolumeKeyAccessibilityService
 import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.BackButton
+import com.superchant.ui.components.InputModeSelector
 import com.superchant.ui.components.ThemeToggle
 import com.superchant.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
@@ -47,6 +54,9 @@ fun SettingsScreen(
     val countVibrationEnabled by preferencesRepository.countVibrationEnabledFlow.collectAsState(initial = true)
     val countVibrationIntensity by preferencesRepository.countVibrationIntensityFlow.collectAsState(initial = 80)
     val roundVibrationIntensity by preferencesRepository.roundVibrationIntensityFlow.collectAsState(initial = 255)
+    val context = LocalContext.current
+    val savedInputMode by preferencesRepository.inputModeFlow.collectAsState(initial = null)
+    val accessibilityEnabled = remember { VolumeKeyAccessibilityService.isAccessibilityServiceEnabled(context) }
     
     Scaffold(
         topBar = {
@@ -62,6 +72,15 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            SettingsSection(title = stringResource(R.string.settings_counting)) {
+                InputModeSelector(
+                    selected = savedInputMode ?: InputMode.default(accessibilityEnabled),
+                    onSelect = { mode -> scope.launch { preferencesRepository.setInputMode(mode) } },
+                    accessibilityEnabled = accessibilityEnabled,
+                    onSetUpAccessibility = { VolumeKeyAccessibilityService.openAccessibilitySettings(context) }
+                )
+            }
+            
             // Appearance section
             SettingsSection(title = "Appearance") {
                 SettingsItem(

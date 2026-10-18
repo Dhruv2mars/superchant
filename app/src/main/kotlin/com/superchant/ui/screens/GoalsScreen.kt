@@ -89,13 +89,11 @@ import com.superchant.R
 import com.superchant.data.Goal
 import com.superchant.data.MantraGoal
 import com.superchant.data.PreferencesRepository
-import com.superchant.data.RoundSize
 import com.superchant.data.newId
 import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.BackButton
 import com.superchant.ui.components.ConfirmDestructiveDialog
 import com.superchant.ui.components.EmptyState
-import com.superchant.ui.components.RoundSizePicker
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -126,7 +124,6 @@ fun GoalsScreen(
 ) {
     // null until loaded, so the empty state doesn't flash before the data arrives
     val loadedGoals by preferencesRepository.goals.collectAsStateWithLifecycle()
-    val appRoundSize = preferencesRepository.roundSize.collectAsStateWithLifecycle().value ?: RoundSize.DEFAULT
     val goals = loadedGoals ?: emptyList()
     
     // Screen states (saveable, so rotation keeps an open editor and its draft)
@@ -204,7 +201,6 @@ fun GoalsScreen(
             if (request != null) {
                 GoalEditorScreen(
                     request = request,
-                    appRoundSize = appRoundSize,
                     isActive = editor?.key == request.key,
                     onSave = { goal ->
                         preferencesRepository.write { saveGoal(goal) }
@@ -271,8 +267,7 @@ private fun GoalCard(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = pluralStringResource(R.plurals.mantras_count, goal.mantras.size, goal.mantras.size) +
-                            " • " + pluralStringResource(R.plurals.rounds_total, goal.totalRounds, goal.totalRounds) +
-                            (goal.roundSize?.let { " • " + pluralStringResource(R.plurals.round_size_beads_per_round, it, it) } ?: ""),
+                            " • " + pluralStringResource(R.plurals.rounds_total, goal.totalRounds, goal.totalRounds),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -400,7 +395,6 @@ private fun GoalCard(
 @Composable
 private fun GoalEditorScreen(
     request: EditorRequest,
-    appRoundSize: Int,
     isActive: Boolean,
     onSave: (Goal) -> Unit,
     onClose: () -> Unit
@@ -410,14 +404,13 @@ private fun GoalEditorScreen(
     val initialName = existingGoal?.name ?: ""
     val initialMantras = existingGoal?.mantras ?: emptyList()
     var goalName by rememberSaveable { mutableStateOf(initialName) }
-    var roundSize by rememberSaveable { mutableStateOf(existingGoal?.roundSize) }
     val mantras = rememberSaveable(saver = mantraListSaver) { initialMantras.toMutableStateList() }
     var editingMantraIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     var showAddMantra by rememberSaveable { mutableStateOf(false) }
     var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
     
     val isValid = goalName.isNotBlank() && mantras.isNotEmpty()
-    val isDirty = goalName != initialName || mantras.toList() != initialMantras || roundSize != existingGoal?.roundSize
+    val isDirty = goalName != initialName || mantras.toList() != initialMantras
     val requestClose = {
         if (isDirty) showDiscardDialog = true else onClose()
     }
@@ -457,8 +450,7 @@ private fun GoalEditorScreen(
                                             id = existingGoal?.id ?: request.key,
                                             name = goalName.trim(),
                                             mantras = mantras.toList(),
-                                            createdAt = existingGoal?.createdAt ?: System.currentTimeMillis(),
-                                            roundSize = roundSize
+                                            createdAt = existingGoal?.createdAt ?: System.currentTimeMillis()
                                         )
                                     )
                                 }
@@ -500,19 +492,6 @@ private fun GoalEditorScreen(
                     ),
                     shape = RoundedCornerShape(12.dp)
                 )
-                
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-                    Text(
-                        text = stringResource(R.string.round_size_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    RoundSizePicker(
-                        selected = roundSize,
-                        onSelect = { roundSize = it },
-                        defaultSize = appRoundSize
-                    )
-                }
                 
                 // Mantras Section Header
                 Row(
@@ -632,7 +611,6 @@ private fun GoalEditorScreen(
         if (showAddMantra) {
             MantraEditorDialog(
                 existingMantra = null,
-                roundSize = roundSize ?: appRoundSize,
                 onSave = { mantra ->
                     mantras.add(mantra)
                     showAddMantra = false
@@ -645,7 +623,6 @@ private fun GoalEditorScreen(
         editingMantraIndex?.let { index ->
             MantraEditorDialog(
                 existingMantra = mantras.getOrNull(index),
-                roundSize = roundSize ?: appRoundSize,
                 onSave = { mantra ->
                     mantras[index] = mantra
                     editingMantraIndex = null
@@ -767,7 +744,6 @@ private fun MantraListItem(
 @Composable
 private fun MantraEditorDialog(
     existingMantra: MantraGoal?,
-    roundSize: Int,
     onSave: (MantraGoal) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -841,7 +817,7 @@ private fun MantraEditorDialog(
                     ),
                     shape = RoundedCornerShape(12.dp),
                     supportingText = {
-                        Text(pluralStringResource(R.plurals.round_size_each_round, roundSize, roundSize))
+                        Text(stringResource(R.string.goals_round_is_108))
                     }
                 )
             }

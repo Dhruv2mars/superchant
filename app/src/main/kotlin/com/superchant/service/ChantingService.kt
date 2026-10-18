@@ -25,10 +25,8 @@ import com.superchant.data.ChantCounter
 import com.superchant.data.ChantState
 import com.superchant.data.CountFeedback
 import com.superchant.data.Goal
-import com.superchant.data.InputMode
 import com.superchant.data.PreferencesRepository
 import com.superchant.data.RestoreAction
-import com.superchant.data.RoundSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,16 +36,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 /**
  * Foreground service that manages the chanting session.
  *
- * Counts volume presses from VolumeKeyAccessibilityService and on-screen taps (via [countFromScreen])
- * through one increment path ([ChantCounter]), and:
- * - Increments the count (or undoes the last one)
+ * Counts volume presses from VolumeKeyAccessibilityService and, while touch counting is on, on-screen
+ * taps (via [countFromScreen]) through one increment path ([ChantCounter]), and:
+ * - Increments the count
  * - Triggers vibration feedback
  * - Updates the notification
  * - Persists the active session on every change, so it is restored after process death
@@ -64,10 +61,6 @@ class ChantingService : Service() {
     // Created on first use, so sessions without the click never open an audio track
     private var beadClick: BeadClick? = null
 
-    // Set from the start intent (or the setting on restore), then kept in sync with the setting
-    // so mid-session changes apply
-    private var inputMode: InputMode = InputMode.VOLUME
-
     override fun onCreate() {
         super.onCreate()
 
@@ -82,17 +75,15 @@ class ChantingService : Service() {
         preferencesRepository = PreferencesRepository.get(this)
 
         createNotificationChannel()
-        serviceScope.launch { preferencesRepository.inputModeFlow.collect { mode -> if (mode != null) inputMode = mode } }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        InputMode.fromName(intent?.getStringExtra(EXTRA_INPUT_MODE))?.let { inputMode = it }
         when (intent?.action) {
             ACTION_START -> startSession(
                 goal = intent.getStringExtra(EXTRA_GOAL)?.let { goalJson ->
                     runCatching { Json.decodeFromString(Goal.serializer(), goalJson) }.getOrNull()
                 },
-                roundSize = intent.getIntExtra(EXTRA_ROUND_SIZE, RoundSize.DEFAULT)
+                touchCounting = intent.getBooleanExtra(EXTRA_TOUCH_COUNTING, false)
             )
             ACTION_STOP -> stopSession()
             ACTION_PAUSE -> setPaused(true)
@@ -128,7 +119,7 @@ class ChantingService : Service() {
         if (newState.isActive) preferencesRepository.write { saveActiveSession(newState) }
     }
 
-    private fun startSession(goal: Goal?, roundSize: Int) {
+    private fun startSession(goal: Goal?, touchCounting: Boolean) {
         val now = System.currentTimeMillis()
         // Starting over a running session (e.g. a goal from the Goals screen) saves it first.
         val previous = state
@@ -143,7 +134,7 @@ class ChantingService : Service() {
                 ?.let { addSessionRecord(it.toRecord(maxOf(it.lastUpdatedAt, it.sessionStartTime))) }
         }
 
-        setState(ChantState.start(goal, now, roundSize))
+        setState(ChantState.start(goal, now, touchCounting))
         _instance = this
         if (!enterForeground()) abandonSession()
     }
@@ -155,8 +146,6 @@ class ChantingService : Service() {
         }
         serviceScope.launch {
             val saved = preferencesRepository.loadActiveSession()
-            inputMode = preferencesRepository.inputModeFlow.first()
-                ?: InputMode.default(VolumeKeyAccessibilityService.isAccessibilityServiceEnabled(this@ChantingService))
             // A session may have been started while loading.
             if (state.isActive) return@launch
             when (val action = saved?.restoreAction(System.currentTimeMillis())) {
@@ -241,17 +230,9 @@ class ChantingService : Service() {
         return true
     }
 
-    private fun undoCount() {
-        val undone = ChantCounter.undo(state) ?: return
-        setState(undone.copy(lastUpdatedAt = System.currentTimeMillis()))
-        updateNotification()
-        val settings = preferencesRepository.vibrationSettings.value
-        if (settings?.countEnabled == true) vibrateUndo(settings.countIntensity)
-    }
-
-    /** Two quick ticks, distinct from the single count tick. */
-    private fun vibrateUndo(amplitude: Int) {
-        vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 20, 70, 20), intArrayOf(0, amplitude, 0, amplitude), -1))
+    private fun setTouchCounting(on: Boolean) {
+        if (!state.isActive || state.touchCounting == on) return
+        setState(state.copy(touchCounting = on, lastUpdatedAt = System.currentTimeMillis()))
     }
 
     private fun giveFeedback(feedback: CountFeedback, rounds: Int) {
@@ -367,7 +348,7 @@ class ChantingService : Service() {
         val title = when {
             state.isPaused -> getString(R.string.notification_paused)
             state.isGoalComplete -> getString(R.string.notification_goal_complete)
-            else -> "${state.currentRoundCount} / ${state.roundSize}"
+            else -> "${state.currentRoundCount} / ${ChantState.ROUND_SIZE}"
         }
 
         val goal = state.activeGoal
@@ -383,7 +364,7 @@ class ChantingService : Service() {
 
         builder.setContentTitle(title)
         builder.setContentText(text)
-        builder.setProgress(state.roundSize, state.currentRoundCount, false)
+        builder.setProgress(ChantState.ROUND_SIZE, state.currentRoundCount, false)
 
         if (actionsPaused != state.isPaused) {
             actionsPaused = state.isPaused
@@ -441,8 +422,7 @@ class ChantingService : Service() {
         private const val ACTION_RESUME = "com.superchant.action.RESUME"
         private const val ACTION_RESTORE = "com.superchant.action.RESTORE"
         private const val EXTRA_GOAL = "com.superchant.extra.GOAL"
-        private const val EXTRA_INPUT_MODE = "com.superchant.extra.INPUT_MODE"
-        private const val EXTRA_ROUND_SIZE = "com.superchant.extra.ROUND_SIZE"
+        private const val EXTRA_TOUCH_COUNTING = "com.superchant.extra.TOUCH_COUNTING"
 
         @Volatile
         private var _instance: ChantingService? = null
@@ -462,18 +442,21 @@ class ChantingService : Service() {
         fun onVolumeKeyPressed(): Boolean =
             acceptsVolumeKeys && _instance?.incrementCount() == true
 
-        /** Whether the running session counts volume keys; false in on-screen-only mode so they change volume. */
-        val acceptsVolumeKeys: Boolean
-            get() = _instance?.inputMode?.usesVolumeKeys == true
+        /**
+         * Whether a running session counts volume keys: only once the user agreed to the accessibility
+         * disclosure (an older install may have the service enabled without it). Otherwise they change volume.
+         */
+        private val acceptsVolumeKeys: Boolean
+            get() = _instance?.preferencesRepository?.accessibilityConsent?.value == true
 
-        /** Counts one on-screen tap through the same path as a volume press. Call on the main thread. */
+        /** Counts one on-screen tap through the same path as a volume press, if touch counting is on. Call on the main thread. */
         fun countFromScreen() {
-            _instance?.takeIf { it.inputMode.usesScreen }?.incrementCount()
+            _instance?.takeIf { it.state.touchCounting }?.incrementCount()
         }
 
-        /** Removes the last count, if any. Call on the main thread. */
-        fun undo() {
-            _instance?.undoCount()
+        /** Turns on-screen counting on or off for the running session. Call on the main thread. */
+        fun setTouchCounting(on: Boolean) {
+            _instance?.setTouchCounting(on)
         }
 
         /** Pauses or resumes the running session, same as the notification actions. Call on the main thread. */
@@ -484,23 +467,15 @@ class ChantingService : Service() {
         private fun intent(context: Context, action: String) =
             Intent(context, ChantingService::class.java).setAction(action)
 
-        private fun startIntent(context: Context, inputMode: InputMode, roundSize: Int) =
-            intent(context, ACTION_START)
-                .putExtra(EXTRA_INPUT_MODE, inputMode.name)
-                .putExtra(EXTRA_ROUND_SIZE, roundSize)
-
-        fun start(context: Context, inputMode: InputMode, roundSize: Int) {
-            context.startForegroundService(startIntent(context, inputMode, roundSize))
+        /** Starts a session, with [goal] if given; [touchCounting] turns on-screen counting on from the start. */
+        fun start(context: Context, goal: Goal?, touchCounting: Boolean) {
+            val intent = intent(context, ACTION_START).putExtra(EXTRA_TOUCH_COUNTING, touchCounting)
+            if (goal != null) intent.putExtra(EXTRA_GOAL, Json.encodeToString(Goal.serializer(), goal))
+            context.startForegroundService(intent)
         }
 
         fun stop(context: Context) {
             context.startService(intent(context, ACTION_STOP))
-        }
-
-        fun startWithGoal(context: Context, goal: Goal, inputMode: InputMode, roundSize: Int) {
-            context.startForegroundService(
-                startIntent(context, inputMode, roundSize).putExtra(EXTRA_GOAL, Json.encodeToString(Goal.serializer(), goal))
-            )
         }
 
         /** Resumes a session persisted by a process that has died; call while the app is visible. */

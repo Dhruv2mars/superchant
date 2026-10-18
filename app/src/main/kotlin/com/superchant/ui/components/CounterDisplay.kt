@@ -33,8 +33,7 @@ import androidx.compose.ui.unit.min
 import com.superchant.data.ChantState
 import com.superchant.ui.theme.CounterGold
 import com.superchant.ui.theme.CounterGoldDark
-import com.superchant.ui.theme.FocusText
-import com.superchant.ui.theme.FocusTrack
+import com.superchant.ui.theme.EaseOutStrong
 import com.superchant.ui.theme.ProgressTrackDark
 import com.superchant.ui.theme.ProgressTrackLight
 import kotlin.math.PI
@@ -45,22 +44,21 @@ import kotlin.math.sin
  * Progress ring with the count of the current round, drawn like a mala: beads around the ring (one per
  * count when they fit, otherwise one per group of counts) and a larger meru bead at the top where each
  * round starts and ends. Everything scales with the space given. Motion is deliberately calm: no bounce,
- * a soft pulse on each count and a slow glow when a round completes.
- * [footer] is an optional line under "/ 108" (the round size); [dimmed] renders the low-glare focus palette.
+ * a barely-there pulse on each count (it happens 108 times a round) and a slow glow when a round completes.
+ * [footer] is an optional line under "/ 108".
  */
 @Composable
 fun CounterDisplay(
     state: ChantState,
     isDarkTheme: Boolean,
     modifier: Modifier = Modifier,
-    footer: String? = null,
-    dimmed: Boolean = false
+    footer: String? = null
 ) {
     val currentCount = state.currentRoundCount
     val progress = state.progress
 
     val animatedProgress = remember { Animatable(progress) }
-    LaunchedEffect(state.count, state.roundSize) {
+    LaunchedEffect(state.count) {
         if (state.count > 0 && currentCount == 0 && animatedProgress.value > 0.5f) {
             // A round just completed: close the circle, then start again from the meru bead.
             animatedProgress.animateTo(1f, tween(160, easing = FastOutSlowInEasing))
@@ -73,7 +71,7 @@ fun CounterDisplay(
         }
     }
 
-    // A slow glow when a round completes (not on undo, and not when the screen first shows a session)
+    // A slow glow when a round completes (not when the screen first shows a session)
     val glow = remember { Animatable(0f) }
     val roundsSeen = remember { mutableIntStateOf(state.rounds) }
     LaunchedEffect(state.rounds) {
@@ -87,28 +85,17 @@ fun CounterDisplay(
         }
     }
 
-    // A gentle pulse on each count
+    // A near-imperceptible pulse on each count: the core action, so it stays well under 150 ms
     val scale = remember { Animatable(1f) }
     LaunchedEffect(state.count) {
         if (state.count > 0) {
-            scale.animateTo(1.04f, tween(60))
-            scale.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
+            scale.snapTo(1.03f)
+            scale.animateTo(1f, tween(140, easing = EaseOutStrong))
         }
     }
 
-    val progressColor = when {
-        dimmed -> CounterGoldDark.copy(alpha = 0.55f)
-        isDarkTheme -> CounterGoldDark
-        else -> CounterGold
-    }
-    val trackColor = when {
-        dimmed -> FocusTrack
-        isDarkTheme -> ProgressTrackDark
-        else -> ProgressTrackLight
-    }
-    val countColor = if (dimmed) FocusText else MaterialTheme.colorScheme.onSurface
-    val secondaryColor = if (dimmed) FocusText.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
-    val footerColor = if (dimmed) progressColor else MaterialTheme.colorScheme.primary
+    val progressColor = if (isDarkTheme) CounterGoldDark else CounterGold
+    val trackColor = if (isDarkTheme) ProgressTrackDark else ProgressTrackLight
 
     BoxWithConstraints(
         contentAlignment = Alignment.Center,
@@ -126,7 +113,7 @@ fun CounterDisplay(
         ) {
             Canvas(modifier = Modifier.fillMaxSize().padding(8.dp)) {
                 val outer = size.minDimension / 2
-                val geometry = MalaGeometry.forRing(outerRadius = outer, density = density, roundSize = state.roundSize)
+                val geometry = MalaGeometry.forRing(outerRadius = outer, density = density)
                 val center = Offset(size.width / 2, size.height / 2)
                 val ringRadius = geometry.ringRadius
 
@@ -192,7 +179,7 @@ fun CounterDisplay(
                         fontSize = countSize,
                         lineHeight = countSize
                     ),
-                    color = countColor,
+                    color = MaterialTheme.colorScheme.onSurface,
                     // Read in the layer block so the pop only redraws, without recomposing each frame
                     modifier = Modifier.graphicsLayer {
                         scaleX = scale.value
@@ -200,15 +187,15 @@ fun CounterDisplay(
                     }
                 )
                 Text(
-                    text = "/ ${state.roundSize}",
+                    text = "/ ${ChantState.ROUND_SIZE}",
                     style = if (availableSize < 220.dp) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall,
-                    color = secondaryColor
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (footer != null) {
                     Text(
                         text = footer,
                         style = MaterialTheme.typography.titleSmall,
-                        color = footerColor,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
@@ -230,7 +217,7 @@ internal data class MalaGeometry(
         /** Beads need at least this much arc per bead, in bead radii, to read as separate beads. */
         private const val MIN_SPACING_RADII = 3.2f
 
-        fun forRing(outerRadius: Float, density: Float, roundSize: Int): MalaGeometry {
+        fun forRing(outerRadius: Float, density: Float): MalaGeometry {
             val beadRadius = (outerRadius * 0.028f).coerceIn(2.5f * density, 6f * density)
             val meruRadius = beadRadius * 1.7f
             val beadOrbit = outerRadius - meruRadius
@@ -243,21 +230,13 @@ internal data class MalaGeometry(
                 beadRadius = beadRadius,
                 beadOrbit = beadOrbit,
                 meruRadius = meruRadius,
-                beadCount = beadsToShow(roundSize, maxBeads)
+                beadCount = beadsToShow(maxBeads)
             )
         }
 
-        /**
-         * One bead per count when the round fits; otherwise the largest whole grouping that fits, so each
-         * bead stands for the same number of counts (108 → 54 beads of 2, or 27 of 4). Sizes with no useful
-         * divisor get evenly spaced markers.
-         */
-        fun beadsToShow(roundSize: Int, maxBeads: Int): Int {
-            if (roundSize <= 0 || maxBeads <= 0) return 0
-            if (roundSize <= maxBeads) return roundSize
-            val divisor = (maxBeads downTo 1).first { roundSize % it == 0 }
-            return if (divisor >= maxBeads / 3) divisor else maxBeads.coerceAtMost(54)
-        }
+        /** One bead per count when all 108 fit; otherwise the most beads that split the round evenly (54 of 2, 36 of 3, ...). */
+        fun beadsToShow(maxBeads: Int): Int =
+            (minOf(maxBeads, ChantState.ROUND_SIZE) downTo 1).firstOrNull { ChantState.ROUND_SIZE % it == 0 } ?: 0
 
         /** Angle of bead [index], leaving the top position free for the meru bead. */
         fun beadAngle(index: Int, count: Int): Double = (index + 0.5) / count * 2 * PI - PI / 2

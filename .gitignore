@@ -24,3 +24,17 @@ captures/
 *.hprof
 *.log
 .DS_Store
+
+# Agent tooling: local state stays untracked; the shared project skills are committed
+# (.agents/skills is canonical, .claude/skills links to it)
+!.claude/
+.claude/*
+!.claude/skills/
+.codex/
+.opencode/
+.gemini/
+.factory/
+.entire/
+.cursor/
+.pi/
+TASKS.md

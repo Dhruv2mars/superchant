@@ -11,7 +11,8 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * A complete, human-readable copy of the user's data: settings, goals and history. Written and read
  * through the Storage Access Framework, so the user decides where it lives; nothing leaves the device
- * otherwise. IDs are strings (see [LenientIdSerializer]); older numeric IDs still import.
+ * otherwise. IDs are strings (see [LenientIdSerializer]); older numeric IDs still import, and fields
+ * older versions wrote that no longer exist (e.g. `roundSize`, `inputMode`, `pocketGuard`) are ignored.
  */
 @Serializable
 data class Backup(
@@ -33,8 +34,6 @@ data class Backup(
 @Serializable
 data class BackupSettings(
     val themeMode: String? = null,
-    val inputMode: String? = null,
-    val roundSize: Int? = null,
     val dailyTarget: Int? = null,
     val countVibration: Boolean? = null,
     val countIntensity: Int? = null,
@@ -42,7 +41,6 @@ data class BackupSettings(
     val roundIntensity: Int? = null,
     val milestonePulse: Boolean? = null,
     val beadClick: Boolean? = null,
-    val pocketGuard: Boolean? = null,
     val reminderEnabled: Boolean? = null,
     val reminderMinuteOfDay: Int? = null
 )

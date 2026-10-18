@@ -43,19 +43,18 @@ import com.superchant.service.VolumeKeyAccessibilityService
  * Everything before the user reaches Android's accessibility settings. First a prominent disclosure
  * of exactly what the service does and doesn't do, which needs an explicit "I agree" (Google Play
  * requires this for apps that aren't accessibility tools). Once agreed, the setup steps, including the
- * restricted-settings help for sideloaded installs on Android 13+.
- * [onCountByTapping], when set, offers on-screen counting as a way out at every step.
+ * restricted-settings help for sideloaded installs on Android 13+. Touch counting works without any
+ * of this, so declining simply closes it.
  */
 @Composable
 fun AccessibilitySetupDialog(
     consented: Boolean,
     onConsent: () -> Unit,
     onDismiss: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onCountByTapping: (() -> Unit)? = null
+    onOpenSettings: () -> Unit
 ) {
     if (!consented) {
-        AccessibilityDisclosureDialog(onAgree = onConsent, onDecline = onDismiss, onCountByTapping = onCountByTapping)
+        AccessibilityDisclosureDialog(onAgree = onConsent, onDecline = onDismiss)
         return
     }
     val context = LocalContext.current
@@ -70,33 +69,21 @@ fun AccessibilitySetupDialog(
             onOpenAppInfo = {
                 VolumeKeyAccessibilityService.openAppSettings(context)
             },
-            onOpenAccessibility = onOpenSettings,
-            onCountByTapping = onCountByTapping
+            onOpenAccessibility = onOpenSettings
         )
     } else {
         // Standard flow - just open accessibility settings
         SimpleAccessibilityDialog(
             onDismiss = onDismiss,
-            onOpenSettings = onOpenSettings,
-            onCountByTapping = onCountByTapping
+            onOpenSettings = onOpenSettings
         )
-    }
-}
-
-/** Escape hatch for anyone who can't or won't grant accessibility. */
-@Composable
-private fun CountByTappingButton(onClick: (() -> Unit)?) {
-    if (onClick == null) return
-    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Text(text = stringResource(R.string.count_by_tapping), style = MaterialTheme.typography.labelMedium)
     }
 }
 
 @Composable
 private fun SimpleAccessibilityDialog(
     onDismiss: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onCountByTapping: (() -> Unit)?
+    onOpenSettings: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -118,8 +105,6 @@ private fun SimpleAccessibilityDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                CountByTappingButton(onClick = onCountByTapping)
             }
         },
         confirmButton = {
@@ -144,8 +129,7 @@ private fun SimpleAccessibilityDialog(
 private fun RestrictedSettingsDialog(
     onDismiss: () -> Unit,
     onOpenAppInfo: () -> Unit,
-    onOpenAccessibility: () -> Unit,
-    onCountByTapping: (() -> Unit)?
+    onOpenAccessibility: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -207,8 +191,6 @@ private fun RestrictedSettingsDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                CountByTappingButton(onClick = onCountByTapping)
             }
         },
         confirmButton = {},
@@ -263,8 +245,7 @@ private fun SetupStepCard(
 @Composable
 private fun AccessibilityDisclosureDialog(
     onAgree: () -> Unit,
-    onDecline: () -> Unit,
-    onCountByTapping: (() -> Unit)?
+    onDecline: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDecline,
@@ -293,8 +274,6 @@ private fun AccessibilityDisclosureDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                CountByTappingButton(onClick = onCountByTapping)
             }
         },
         confirmButton = {

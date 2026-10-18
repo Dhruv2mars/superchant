@@ -136,39 +136,20 @@
     <string name="settings">Settings</string>
     <string name="action_start">Start</string>
     <string name="cancel">Cancel</string>
-    <string name="focus_enter">Focus mode</string>
-    <string name="focus_exit">Exit focus mode</string>
 
-    <!-- Input mode -->
-    <string name="input_mode_title">How do you want to count?</string>
-    <string name="input_mode_on_screen">On-screen</string>
-    <string name="input_mode_volume">Volume</string>
-    <string name="input_mode_both">Both</string>
-    <string name="input_mode_on_screen_desc">Tap anywhere on the counter. No special permissions needed.</string>
-    <string name="input_mode_volume_desc">Press either volume button, even with the screen off. Needs the accessibility service.</string>
-    <string name="input_mode_both_desc">Tap the counter or press a volume button. Volume buttons need the accessibility service.</string>
-    <string name="input_mode_needs_accessibility">Volume buttons need the accessibility service.</string>
-    <string name="input_mode_set_up">Set up</string>
-    <string name="count_by_tapping">Count by tapping instead</string>
+    <!-- Counting -->
     <string name="settings_counting">Counting</string>
+    <string name="touch_counting">Touch counting</string>
+    <string name="touch_counting_on">On. Tap the counter to count.</string>
+    <string name="touch_counting_off">Off</string>
+    <string name="touch_counting_hint">Turn touch counting on or off here</string>
+    <string name="volume_buttons_offer">Count with volume buttons</string>
+    <string name="volume_buttons_title">Volume buttons</string>
+    <string name="volume_buttons_on">Volume up or down counts during a session, even with the screen off.</string>
+    <string name="volume_buttons_off">Count with volume up or down, even with the screen off. Needs the accessibility service.</string>
+    <string name="volume_buttons_set_up">Set up</string>
     <string name="ok">OK</string>
 
-    <!-- Round size -->
-    <string name="round_size_title">Beads per round</string>
-    <string name="round_size_desc">A round completes after this many counts. Match your mala.</string>
-    <string name="round_size_default">Default (%d)</string>
-    <string name="round_size_custom">Custom</string>
-    <string name="round_size_custom_value">Custom: %d</string>
-    <string name="round_size_custom_title">Custom round size</string>
-    <string name="round_size_range">From %1$d to %2$d</string>
-    <plurals name="round_size_each_round">
-        <item quantity="one">Each round = %d count</item>
-        <item quantity="other">Each round = %d counts</item>
-    </plurals>
-    <plurals name="round_size_beads_per_round">
-        <item quantity="one">%d bead/round</item>
-        <item quantity="other">%d beads/round</item>
-    </plurals>
 
     <!-- Session -->
     <string name="status_paused">Paused</string>
@@ -176,6 +157,7 @@
     <string name="status_tap">Tap anywhere here to count</string>
     <string name="status_volume">Press a volume button to count</string>
     <string name="status_both">Tap here or press a volume button to count</string>
+    <string name="status_touch_off">Turn on touch counting to count</string>
     <string name="status_goal_complete">Goal complete. Tap Stop to save it.</string>
     <string name="notification_paused">Paused</string>
     <string name="notification_goal_complete">Goal Complete!</string>
@@ -190,16 +172,8 @@
     <!-- TalkBack description of the counter, e.g. "Count 42 of 108. 3 rounds" -->
     <string name="count_description">Count %1$d of %2$d. %3$s</string>
     <string name="tap_to_count_action">Count</string>
-    <string name="undo_label">−1</string>
-    <string name="undo_hold_hint">Hold to undo</string>
-    <string name="undo_description">Undo last count</string>
-    <string name="undo_action">Undo</string>
-    <string name="stop_hold_hint">Hold to stop</string>
-    <string name="status_pocket_guard">Screen covered. Taps are ignored.</string>
 
     <!-- Counting feel -->
-    <string name="pocket_guard_title">Pocket guard</string>
-    <string name="pocket_guard_desc">Ignore taps while the screen is covered, so a pocket can\'t count.</string>
     <string name="bead_click_title">Soft bead click</string>
     <string name="bead_click_desc">A quiet click on each count. Follows the system sounds volume and silent mode.</string>
     <string name="milestone_pulse_title">Milestone pulse</string>
@@ -332,4 +306,5 @@
     <string name="goals_mantra_name_label">Mantra Name</string>
     <string name="goals_mantra_name_placeholder">e.g., Om Namah Shivaya</string>
     <string name="goals_target_rounds_label">Target Rounds</string>
+    <string name="goals_round_is_108">Each round = 108 counts</string>
 </resources>

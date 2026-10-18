@@ -11,21 +11,20 @@ data class CountResult(val state: ChantState, val feedback: CountFeedback)
  */
 object ChantCounter {
 
-    /** Adds one count, rolling rounds every [ChantState.roundSize] beads and advancing goal mantras. Null when counting isn't allowed. */
+    /** Adds one count, rolling rounds every [ChantState.ROUND_SIZE] beads and advancing goal mantras. Null when counting isn't allowed. */
     fun increment(state: ChantState): CountResult? {
         if (!state.isActive || state.isPaused || state.isGoalComplete) return null
 
         val newCount = state.count + 1
-        val newRounds = newCount / state.roundSize
+        val newRounds = newCount / ChantState.ROUND_SIZE
         val roundCompleted = newRounds > state.rounds
 
         val goal = state.activeGoal
         var mantraIndex = state.currentMantraIndex
         var mantraRounds = state.mantraRoundsCompleted
-        val interval = RoundSize.milestoneInterval(state.roundSize)
         var feedback = when {
             roundCompleted -> CountFeedback.ROUND
-            interval > 0 && (newCount % state.roundSize) % interval == 0 -> CountFeedback.MILESTONE
+            newCount % ChantState.MILESTONE_INTERVAL == 0 -> CountFeedback.MILESTONE
             else -> CountFeedback.COUNT
         }
 
@@ -51,38 +50,6 @@ object ChantCounter {
                 mantraRoundsCompleted = mantraRounds
             ),
             feedback
-        )
-    }
-
-    /**
-     * Removes the last count: the exact inverse of [increment], including stepping back across a round
-     * boundary, re-opening a completed goal, or returning to the previous mantra. Null at 0 or while paused.
-     */
-    fun undo(state: ChantState): ChantState? {
-        if (!state.isActive || state.isPaused || state.count <= 0) return null
-
-        val newCount = state.count - 1
-        val newRounds = newCount / state.roundSize
-
-        val goal = state.activeGoal
-        var mantraIndex = state.currentMantraIndex
-        var mantraRounds = state.mantraRoundsCompleted
-
-        if (goal != null && newRounds < state.rounds) {
-            if (mantraRounds > 0) {
-                mantraRounds--
-            } else if (mantraIndex > 0) {
-                // That round finished the previous mantra and advanced; step back into it.
-                mantraIndex--
-                mantraRounds = (goal.mantras[mantraIndex].targetRounds - 1).coerceAtLeast(0)
-            }
-        }
-
-        return state.copy(
-            count = newCount,
-            rounds = newRounds,
-            currentMantraIndex = mantraIndex,
-            mantraRoundsCompleted = mantraRounds
         )
     }
 }

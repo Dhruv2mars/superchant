@@ -36,12 +36,10 @@ private val Context.sessionDataStore: DataStore<Preferences> by preferencesDataS
 
 /** Optional extras around each count. */
 data class CountingFeel(
-    /** A distinct pulse at milestone beads (see [RoundSize.milestoneInterval]). */
+    /** A distinct pulse every [ChantState.MILESTONE_INTERVAL] beads. */
     val milestonePulse: Boolean = true,
     /** A soft synthesized bead click on each count; plays through the system sounds volume. */
-    val beadClick: Boolean = false,
-    /** Ignore on-screen taps while the proximity sensor is covered, e.g. in a pocket. */
-    val pocketGuard: Boolean = true
+    val beadClick: Boolean = false
 )
 
 /** The optional daily reminder; [minuteOfDay] is local time (e.g. 360 = 6:00). */
@@ -75,15 +73,14 @@ class PreferencesRepository private constructor(private val context: Context) {
         val SESSION_HISTORY = stringPreferencesKey("session_history")
         val SAVED_GOALS = stringPreferencesKey("saved_goals")
         val ACTIVE_SESSION = stringPreferencesKey("active_session")
-        val INPUT_MODE = stringPreferencesKey("input_mode")
-        val ROUND_SIZE = intPreferencesKey("round_size")
+        // Keys of removed features ("input_mode", "round_size", "pocket_guard") may still be stored; they are never read.
         val MILESTONE_PULSE = booleanPreferencesKey("milestone_pulse")
         val BEAD_CLICK = booleanPreferencesKey("bead_click")
-        val POCKET_GUARD = booleanPreferencesKey("pocket_guard")
         val ACCESSIBILITY_CONSENT = booleanPreferencesKey("accessibility_consent")
         val DAILY_TARGET = intPreferencesKey("daily_target")
         val REMINDER_ENABLED = booleanPreferencesKey("reminder_enabled")
         val REMINDER_MINUTE = intPreferencesKey("reminder_minute")
+        val TOUCH_HINT_SEEN = booleanPreferencesKey("touch_hint_seen")
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -182,8 +179,7 @@ class PreferencesRepository private constructor(private val context: Context) {
         val defaults = CountingFeel()
         CountingFeel(
             milestonePulse = preferences[PreferencesKeys.MILESTONE_PULSE] ?: defaults.milestonePulse,
-            beadClick = preferences[PreferencesKeys.BEAD_CLICK] ?: defaults.beadClick,
-            pocketGuard = preferences[PreferencesKeys.POCKET_GUARD] ?: defaults.pocketGuard
+            beadClick = preferences[PreferencesKeys.BEAD_CLICK] ?: defaults.beadClick
         )
     }.share()
 
@@ -193,10 +189,6 @@ class PreferencesRepository private constructor(private val context: Context) {
 
     suspend fun setBeadClick(enabled: Boolean) {
         context.dataStore.edit { it[PreferencesKeys.BEAD_CLICK] = enabled }
-    }
-
-    suspend fun setPocketGuard(enabled: Boolean) {
-        context.dataStore.edit { it[PreferencesKeys.POCKET_GUARD] = enabled }
     }
 
     /** Rounds per day to aim for; 0 means no target. */
@@ -230,26 +222,11 @@ class PreferencesRepository private constructor(private val context: Context) {
         context.dataStore.edit { it[PreferencesKeys.ACCESSIBILITY_CONSENT] = agreed }
     }
 
-    /** The chosen [InputMode], or null until the user picks one (see [InputMode.default]). */
-    val inputModeFlow: Flow<InputMode?> = prefs.map { preferences ->
-        InputMode.fromName(preferences[PreferencesKeys.INPUT_MODE])
-    }.distinctUntilChanged()
-    
-    suspend fun setInputMode(mode: InputMode) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.INPUT_MODE] = mode.name
-        }
-    }
-    
-    /** Default beads per round for sessions without a goal-specific size. */
-    val roundSize: StateFlow<Int?> = prefs.map { preferences ->
-        RoundSize.sanitize(preferences[PreferencesKeys.ROUND_SIZE])
-    }.share()
+    /** Whether the one-time hint for the touch-counting toggle has been shown. */
+    val touchHintSeen: StateFlow<Boolean?> = prefs.map { it[PreferencesKeys.TOUCH_HINT_SEEN] ?: false }.share()
 
-    suspend fun setRoundSize(size: Int) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.ROUND_SIZE] = RoundSize.sanitize(size)
-        }
+    suspend fun setTouchHintSeen() {
+        context.dataStore.edit { it[PreferencesKeys.TOUCH_HINT_SEEN] = true }
     }
 
     // Session history. Decoded only when the stored JSON changes, not on every preference write.
@@ -318,8 +295,6 @@ class PreferencesRepository private constructor(private val context: Context) {
                     2 -> ThemeMode.SYSTEM.name
                     else -> null
                 },
-                inputMode = p[PreferencesKeys.INPUT_MODE],
-                roundSize = p[PreferencesKeys.ROUND_SIZE],
                 dailyTarget = p[PreferencesKeys.DAILY_TARGET],
                 countVibration = p[PreferencesKeys.COUNT_VIBRATION_ENABLED],
                 countIntensity = p[PreferencesKeys.COUNT_VIBRATION_INTENSITY],
@@ -327,7 +302,6 @@ class PreferencesRepository private constructor(private val context: Context) {
                 roundIntensity = p[PreferencesKeys.ROUND_VIBRATION_INTENSITY],
                 milestonePulse = p[PreferencesKeys.MILESTONE_PULSE],
                 beadClick = p[PreferencesKeys.BEAD_CLICK],
-                pocketGuard = p[PreferencesKeys.POCKET_GUARD],
                 reminderEnabled = p[PreferencesKeys.REMINDER_ENABLED],
                 reminderMinuteOfDay = p[PreferencesKeys.REMINDER_MINUTE]
             ),
@@ -361,8 +335,6 @@ class PreferencesRepository private constructor(private val context: Context) {
                     ThemeMode.DARK.name -> p[PreferencesKeys.THEME_MODE] = 1
                     ThemeMode.SYSTEM.name -> p[PreferencesKeys.THEME_MODE] = 2
                 }
-                InputMode.fromName(inputMode)?.let { p[PreferencesKeys.INPUT_MODE] = it.name }
-                roundSize?.takeIf(RoundSize::isValid)?.let { p[PreferencesKeys.ROUND_SIZE] = it }
                 dailyTarget?.takeIf { it in 0..PracticeStats.DAILY_TARGET_MAX }?.let { p[PreferencesKeys.DAILY_TARGET] = it }
                 countVibration?.let { p[PreferencesKeys.COUNT_VIBRATION_ENABLED] = it }
                 countIntensity?.takeIf { it in 1..255 }?.let { p[PreferencesKeys.COUNT_VIBRATION_INTENSITY] = it }
@@ -370,7 +342,6 @@ class PreferencesRepository private constructor(private val context: Context) {
                 roundIntensity?.takeIf { it in 1..255 }?.let { p[PreferencesKeys.ROUND_VIBRATION_INTENSITY] = it }
                 milestonePulse?.let { p[PreferencesKeys.MILESTONE_PULSE] = it }
                 beadClick?.let { p[PreferencesKeys.BEAD_CLICK] = it }
-                pocketGuard?.let { p[PreferencesKeys.POCKET_GUARD] = it }
                 reminderEnabled?.let { p[PreferencesKeys.REMINDER_ENABLED] = it }
                 reminderMinuteOfDay?.takeIf { it in 0 until 24 * 60 }?.let { p[PreferencesKeys.REMINDER_MINUTE] = it }
             }
@@ -388,8 +359,8 @@ class PreferencesRepository private constructor(private val context: Context) {
     suspend fun loadActiveSession(): ChantState? = try {
         context.sessionDataStore.data.first()[PreferencesKeys.ACTIVE_SESSION]
             ?.let { json.decodeFromString(ChantState.serializer(), it) }
-            // A bad size (e.g. 0) would divide by zero on every count and every launch
-            ?.let { it.copy(roundSize = RoundSize.sanitize(it.roundSize)) }
+            // Older versions allowed other round sizes; rounds always follow the count at 108 now
+            ?.let { it.copy(rounds = it.count / ChantState.ROUND_SIZE) }
     } catch (e: Exception) {
         Log.e(TAG, "Reading the active session failed", e)
         null

@@ -17,7 +17,7 @@ The only copy that can leave your device is Android's own device backup, describ
 
 The following data is stored on your device:
 
-- **Chanting session history** - Your completed sessions (counts, rounds, round size, duration, goal
+- **Chanting session history** - Your completed sessions (counts, rounds, duration, goal
   name and how many rounds of each of its mantras)
 - **Goals** - Custom goals you create
 - **Preferences** - Theme, vibration, counting, daily target and reminder settings, and whether you

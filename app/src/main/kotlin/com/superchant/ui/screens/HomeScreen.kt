@@ -5,63 +5,60 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.NightsStay
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,8 +68,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -92,36 +87,34 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.superchant.R
 import com.superchant.data.ChantState
 import com.superchant.data.Goal
-import com.superchant.data.InputMode
 import com.superchant.data.PreferencesRepository
-import com.superchant.data.RoundSize
 import com.superchant.service.ChantingService
 import com.superchant.service.VolumeKeyAccessibilityService
 import com.superchant.ui.components.AccessibilitySetupDialog
 import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.CounterDisplay
-import com.superchant.ui.components.FocusWindowEffect
-import com.superchant.ui.components.HoldToStopButton
-import com.superchant.ui.components.HoldToUndoButton
-import com.superchant.ui.components.InputModeSelector
 import com.superchant.ui.components.KeepScreenOn
-import com.superchant.ui.components.StartStopButton
+import com.superchant.ui.components.StartButton
+import com.superchant.ui.components.StopButton
 import com.superchant.ui.components.TapToCountPad
 import com.superchant.ui.components.TodayLine
-import com.superchant.ui.components.rememberProximityCovered
-import com.superchant.ui.theme.FocusBackground
-import com.superchant.ui.theme.FocusText
+import com.superchant.ui.components.TouchCountingToggle
 import com.superchant.ui.theme.ThemeMode
+import com.superchant.ui.theme.pressScale
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 /**
- * Home: the counter. Idle, it shows the empty ring, the input-mode choice and Start. During a session
- * it shows controls (hold-to-undo, focus, Stop) above the goal strip and a large tap-to-count pad, which
- * takes all remaining space so the controls and goal never get pushed off-screen.
+ * Home: the counter. Idle, it shows the empty ring and Start. During a session it shows the controls
+ * (touch counting, pause, Stop) above the goal strip and the counter, which takes all remaining space
+ * so the controls and goal never get pushed off-screen.
+ *
+ * Volume buttons always count once the accessibility service is enabled and agreed to. Touch counting
+ * is a per-session switch: on, the counter becomes the tap target and the screen stays awake. It starts
+ * on when volume buttons can't count yet, so Start never waits on a permission.
  *
  * [pendingStart] is a start requested elsewhere (a goal on the Goals screen, a launcher shortcut or the
- * Quick Settings tile); it goes through the same permission checks as Start.
+ * Quick Settings tile); it goes through the same notification permission check as Start.
  */
 @Composable
 fun HomeScreen(
@@ -136,7 +129,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val configuration = LocalConfiguration.current
-    // The count changes on every press, so it is only read where it's shown (CounterArea, focus mode);
+    // The count changes on every press, so it is only read where it's shown (CounterArea);
     // this screen reads coarse derived values and recomposes only when those change.
     val chantStateHolder = ChantingService.chantStateFlow.collectAsStateWithLifecycle()
     val chantState = remember(chantStateHolder) { { chantStateHolder.value } }
@@ -147,9 +140,8 @@ fun HomeScreen(
     val isServiceRunning by remember { derivedStateOf { chantStateHolder.value.isActive } }
     val isPaused by remember { derivedStateOf { chantStateHolder.value.isPaused } }
     val isGoalComplete by remember { derivedStateOf { chantStateHolder.value.isGoalComplete } }
+    val touchCounting by remember { derivedStateOf { chantStateHolder.value.touchCounting } }
     val rounds by remember { derivedStateOf { chantStateHolder.value.rounds } }
-    val canUndo by remember { derivedStateOf { chantStateHolder.value.count > 0 && !chantStateHolder.value.isPaused } }
-    val hasCounts by remember { derivedStateOf { chantStateHolder.value.count > 0 } }
     // Goal progress without the per-press fields, so the goal strip only changes at round boundaries
     val goalProgress by remember {
         derivedStateOf { chantStateHolder.value.copy(count = 0, rounds = 0, lastUpdatedAt = 0L) }
@@ -159,30 +151,11 @@ fun HomeScreen(
     var isAccessibilityEnabled by remember {
         mutableStateOf(VolumeKeyAccessibilityService.isAccessibilityServiceEnabled(context))
     }
-
-    // Saved input mode; `loaded` guards against starting before DataStore has been read
-    val (savedInputMode, inputModeFlowLoaded) = remember(preferencesRepository) {
-        preferencesRepository.inputModeFlow.map { it to true }
-    }.collectAsState(initial = null to false).value
-    val savedRoundSize by preferencesRepository.roundSize.collectAsStateWithLifecycle()
-    val appRoundSize = savedRoundSize ?: RoundSize.DEFAULT
+    // null until loaded; Start waits for it so a session never starts on a guess
     val savedConsent by preferencesRepository.accessibilityConsent.collectAsStateWithLifecycle()
     val accessibilityConsent = savedConsent == true
-    val inputModeLoaded = inputModeFlowLoaded && savedRoundSize != null && savedConsent != null
-    val inputMode = savedInputMode ?: InputMode.default(isAccessibilityEnabled)
-    val setInputMode: (InputMode) -> Unit = { mode -> preferencesRepository.write { setInputMode(mode) } }
-
-    val tapCounting = inputMode.usesScreen
-    val volumeCounting = inputMode.usesVolumeKeys && isAccessibilityEnabled
-
-    // Setup dialog, shown on Start (volume counting without accessibility) or from "Set up"
+    val volumeReady = isAccessibilityEnabled && accessibilityConsent
     var showAccessibilityDialog by remember { mutableStateOf(false) }
-    var accessibilityDialogStartsSession by remember { mutableStateOf(false) }
-    var focusMode by rememberSaveable { mutableStateOf(false) }
-
-    LaunchedEffect(isServiceRunning) {
-        if (!isServiceRunning) focusMode = false
-    }
 
     // Permission handling for notifications (Android 13+)
     fun notificationsGranted() = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
@@ -203,60 +176,50 @@ fun HomeScreen(
         }
     }
 
-    val pocketGuardOn = preferencesRepository.countingFeel.collectAsStateWithLifecycle().value?.pocketGuard ?: true
-    val pocketCovered = rememberProximityCovered(enabled = isServiceRunning && tapCounting && pocketGuardOn)
-    // Covered: taps are ignored and the screen may time out as usual, instead of burning in a pocket
-    KeepScreenOn(enabled = isServiceRunning && tapCounting && !pocketCovered)
-    FocusWindowEffect(enabled = isServiceRunning && focusMode)
-    BackHandler(enabled = isServiceRunning && focusMode) { focusMode = false }
+    // Awake only while taps can count (the tap surface is showing): not when off, paused or the goal is done
+    KeepScreenOn(enabled = isServiceRunning && touchCounting && !isPaused && !isGoalComplete)
 
+    // A session that volume buttons can't count (restored from an older version, or the service was turned
+    // off) gets touch counting, once per session and readiness change, so switching it off by hand sticks
+    // across navigation and rotation.
+    val sessionId by remember { derivedStateOf { chantStateHolder.value.run { sessionId.takeIf { isActive } } } }
+    var autoTouchHandled by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(sessionId, volumeReady, savedConsent != null) {
+        if (sessionId == null || savedConsent == null) return@LaunchedEffect
+        val key = "$sessionId:$volumeReady"
+        if (autoTouchHandled == key) return@LaunchedEffect
+        autoTouchHandled = key
+        if (!volumeReady && !chantStateHolder.value.touchCounting) ChantingService.setTouchCounting(true)
+    }
 
-    // A start waiting on a dialog or the permission prompt
+    // A start waiting on the permission prompt
     var goalToStart by remember { mutableStateOf<Goal?>(null) }
-    var modeToStart by remember { mutableStateOf<InputMode?>(null) }
+    var startPending by remember { mutableStateOf(false) }
 
-    fun beginSession(mode: InputMode) {
+    fun beginSession() {
         val goal = goalToStart
         goalToStart = null
-        modeToStart = null
-        // Lock in the default on first use so it doesn't flip if accessibility is enabled later
-        if (savedInputMode == null) setInputMode(mode)
-        val roundSize = RoundSize.forSession(goal, appRoundSize)
-        if (goal != null) {
-            ChantingService.startWithGoal(context, goal, mode, roundSize)
-        } else {
-            ChantingService.start(context, mode, roundSize)
-        }
+        startPending = false
+        ChantingService.start(context, goal, touchCounting = !volumeReady)
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasNotificationPermission = isGranted
-        val mode = modeToStart ?: return@rememberLauncherForActivityResult
+        if (!startPending) return@rememberLauncherForActivityResult
         // Counting doesn't need the notification (the service runs either way), so start and say why it's missing
         if (!isGranted) Toast.makeText(context, R.string.notifications_off_hint, Toast.LENGTH_LONG).show()
-        beginSession(mode)
-    }
-
-    // Accessibility is settled; ask for notifications if needed, then start
-    fun continueStart(mode: InputMode) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
-            modeToStart = mode
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            beginSession(mode)
-        }
+        beginSession()
     }
 
     fun requestStart(goal: Goal?) {
         goalToStart = goal
-        // Also for users who enabled the service before the disclosure existed: they agree once first
-        if (inputMode.usesVolumeKeys && (!isAccessibilityEnabled || !accessibilityConsent)) {
-            accessibilityDialogStartsSession = true
-            showAccessibilityDialog = true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
+            startPending = true
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
-            continueStart(inputMode)
+            beginSession()
         }
     }
 
@@ -269,50 +232,32 @@ fun HomeScreen(
         }
     }
 
-    val onStartStopClick: () -> Unit = {
-        if (isServiceRunning) {
-            lastSummary = SessionSummary.of(chantStateHolder.value, System.currentTimeMillis())
-            ChantingService.stop(context)
-        } else if (inputModeLoaded) {
-            requestStart(goal = null)
-        }
+    val onStop: () -> Unit = {
+        lastSummary = SessionSummary.of(chantStateHolder.value, System.currentTimeMillis())
+        ChantingService.stop(context)
     }
+    val onStart: () -> Unit = { if (savedConsent != null) requestStart(goal = null) }
 
-    LaunchedEffect(pendingStart, inputModeLoaded) {
+    LaunchedEffect(pendingStart, savedConsent) {
         val request = pendingStart ?: return@LaunchedEffect
-        if (!inputModeLoaded) return@LaunchedEffect
+        if (savedConsent == null) return@LaunchedEffect
         onPendingStartHandled()
         // A plain "start counting" while a session runs just shows it; a goal starts over (saving the current one)
         if (request.goal != null || !isServiceRunning) requestStart(request.goal)
     }
 
-    // Accessibility Setup Dialog
     if (showAccessibilityDialog) {
         AccessibilitySetupDialog(
             consented = accessibilityConsent,
             onConsent = {
                 preferencesRepository.write { setAccessibilityConsent(true) }
                 // Already enabled (e.g. from an older version): nothing left to set up
-                if (isAccessibilityEnabled) {
-                    showAccessibilityDialog = false
-                    if (accessibilityDialogStartsSession) continueStart(inputMode) else goalToStart = null
-                }
+                if (isAccessibilityEnabled) showAccessibilityDialog = false
             },
-            onDismiss = {
-                showAccessibilityDialog = false
-                goalToStart = null
-            },
+            onDismiss = { showAccessibilityDialog = false },
             onOpenSettings = {
                 showAccessibilityDialog = false
-                goalToStart = null
                 VolumeKeyAccessibilityService.openAccessibilitySettings(context)
-            },
-            onCountByTapping = {
-                showAccessibilityDialog = false
-                // Volume-only users switch to on-screen; "Both" keeps volume for when accessibility is enabled
-                val mode = if (inputMode == InputMode.VOLUME) InputMode.ON_SCREEN else inputMode
-                setInputMode(mode)
-                if (accessibilityDialogStartsSession) continueStart(mode)
             }
         )
     }
@@ -323,33 +268,28 @@ fun HomeScreen(
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
 
+    val touchHintSeen = preferencesRepository.touchHintSeen.collectAsStateWithLifecycle().value
     val session = SessionUi(
         state = chantState,
-        tapEnabled = tapCounting && !isPaused && !isGoalComplete && !pocketCovered,
+        tapEnabled = touchCounting && !isPaused && !isGoalComplete,
         statusText = stringResource(
             when {
                 isGoalComplete -> R.string.status_goal_complete
                 isPaused -> R.string.status_paused_hint
-                pocketCovered -> R.string.status_pocket_guard
-                tapCounting && volumeCounting -> R.string.status_both
-                tapCounting -> R.string.status_tap
-                else -> R.string.status_volume
+                touchCounting && volumeReady -> R.string.status_both
+                touchCounting -> R.string.status_tap
+                volumeReady -> R.string.status_volume
+                else -> R.string.status_touch_off
             }
         ),
         roundsText = if (rounds > 0) pluralStringResource(R.plurals.rounds_count, rounds, rounds) else null,
-        canUndo = canUndo,
-        onCount = ChantingService::countFromScreen,
-        onUndo = ChantingService::undo,
+        touchCounting = touchCounting,
+        showTouchHint = touchHintSeen == false,
+        onTouchHintShown = { preferencesRepository.write { setTouchHintSeen() } },
         onPauseToggle = { ChantingService.setPaused(!chantStateHolder.value.isPaused) },
         isPaused = isPaused,
-        isGoalComplete = isGoalComplete,
-        hasCounts = hasCounts
+        isGoalComplete = isGoalComplete
     )
-
-    if (isServiceRunning && focusMode) {
-        FocusContent(session = session, onExit = { focusMode = false })
-        return
-    }
 
     Scaffold(
         topBar = {
@@ -370,37 +310,30 @@ fun HomeScreen(
         },
         containerColor = MaterialTheme.colorScheme.surface
     ) { paddingValues ->
-        val controls: @Composable (Modifier) -> Unit = { modifier ->
-            SessionControls(
-                session = session,
-                onFocus = { focusMode = true },
-                onStop = onStartStopClick,
-                modifier = modifier
-            )
-        }
-        val idleControls: @Composable (Modifier) -> Unit = { modifier ->
-            IdleControls(
-                inputMode = inputMode,
-                onInputModeChange = setInputMode,
-                accessibilityEnabled = isAccessibilityEnabled,
-                onSetUpAccessibility = {
-                    accessibilityDialogStartsSession = false
-                    showAccessibilityDialog = true
-                },
-                onStart = onStartStopClick,
-                modifier = modifier,
-                todayLine = {
-                    AnimatedVisibility(visible = lastSummary != null, enter = fadeIn(), exit = fadeOut()) {
-                        lastSummary?.let { SessionSavedLine(it) }
-                    }
-                    val sessions = preferencesRepository.sessionHistory.collectAsStateWithLifecycle().value
-                    val target = preferencesRepository.dailyTarget.collectAsStateWithLifecycle().value
-                    if (sessions != null && target != null) TodayLine(sessions = sessions, dailyTarget = target)
-                }
-            )
+        val sessionControls: @Composable (Modifier) -> Unit = { modifier ->
+            SessionControls(session = session, onStop = onStop, modifier = modifier)
         }
         val goalStrip: @Composable () -> Unit = {
             goalProgress.activeGoal?.let { goal -> GoalStrip(state = goalProgress, goal = goal) }
+        }
+        // Offered whenever volume buttons can't count yet; goes through the disclosure first
+        val volumeOffer: @Composable (Modifier) -> Unit = { modifier ->
+            if (!volumeReady) VolumeButtonsOffer(onClick = { showAccessibilityDialog = true }, modifier = modifier)
+        }
+        val idleControls: @Composable (Modifier) -> Unit = { modifier ->
+            Column(
+                modifier = modifier,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                AnimatedVisibility(visible = lastSummary != null, enter = fadeIn(), exit = fadeOut()) {
+                    lastSummary?.let { SessionSavedLine(it) }
+                }
+                val sessions = preferencesRepository.sessionHistory.collectAsStateWithLifecycle().value
+                val target = preferencesRepository.dailyTarget.collectAsStateWithLifecycle().value
+                if (sessions != null && target != null) TodayLine(sessions = sessions, dailyTarget = target)
+                StartButton(onClick = onStart, modifier = Modifier.fillMaxWidth(0.7f))
+            }
         }
 
         if (isLandscape) {
@@ -414,7 +347,6 @@ fun HomeScreen(
                 CounterArea(
                     session = session,
                     isActive = isServiceRunning,
-                    idleRoundSize = appRoundSize,
                     isDarkTheme = isDarkTheme,
                     modifier = Modifier
                         .weight(1.5f)
@@ -428,8 +360,9 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     if (isServiceRunning) {
-                        controls(Modifier.fillMaxWidth())
+                        sessionControls(Modifier.fillMaxWidth())
                         goalStrip()
+                        volumeOffer(Modifier.align(Alignment.CenterHorizontally))
                     } else {
                         idleControls(Modifier.fillMaxWidth())
                     }
@@ -444,20 +377,21 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 if (isServiceRunning) {
-                    controls(Modifier.fillMaxWidth().padding(top = 4.dp))
+                    sessionControls(Modifier.fillMaxWidth().padding(top = 4.dp))
                     goalStrip()
                 }
                 // The counter takes whatever is left, so everything else always fits
                 CounterArea(
                     session = session,
                     isActive = isServiceRunning,
-                    idleRoundSize = appRoundSize,
                     isDarkTheme = isDarkTheme,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
                 )
-                if (!isServiceRunning) {
+                if (isServiceRunning) {
+                    volumeOffer(Modifier.align(Alignment.CenterHorizontally))
+                } else {
                     idleControls(Modifier.fillMaxWidth())
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -475,6 +409,10 @@ private data class SessionSummary(val counts: Int, val rounds: Int, val minutes:
 }
 
 private const val SUMMARY_VISIBLE_MS = 6_000L
+
+/** How long the one-time touch-counting hint stays up, after a short beat for the screen to settle. */
+private const val TOUCH_HINT_DELAY_MS = 600L
+private const val TOUCH_HINT_VISIBLE_MS = 5_000L
 
 @Composable
 private fun SessionSavedLine(summary: SessionSummary) {
@@ -505,13 +443,12 @@ private data class SessionUi(
     val tapEnabled: Boolean,
     val statusText: String,
     val roundsText: String?,
-    val canUndo: Boolean,
-    val onCount: () -> Unit,
-    val onUndo: () -> Unit,
+    val touchCounting: Boolean,
+    val showTouchHint: Boolean,
+    val onTouchHintShown: () -> Unit,
     val onPauseToggle: () -> Unit,
     val isPaused: Boolean,
-    val isGoalComplete: Boolean,
-    val hasCounts: Boolean
+    val isGoalComplete: Boolean
 )
 
 /** TalkBack description of the count, e.g. "Count 42 of 108. 3 rounds". */
@@ -519,7 +456,7 @@ private data class SessionUi(
 private fun countDescription(state: ChantState): String = stringResource(
     R.string.count_description,
     state.currentRoundCount,
-    state.roundSize,
+    ChantState.ROUND_SIZE,
     pluralStringResource(R.plurals.rounds_count, state.rounds, state.rounds)
 )
 
@@ -528,19 +465,18 @@ private fun countDescription(state: ChantState): String = stringResource(
 private fun CounterArea(
     session: SessionUi,
     isActive: Boolean,
-    idleRoundSize: Int,
     isDarkTheme: Boolean,
     modifier: Modifier = Modifier
 ) {
     if (!isActive) {
-        CounterDisplay(state = ChantState(roundSize = idleRoundSize), isDarkTheme = isDarkTheme, modifier = modifier)
+        CounterDisplay(state = ChantState(), isDarkTheme = isDarkTheme, modifier = modifier)
         return
     }
     val state = session.state()
     TapToCountPad(
         enabled = session.tapEnabled,
         countDescription = countDescription(state),
-        onCount = session.onCount,
+        onCount = ChantingService::countFromScreen,
         modifier = modifier
     ) {
         Column(
@@ -567,161 +503,70 @@ private fun CounterArea(
     }
 }
 
-/** Session controls, kept at the top away from the thumb that taps the pad: hold-to-undo, pause, focus, hold-to-Stop. */
+/**
+ * Session controls, kept at the top away from the thumb that taps the counter: the touch-counting
+ * switch on the left, pause and Stop on the right. The first session ever shows one hint on the switch.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SessionControls(
     session: SessionUi,
-    onFocus: () -> Unit,
     onStop: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val tooltipState = rememberTooltipState(isPersistent = true)
+    LaunchedEffect(session.showTouchHint) {
+        if (!session.showTouchHint) return@LaunchedEffect
+        delay(TOUCH_HINT_DELAY_MS)
+        launch { tooltipState.show() }
+        // Seen once it shows, even if the session ends before it fades
+        session.onTouchHintShown()
+        delay(TOUCH_HINT_VISIBLE_MS)
+        tooltipState.dismiss()
+    }
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        HoldToUndoButton(enabled = session.canUndo, onUndo = session.onUndo)
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+            tooltip = { PlainTooltip { Text(stringResource(R.string.touch_counting_hint)) } },
+            state = tooltipState
+        ) {
+            TouchCountingToggle(checked = session.touchCounting, onCheckedChange = ChantingService::setTouchCounting)
+        }
         Spacer(modifier = Modifier.weight(1f))
         val paused = session.isPaused
+        val pauseInteraction = remember { MutableInteractionSource() }
         FilledTonalIconButton(
             onClick = session.onPauseToggle,
             enabled = !session.isGoalComplete,
-            modifier = Modifier.size(48.dp)
+            interactionSource = pauseInteraction,
+            modifier = Modifier
+                .size(48.dp)
+                .pressScale(pauseInteraction)
         ) {
             Icon(
                 imageVector = if (paused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
                 contentDescription = stringResource(if (paused) R.string.action_resume else R.string.action_pause)
             )
         }
-        FilledTonalIconButton(onClick = onFocus, modifier = Modifier.size(48.dp)) {
-            Icon(imageVector = Icons.Outlined.NightsStay, contentDescription = stringResource(R.string.focus_enter))
-        }
-        HoldToStopButton(holdRequired = session.hasCounts, onStop = onStop)
+        StopButton(onClick = onStop)
     }
 }
 
-/** Idle: the two ways to count, then Start. */
+/** Quiet offer to count with the volume buttons too, shown while they can't. */
 @Composable
-private fun IdleControls(
-    inputMode: InputMode,
-    onInputModeChange: (InputMode) -> Unit,
-    accessibilityEnabled: Boolean,
-    onSetUpAccessibility: () -> Unit,
-    onStart: () -> Unit,
-    modifier: Modifier = Modifier,
-    todayLine: @Composable () -> Unit = {}
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        todayLine()
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = stringResource(R.string.input_mode_title),
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-                InputModeSelector(
-                    selected = inputMode,
-                    onSelect = onInputModeChange,
-                    accessibilityEnabled = accessibilityEnabled,
-                    onSetUpAccessibility = onSetUpAccessibility
-                )
-            }
-        }
-        StartStopButton(
-            isActive = false,
-            onClick = onStart,
-            modifier = Modifier.fillMaxWidth(0.7f)
+private fun VolumeButtonsOffer(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    TextButton(onClick = onClick, modifier = modifier.heightIn(min = 48.dp)) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Outlined.VolumeUp,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp)
         )
-    }
-}
-
-/** Minimal, near-black layout with a dimmed window: the whole screen counts. */
-@Composable
-private fun FocusContent(session: SessionUi, onExit: () -> Unit) {
-    val state = session.state()
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FocusBackground)
-    ) {
-        TapToCountPad(
-            enabled = session.tapEnabled,
-            countDescription = countDescription(state),
-            onCount = session.onCount,
-            shape = RectangleShape,
-            containerColor = Color.Transparent,
-            pressedColor = FocusText,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(top = 64.dp, bottom = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                CounterDisplay(
-                    state = state,
-                    isDarkTheme = true,
-                    footer = session.roundsText,
-                    dimmed = true,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
-                )
-                val mantra = state.currentMantra
-                Text(
-                    text = if (state.isPaused) {
-                        stringResource(R.string.status_paused)
-                    } else if (mantra != null && !state.isGoalComplete) {
-                        "${mantra.name} · " + pluralStringResource(
-                            R.plurals.goal_mantra_progress,
-                            mantra.targetRounds,
-                            state.mantraRoundsCompleted,
-                            mantra.targetRounds
-                        )
-                    } else {
-                        session.statusText
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = FocusText.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 24.dp)
-                )
-            }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onExit) {
-                Icon(
-                    imageVector = Icons.Outlined.Close,
-                    contentDescription = stringResource(R.string.focus_exit),
-                    tint = FocusText
-                )
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            HoldToUndoButton(enabled = session.canUndo, onUndo = session.onUndo, dimmed = true)
-        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(stringResource(R.string.volume_buttons_offer))
     }
 }
 

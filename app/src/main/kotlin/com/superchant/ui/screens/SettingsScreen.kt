@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
@@ -34,6 +35,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -53,18 +55,14 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.superchant.BuildConfig
 import com.superchant.R
-import com.superchant.data.InputMode
 import com.superchant.data.CountingFeel
 import com.superchant.data.PreferencesRepository
 import com.superchant.data.ReminderSettings
-import com.superchant.data.RoundSize
 import com.superchant.data.VibrationSettings
 import com.superchant.service.VolumeKeyAccessibilityService
 import com.superchant.ui.components.AccessibilitySetupDialog
 import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.BackButton
-import com.superchant.ui.components.InputModeSelector
-import com.superchant.ui.components.RoundSizePicker
 import com.superchant.ui.components.ThemeToggle
 import com.superchant.ui.theme.ThemeMode
 import kotlin.math.roundToInt
@@ -76,7 +74,6 @@ fun SettingsScreen(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val savedInputMode by preferencesRepository.inputModeFlow.collectAsStateWithLifecycle(initialValue = null)
     // Re-checked on resume, e.g. after returning from the accessibility settings
     var accessibilityEnabled by remember { mutableStateOf(VolumeKeyAccessibilityService.isAccessibilityServiceEnabled(context)) }
     LifecycleResumeEffect(Unit) {
@@ -86,7 +83,6 @@ fun SettingsScreen(
     val hasAmplitudeControl = remember { context.vibrator().hasAmplitudeControl() }
     // Loaded at app start, so the stored values (not defaults) are shown from the first frame
     val vibration = preferencesRepository.vibrationSettings.collectAsStateWithLifecycle().value ?: VibrationSettings()
-    val roundSize = preferencesRepository.roundSize.collectAsStateWithLifecycle().value ?: RoundSize.DEFAULT
     val feel = preferencesRepository.countingFeel.collectAsStateWithLifecycle().value ?: CountingFeel()
     val dailyTarget = preferencesRepository.dailyTarget.collectAsStateWithLifecycle().value ?: 0
     val reminder = preferencesRepository.reminder.collectAsStateWithLifecycle().value ?: ReminderSettings()
@@ -95,7 +91,11 @@ fun SettingsScreen(
     if (showAccessibilitySetup) {
         AccessibilitySetupDialog(
             consented = accessibilityConsent,
-            onConsent = { preferencesRepository.write { setAccessibilityConsent(true) } },
+            onConsent = {
+                preferencesRepository.write { setAccessibilityConsent(true) }
+                // Already enabled (e.g. from an older version): nothing left to set up
+                if (accessibilityEnabled) showAccessibilitySetup = false
+            },
             onDismiss = { showAccessibilitySetup = false },
             onOpenSettings = {
                 showAccessibilitySetup = false
@@ -121,42 +121,21 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             SettingsSection(title = stringResource(R.string.settings_counting)) {
-                InputModeSelector(
-                    selected = savedInputMode ?: InputMode.default(accessibilityEnabled),
-                    onSelect = { mode -> preferencesRepository.write { setInputMode(mode) } },
-                    accessibilityEnabled = accessibilityEnabled,
-                    onSetUpAccessibility = { showAccessibilitySetup = true }
-                )
+                val volumeReady = accessibilityEnabled && accessibilityConsent
+                SettingsItem(
+                    title = stringResource(R.string.volume_buttons_title),
+                    subtitle = stringResource(if (volumeReady) R.string.volume_buttons_on else R.string.volume_buttons_off)
+                ) {
+                    if (!volumeReady) {
+                        TextButton(onClick = { showAccessibilitySetup = true }, modifier = Modifier.heightIn(min = 48.dp)) {
+                            Text(stringResource(R.string.volume_buttons_set_up))
+                        }
+                    }
+                }
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 12.dp),
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
-                Text(
-                    text = stringResource(R.string.round_size_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = stringResource(R.string.round_size_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
-                RoundSizePicker(
-                    selected = roundSize,
-                    onSelect = { size -> if (size != null) preferencesRepository.write { setRoundSize(size) } }
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-                SettingsToggleItem(
-                    title = stringResource(R.string.pocket_guard_title),
-                    subtitle = stringResource(R.string.pocket_guard_desc),
-                    checked = feel.pocketGuard,
-                    onCheckedChange = { enabled -> preferencesRepository.write { setPocketGuard(enabled) } }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
                 SettingsToggleItem(
                     title = stringResource(R.string.bead_click_title),
                     subtitle = stringResource(R.string.bead_click_desc),

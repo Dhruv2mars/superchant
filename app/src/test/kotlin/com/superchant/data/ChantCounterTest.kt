@@ -39,24 +39,6 @@ class ChantCounterTest {
     }
 
     @Test
-    fun undoAtZeroIsNoOp() {
-        assertNull(ChantCounter.undo(active))
-        assertNull(ChantCounter.undo(ChantState(count = 5)))
-        assertNull(ChantCounter.undo(active.copy(count = 5, isPaused = true)))
-    }
-
-    @Test
-    fun undoAcrossRoundBoundary() {
-        val at108 = active.incTimes(108)
-        val undone = ChantCounter.undo(at108)!!
-        assertEquals(107, undone.count)
-        assertEquals(0, undone.rounds)
-        assertEquals(107, undone.currentRoundCount)
-        // Counting again re-completes the round.
-        assertEquals(CountFeedback.ROUND, undone.inc().feedback)
-    }
-
-    @Test
     fun goalAdvancesThroughMantrasAndCompletes() {
         val start = active.copy(activeGoal = goal)
 
@@ -74,50 +56,6 @@ class ChantCounterTest {
         assertTrue(done.state.isGoalComplete)
         assertEquals(324, done.state.count)
         assertNull(ChantCounter.increment(done.state))
-    }
-
-    @Test
-    fun undoReopensCompletedGoal() {
-        val done = active.copy(activeGoal = goal).incTimes(324)
-        assertTrue(done.isGoalComplete)
-        val undone = ChantCounter.undo(done)!!
-        assertFalse(undone.isGoalComplete)
-        assertEquals(1, undone.currentMantraIndex)
-        assertEquals(1, undone.mantraRoundsCompleted)
-        assertEquals(CountFeedback.GOAL, undone.inc().feedback)
-    }
-
-    @Test
-    fun undoStepsBackIntoPreviousMantra() {
-        val advanced = active.copy(activeGoal = goal).incTimes(108)
-        assertEquals(1, advanced.currentMantraIndex)
-        val undone = ChantCounter.undo(advanced)!!
-        assertEquals(0, undone.currentMantraIndex)
-        assertEquals(0, undone.mantraRoundsCompleted)
-        assertEquals(107, undone.count)
-        assertEquals(CountFeedback.SECTION, undone.inc().feedback)
-    }
-
-    @Test
-    fun undoInsideRoundLeavesGoalProgressAlone() {
-        val state = active.copy(activeGoal = goal).incTimes(110)
-        val undone = ChantCounter.undo(state)!!
-        assertEquals(109, undone.count)
-        assertEquals(1, undone.currentMantraIndex)
-        assertEquals(0, undone.mantraRoundsCompleted)
-    }
-
-    @Test
-    fun undoIsExactInverseOfIncrementOverWholeGoal() {
-        var state = active.copy(activeGoal = goal)
-        val history = mutableListOf(state)
-        while (true) {
-            state = ChantCounter.increment(state)?.state ?: break
-            history += state
-        }
-        for (i in history.size - 1 downTo 1) {
-            assertEquals(history[i - 1], ChantCounter.undo(history[i]))
-        }
     }
 
     @Test

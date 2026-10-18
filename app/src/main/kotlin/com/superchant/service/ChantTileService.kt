@@ -71,7 +71,7 @@ class ChantTileService : TileService() {
             !running -> getString(R.string.tile_start)
             state.isGoalComplete -> getString(R.string.notification_goal_complete)
             state.isPaused -> getString(R.string.status_paused)
-            else -> "${state.currentRoundCount} / ${state.roundSize}"
+            else -> "${state.currentRoundCount} / ${ChantState.ROUND_SIZE}"
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) tile.subtitle = subtitle
         tile.contentDescription = "${getString(R.string.app_name)}, $subtitle"

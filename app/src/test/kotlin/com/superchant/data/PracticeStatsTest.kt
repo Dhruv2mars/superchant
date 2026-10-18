@@ -88,10 +88,10 @@ class PracticeStatsTest {
     @Test
     fun recordsCarryAPerMantraBreakdownThatAddsUp() {
         val goal = Goal(name = "G", mantras = listOf(MantraGoal(name = "A", targetRounds = 1), MantraGoal(name = "B", targetRounds = 2)))
-        var state = ChantState.start(goal, now = 0, roundSize = 10)
-        repeat(25) { state = ChantCounter.increment(state)!!.state }
+        var state = ChantState.start(goal, now = 0)
+        repeat(250) { state = ChantCounter.increment(state)!!.state }
         val record = state.toRecord(endTime = 1)
-        assertEquals(listOf(MantraTally("A", 1, 10), MantraTally("B", 1, 15)), record.mantras)
+        assertEquals(listOf(MantraTally("A", 1, 108), MantraTally("B", 1, 142)), record.mantras)
         assertEquals(record.totalCounts, record.mantras.sumOf { it.counts })
         assertTrue(ChantState.start(null, 0).copy(count = 5).toRecord(1).mantras.isEmpty())
     }

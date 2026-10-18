@@ -85,8 +85,3 @@ val CounterGold = Color(0xFFD4A574)
 val CounterGoldDark = Color(0xFFFFB95A)
 val ProgressTrackLight = Color(0xFFE8DDD4)
 val ProgressTrackDark = Color(0xFF3A3330)
-
-// Focus layout - near-black, low-glare palette used regardless of theme
-val FocusBackground = Color(0xFF000000)
-val FocusTrack = Color(0xFF1F1A16)
-val FocusText = Color(0xFF9C8F84)

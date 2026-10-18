@@ -11,16 +11,15 @@ class BackupTest {
         id = "g1",
         name = "Morning",
         mantras = listOf(MantraGoal(id = "m1", name = "Om", targetRounds = 2)),
-        createdAt = 10,
-        roundSize = 54
+        createdAt = 10
     )
     private val record = SessionRecord(
         id = "s1", startTime = 100, endTime = 700, totalCounts = 120, totalRounds = 2,
-        goalId = "g1", goalName = "Morning", roundSize = 54, mantras = listOf(MantraTally("Om", 2, 120))
+        goalId = "g1", goalName = "Morning", mantras = listOf(MantraTally("Om", 2, 120))
     )
     private val backup = Backup(
         exportedAt = 1_000,
-        settings = BackupSettings(themeMode = "DARK", inputMode = "BOTH", roundSize = 54, dailyTarget = 4, beadClick = true),
+        settings = BackupSettings(themeMode = "DARK", dailyTarget = 4, beadClick = true),
         goals = listOf(goal),
         history = listOf(record, record.copy(id = "s2", startTime = 50, goalId = null, goalName = null, mantras = emptyList()))
     )
@@ -43,7 +42,22 @@ class BackupTest {
         assertEquals("1690000000000", decoded.goals.single().id)
         assertEquals("1700000000000", decoded.history.single().id)
         assertEquals("1690000000000", decoded.history.single().goalId)
-        assertEquals(RoundSize.DEFAULT, decoded.history.single().roundSize)
+    }
+
+    /** A file exported by v1.2 (#5), when round size, input mode and pocket guard were settings. */
+    @Test
+    fun exportsWithRemovedFieldsStillImport() {
+        val text = """
+            {"app":"SuperChant","format":1,"exportedAt":1000,
+             "settings":{"themeMode":"DARK","inputMode":"BOTH","roundSize":54,"dailyTarget":4,"pocketGuard":false,"beadClick":true},
+             "goals":[{"id":"g1","name":"Morning","mantras":[{"id":"m1","name":"Om","targetRounds":2}],"createdAt":10,"roundSize":54}],
+             "history":[{"id":"s1","startTime":100,"endTime":700,"totalCounts":120,"totalRounds":2,"goalId":"g1","goalName":"Morning",
+                         "roundSize":54,"mantras":[{"name":"Om","rounds":2,"counts":120}]}]}
+        """.trimIndent()
+        val decoded = BackupCodec.decode(text)
+        assertEquals(BackupSettings(themeMode = "DARK", dailyTarget = 4, beadClick = true), decoded.settings)
+        assertEquals(listOf(goal), decoded.goals)
+        assertEquals(listOf(record), decoded.history)
     }
 
     @Test

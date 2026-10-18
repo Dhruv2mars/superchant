@@ -90,6 +90,14 @@
         <item quantity="other">%1$d of %2$d rounds so far today.</item>
     </plurals>
 
+    <!-- Polish -->
+    <string name="session_saved">Session saved</string>
+    <plurals name="minutes_short">
+        <item quantity="one">%d min</item>
+        <item quantity="other">%d min</item>
+    </plurals>
+    <string name="goals_create_first">Create a goal</string>
+
     <!-- Fast access -->
     <string name="shortcut_start_short">Start counting</string>
     <string name="shortcut_start_long">Start a chanting session</string>

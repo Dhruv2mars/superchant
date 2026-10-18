@@ -9,6 +9,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -75,6 +77,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -107,6 +112,7 @@ import com.superchant.ui.components.rememberProximityCovered
 import com.superchant.ui.theme.FocusBackground
 import com.superchant.ui.theme.FocusText
 import com.superchant.ui.theme.ThemeMode
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 
 /**
@@ -252,8 +258,18 @@ fun HomeScreen(
         }
     }
 
+    // A brief, quiet acknowledgement after Stop; read from the state only at that moment
+    var lastSummary by remember { mutableStateOf<SessionSummary?>(null) }
+    LaunchedEffect(lastSummary) {
+        if (lastSummary != null) {
+            delay(SUMMARY_VISIBLE_MS)
+            lastSummary = null
+        }
+    }
+
     val onStartStopClick: () -> Unit = {
         if (isServiceRunning) {
+            lastSummary = SessionSummary.of(chantStateHolder.value, System.currentTimeMillis())
             ChantingService.stop(context)
         } else if (inputModeLoaded) {
             requestStart(goal = null)
@@ -365,6 +381,9 @@ fun HomeScreen(
                 onStart = onStartStopClick,
                 modifier = modifier,
                 todayLine = {
+                    AnimatedVisibility(visible = lastSummary != null, enter = fadeIn(), exit = fadeOut()) {
+                        lastSummary?.let { SessionSavedLine(it) }
+                    }
                     val sessions = preferencesRepository.sessionHistory.collectAsStateWithLifecycle().value
                     val target = preferencesRepository.dailyTarget.collectAsStateWithLifecycle().value
                     if (sessions != null && target != null) TodayLine(sessions = sessions, dailyTarget = target)
@@ -436,6 +455,33 @@ fun HomeScreen(
             }
         }
     }
+}
+
+/** What a just-stopped session added, shown briefly on Home. */
+private data class SessionSummary(val counts: Int, val rounds: Int, val minutes: Long) {
+    companion object {
+        fun of(state: ChantState, now: Long): SessionSummary? =
+            if (state.count > 0) SessionSummary(state.count, state.rounds, (now - state.sessionStartTime).coerceAtLeast(0) / 60_000) else null
+    }
+}
+
+private const val SUMMARY_VISIBLE_MS = 6_000L
+
+@Composable
+private fun SessionSavedLine(summary: SessionSummary) {
+    val parts = listOfNotNull(
+        stringResource(R.string.session_saved),
+        if (summary.rounds > 0) pluralStringResource(R.plurals.rounds_count, summary.rounds, summary.rounds)
+        else pluralStringResource(R.plurals.insights_counts, summary.counts, summary.counts),
+        if (summary.minutes > 0) pluralStringResource(R.plurals.minutes_short, summary.minutes.toInt(), summary.minutes.toInt()) else null
+    )
+    Text(
+        text = parts.joinToString(" · "),
+        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+        color = MaterialTheme.colorScheme.primary,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+    )
 }
 
 /** A session start asked for from outside Home; [goal] null is a free session. */

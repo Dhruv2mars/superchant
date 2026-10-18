@@ -135,6 +135,11 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
             return false
         }
 
+        // In on-screen-only mode the keys keep changing the volume
+        if (!ChantingService.acceptsVolumeKeys) {
+            return false
+        }
+
         // Session is active and not paused - emit to ChantingService and consume the key
         if (!_volumeKeyEvents.tryEmit(VolumeKeyEvent())) {
             // This shouldn't happen with our buffer size, but log if it does

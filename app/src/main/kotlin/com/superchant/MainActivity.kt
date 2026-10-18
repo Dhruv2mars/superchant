@@ -12,12 +12,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.superchant.data.Goal
 import com.superchant.data.PreferencesRepository
-import com.superchant.service.ChantingService
 import com.superchant.ui.screens.GoalsScreen
 import com.superchant.ui.screens.HistoryScreen
 import com.superchant.ui.screens.HomeScreen
@@ -39,6 +42,8 @@ class MainActivity : ComponentActivity() {
             SuperChantTheme(themeMode = themeMode) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
+                    // Goal picked on the Goals screen; Home starts it after its permission checks
+                    var pendingGoal by remember { mutableStateOf<Goal?>(null) }
                     
                     NavHost(
                         navController = navController,
@@ -71,6 +76,9 @@ class MainActivity : ComponentActivity() {
                         composable("home") {
                             HomeScreen(
                                 themeMode = themeMode,
+                                preferencesRepository = preferencesRepository,
+                                pendingGoal = pendingGoal,
+                                onPendingGoalHandled = { pendingGoal = null },
                                 onSettingsClick = { navController.navigate("settings") },
                                 onHistoryClick = { navController.navigate("history") },
                                 onGoalsClick = { navController.navigate("goals") }
@@ -97,7 +105,7 @@ class MainActivity : ComponentActivity() {
                                 preferencesRepository = preferencesRepository,
                                 onBackClick = { navController.popBackStack() },
                                 onStartGoal = { goal ->
-                                    ChantingService.startWithGoal(applicationContext, goal)
+                                    pendingGoal = goal
                                     navController.popBackStack()
                                 }
                             )

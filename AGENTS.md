@@ -1,8 +1,8 @@
 # AGENTS.md - SuperChant
 
-Kotlin/Jetpack Compose Android app that counts chants with the volume keys. An AccessibilityService
-intercepts volume key presses, a foreground service owns the session state, and DataStore Preferences
-persists settings, goals and history (as JSON via kotlinx.serialization).
+Kotlin/Jetpack Compose Android app that counts chants with the volume keys and/or on-screen taps. An
+AccessibilityService intercepts volume key presses, a foreground service owns the session state, and
+DataStore Preferences persists settings, goals and history (as JSON via kotlinx.serialization).
 
 ## Commands
 
@@ -38,12 +38,14 @@ app/src/main/kotlin/com/superchant/
 ├── MainActivity.kt                  # NavHost: home, settings, history, goals
 ├── data/
 │   ├── ChantState.kt                # ChantState (session), Goal, MantraGoal, SessionRecord
+│   ├── ChantCounter.kt              # Pure increment/undo rules shared by all inputs; CountDebouncer
+│   ├── InputMode.kt                 # VOLUME / ON_SCREEN / BOTH
 │   └── PreferencesRepository.kt     # DataStore flows + setters
 ├── service/
 │   ├── ChantingService.kt           # Foreground service; owns ChantState via a companion StateFlow
 │   └── VolumeKeyAccessibilityService.kt  # onKeyEvent -> SharedFlow consumed by ChantingService
 └── ui/
-    ├── components/                  # Shared composables (AppTopBar, EmptyState, CounterDisplay, ...)
+    ├── components/                  # Shared composables (AppTopBar, CounterDisplay, TapToCountPad, HoldToUndoButton, ...)
     ├── screens/                     # Home, Goals, History, Settings
     └── theme/                       # Material 3 colors, typography, ThemeMode
 app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
@@ -51,19 +53,25 @@ app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
 
 ## How counting works
 
-1. `ChantingService.start()/startWithGoal()` starts the foreground service and marks the session active.
-2. `VolumeKeyAccessibilityService.onKeyEvent` consumes `VOLUME_UP/DOWN` key-downs only while a session is
-   active and not paused, and emits them on a `SharedFlow`.
-3. `ChantingService` increments `count`; a round is `ChantState.COUNTS_PER_ROUND` (108) counts. In goal
-   mode it advances through the goal's mantras and stops counting when the goal is complete.
-4. UI screens collect `ChantingService.chantStateFlow`. There are no ViewModels.
+1. The input mode (`InputMode`, persisted; Home and Settings) decides how to count. Starting in on-screen
+   mode needs neither the accessibility service nor the notification permission (it is requested, not
+   required). Volume mode requires both. Goals started from the Goals screen go through Home's checks.
+2. `ChantingService.start()/startWithGoal()` starts the foreground service with the mode and marks the
+   session active.
+3. Volume: `VolumeKeyAccessibilityService.onKeyEvent` consumes `VOLUME_UP/DOWN` key-downs only while a
+   session is active, not paused and `ChantingService.acceptsVolumeKeys`, and emits them on a `SharedFlow`.
+   On-screen: `TapToCountPad` calls `ChantingService.countFromScreen()` (one count per touch, extra fingers
+   and repeats under 150 ms ignored). `ChantingService.undo()` removes the last count.
+4. Both inputs go through one `incrementCount()`, which applies `ChantCounter.increment` (108 per round, goal
+   mantra advance, no counting after the goal completes) and plays the same haptics/sounds.
+5. UI screens collect `ChantingService.chantStateFlow`. There are no ViewModels.
 
 ## Conventions
 
 - 4-space indent, trailing-lambda Compose style.
 - Reuse `ui/components` (e.g. `AppTopBar`, `BackButton`, `EmptyState`, `ConfirmDestructiveDialog`) instead of copying UI.
 - New persisted data classes need `@Serializable` and defaults for new fields so old JSON still decodes.
-- Most UI strings are hardcoded in composables today; `res/values/strings.xml` holds the rest.
+- New UI strings go in `res/values/strings.xml` (plurals for counts). Older screens still hardcode some.
 
 ## Testing on an emulator
 

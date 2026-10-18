@@ -25,6 +25,7 @@ class PreferencesRepository(private val context: Context) {
         val ROUND_VIBRATION_INTENSITY = intPreferencesKey("round_vibration_intensity")
         val SESSION_HISTORY = stringPreferencesKey("session_history")
         val SAVED_GOALS = stringPreferencesKey("saved_goals")
+        val INPUT_MODE = stringPreferencesKey("input_mode")
     }
     
     private val json = Json { 
@@ -90,6 +91,17 @@ class PreferencesRepository(private val context: Context) {
     suspend fun setRoundVibrationIntensity(intensity: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.ROUND_VIBRATION_INTENSITY] = intensity.coerceIn(1, 255)
+        }
+    }
+    
+    /** The chosen [InputMode], or null until the user picks one (see [InputMode.default]). */
+    val inputModeFlow: Flow<InputMode?> = context.dataStore.data.map { preferences ->
+        InputMode.fromName(preferences[PreferencesKeys.INPUT_MODE])
+    }
+    
+    suspend fun setInputMode(mode: InputMode) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.INPUT_MODE] = mode.name
         }
     }
     

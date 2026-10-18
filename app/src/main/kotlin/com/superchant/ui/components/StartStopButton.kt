@@ -16,8 +16,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.superchant.R
 
 @Composable
 fun StartStopButton(
@@ -66,7 +68,7 @@ fun StartStopButton(
         contentPadding = PaddingValues(horizontal = 32.dp, vertical = 12.dp)
     ) {
         Text(
-            text = if (isActive) "Stop" else "Start",
+            text = stringResource(if (isActive) R.string.action_stop else R.string.action_start),
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.SemiBold
             )

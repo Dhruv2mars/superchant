@@ -27,4 +27,58 @@
     <string name="restricted_settings_step2_desc">Find \"SuperChant Volume Counter\" in the list and turn it ON</string>
     <string name="open_app_info">Open App Info</string>
     <string name="enable_accessibility">Open Accessibility Settings</string>
+    <!-- Home -->
+    <string name="goals">Goals</string>
+    <string name="history">History</string>
+    <string name="settings">Settings</string>
+    <string name="action_start">Start</string>
+    <string name="cancel">Cancel</string>
+    <string name="focus_enter">Focus mode</string>
+    <string name="focus_exit">Exit focus mode</string>
+
+    <!-- Input mode -->
+    <string name="input_mode_title">How do you want to count?</string>
+    <string name="input_mode_on_screen">On-screen</string>
+    <string name="input_mode_volume">Volume</string>
+    <string name="input_mode_both">Both</string>
+    <string name="input_mode_on_screen_desc">Tap anywhere on the counter. No special permissions needed.</string>
+    <string name="input_mode_volume_desc">Press either volume button, even with the screen off. Needs the accessibility service.</string>
+    <string name="input_mode_both_desc">Tap the counter or press a volume button. Volume buttons need the accessibility service.</string>
+    <string name="input_mode_needs_accessibility">Volume buttons need the accessibility service.</string>
+    <string name="input_mode_set_up">Set up</string>
+    <string name="count_by_tapping">Count by tapping instead</string>
+    <string name="settings_counting">Counting</string>
+
+    <!-- Session -->
+    <string name="status_paused">Paused</string>
+    <string name="status_tap">Tap anywhere here to count</string>
+    <string name="status_volume">Press a volume button to count</string>
+    <string name="status_both">Tap here or press a volume button to count</string>
+    <string name="status_goal_complete">Goal complete. Tap Stop to save it.</string>
+    <plurals name="rounds_count">
+        <item quantity="one">%d round</item>
+        <item quantity="other">%d rounds</item>
+    </plurals>
+    <!-- TalkBack description of the counter, e.g. "Count 42 of 108. 3 rounds" -->
+    <string name="count_description">Count %1$d of %2$d. %3$s</string>
+    <string name="tap_to_count_action">Count</string>
+    <string name="undo_label">−1</string>
+    <string name="undo_hold_hint">Hold to undo</string>
+    <string name="undo_description">Undo last count</string>
+    <string name="undo_action">Undo</string>
+
+    <!-- Goal progress -->
+    <string name="goal_mantra_position">Mantra %1$d of %2$d</string>
+    <plurals name="goal_mantra_progress">
+        <item quantity="one">%1$d / %2$d round</item>
+        <item quantity="other">%1$d / %2$d rounds</item>
+    </plurals>
+    <plurals name="goal_all_rounds_done">
+        <item quantity="one">All %d round completed</item>
+        <item quantity="other">All %d rounds completed</item>
+    </plurals>
+    <string name="goal_complete">Complete</string>
+    <string name="goal_mantra_completed">Completed</string>
+    <string name="goal_show_mantras">Show all mantras</string>
+    <string name="goal_hide_mantras">Hide mantras</string>
 </resources>

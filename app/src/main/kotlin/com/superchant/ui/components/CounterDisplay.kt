@@ -19,27 +19,37 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import com.superchant.data.ChantState
 import com.superchant.ui.theme.CounterGold
 import com.superchant.ui.theme.CounterGoldDark
+import com.superchant.ui.theme.FocusText
+import com.superchant.ui.theme.FocusTrack
 import com.superchant.ui.theme.ProgressTrackDark
 import com.superchant.ui.theme.ProgressTrackLight
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
+/**
+ * Progress ring with the count of the current round. The ring and text scale with the space given.
+ * [footer] is an optional line under "/ 108" (e.g. rounds); [dimmed] renders the low-glare focus palette.
+ */
 @Composable
 fun CounterDisplay(
     state: ChantState,
     isDarkTheme: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    footer: String? = null,
+    dimmed: Boolean = false
 ) {
     val currentCount = state.currentRoundCount
     val progress = state.progress
@@ -67,9 +77,20 @@ fun CounterDisplay(
         }
     }
     
-    val progressColor = if (isDarkTheme) CounterGoldDark else CounterGold
-    val trackColor = if (isDarkTheme) ProgressTrackDark else ProgressTrackLight
-    val beadColor = if (isDarkTheme) CounterGoldDark else CounterGold
+    val progressColor = when {
+        dimmed -> CounterGoldDark.copy(alpha = 0.55f)
+        isDarkTheme -> CounterGoldDark
+        else -> CounterGold
+    }
+    val trackColor = when {
+        dimmed -> FocusTrack
+        isDarkTheme -> ProgressTrackDark
+        else -> ProgressTrackLight
+    }
+    val beadColor = progressColor
+    val countColor = if (dimmed) FocusText else MaterialTheme.colorScheme.onSurface
+    val secondaryColor = if (dimmed) FocusText.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val footerColor = if (dimmed) progressColor else MaterialTheme.colorScheme.primary
     
     // Use BoxWithConstraints to adapt to available space (especially for landscape)
     BoxWithConstraints(
@@ -78,6 +99,8 @@ fun CounterDisplay(
     ) {
         // Calculate the optimal size based on available space
         val availableSize = min(maxWidth, maxHeight)
+        // Scale the count with the ring so it fits on small screens and fills large ones
+        val countSize = with(LocalDensity.current) { (availableSize * 0.22f).coerceIn(32.dp, 96.dp).toSp() }
         
         Box(
             contentAlignment = Alignment.Center,
@@ -141,41 +164,27 @@ fun CounterDisplay(
                 Text(
                     text = currentCount.toString(),
                     style = MaterialTheme.typography.displayLarge.copy(
-                        fontWeight = FontWeight.Light
+                        fontWeight = FontWeight.Light,
+                        fontSize = countSize,
+                        lineHeight = countSize
                     ),
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = countColor,
+                    modifier = Modifier.scale(scale.value)
                 )
                 Text(
                     text = "/ ${ChantState.COUNTS_PER_ROUND}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = if (availableSize < 220.dp) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall,
+                    color = secondaryColor
                 )
+                if (footer != null) {
+                    Text(
+                        text = footer,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = footerColor,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
             }
         }
-    }
-}
-
-@Composable
-fun RoundsDisplay(
-    rounds: Int,
-    modifier: Modifier = Modifier,
-    label: String? = null
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-    ) {
-        Text(
-            text = rounds.toString(),
-            style = MaterialTheme.typography.displaySmall.copy(
-                fontWeight = FontWeight.SemiBold
-            ),
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = label ?: if (rounds == 1) "round" else "rounds",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

@@ -115,63 +115,65 @@ fun CounterDisplay(
             val drawnCount = state.count
             Canvas(modifier = Modifier.fillMaxSize().padding(8.dp)) {
                 PerfTrace.countDrawn(drawnCount)
-                val outer = size.minDimension / 2
-                val geometry = MalaGeometry.forRing(outerRadius = outer, density = density)
-                val center = Offset(size.width / 2, size.height / 2)
-                val ringRadius = geometry.ringRadius
+                PerfTrace.section("SC.ringDraw") {
+                    val outer = size.minDimension / 2
+                    val geometry = MalaGeometry.forRing(outerRadius = outer, density = density)
+                    val center = Offset(size.width / 2, size.height / 2)
+                    val ringRadius = geometry.ringRadius
 
-                drawCircle(
-                    color = trackColor,
-                    radius = ringRadius,
-                    center = center,
-                    style = Stroke(width = geometry.strokeWidth)
-                )
-
-                if (glow.value > 0f) {
                     drawCircle(
-                        color = progressColor.copy(alpha = 0.35f * glow.value),
+                        color = trackColor,
                         radius = ringRadius,
                         center = center,
-                        style = Stroke(width = geometry.strokeWidth * (1f + 2.5f * glow.value))
+                        style = Stroke(width = geometry.strokeWidth)
                     )
-                }
 
-                val sweepAngle = animatedProgress.value * 360f
-                if (sweepAngle > 0) {
-                    drawArc(
-                        color = progressColor,
-                        startAngle = -90f,
-                        sweepAngle = sweepAngle,
-                        useCenter = false,
-                        topLeft = Offset(center.x - ringRadius, center.y - ringRadius),
-                        size = Size(ringRadius * 2, ringRadius * 2),
-                        style = Stroke(width = geometry.strokeWidth, cap = StrokeCap.Round)
-                    )
-                }
-
-                // Beads sit between the meru gap at the top; bead i lights once its share of the round is done.
-                val beadCount = geometry.beadCount
-                for (i in 0 until beadCount) {
-                    val angle = MalaGeometry.beadAngle(i, beadCount)
-                    val isLit = animatedProgress.value >= (i + 1f) / beadCount - 0.0001f
-                    drawCircle(
-                        color = if (isLit) progressColor else trackColor,
-                        radius = if (isLit) geometry.beadRadius else geometry.beadRadius * 0.62f,
-                        center = Offset(
-                            center.x + geometry.beadOrbit * cos(angle).toFloat(),
-                            center.y + geometry.beadOrbit * sin(angle).toFloat()
+                    if (glow.value > 0f) {
+                        drawCircle(
+                            color = progressColor.copy(alpha = 0.35f * glow.value),
+                            radius = ringRadius,
+                            center = center,
+                            style = Stroke(width = geometry.strokeWidth * (1f + 2.5f * glow.value))
                         )
+                    }
+
+                    val sweepAngle = animatedProgress.value * 360f
+                    if (sweepAngle > 0) {
+                        drawArc(
+                            color = progressColor,
+                            startAngle = -90f,
+                            sweepAngle = sweepAngle,
+                            useCenter = false,
+                            topLeft = Offset(center.x - ringRadius, center.y - ringRadius),
+                            size = Size(ringRadius * 2, ringRadius * 2),
+                            style = Stroke(width = geometry.strokeWidth, cap = StrokeCap.Round)
+                        )
+                    }
+
+                    // Beads sit between the meru gap at the top; bead i lights once its share of the round is done.
+                    val beadCount = geometry.beadCount
+                    for (i in 0 until beadCount) {
+                        val angle = MalaGeometry.beadAngle(i, beadCount)
+                        val isLit = animatedProgress.value >= (i + 1f) / beadCount - 0.0001f
+                        drawCircle(
+                            color = if (isLit) progressColor else trackColor,
+                            radius = if (isLit) geometry.beadRadius else geometry.beadRadius * 0.62f,
+                            center = Offset(
+                                center.x + geometry.beadOrbit * cos(angle).toFloat(),
+                                center.y + geometry.beadOrbit * sin(angle).toFloat()
+                            )
+                        )
+                    }
+
+                    // Meru bead: start and end of every round
+                    val meruCenter = Offset(center.x, center.y - geometry.beadOrbit)
+                    drawCircle(color = progressColor, radius = geometry.meruRadius, center = meruCenter)
+                    drawCircle(
+                        color = trackColor,
+                        radius = geometry.meruRadius * 0.42f,
+                        center = meruCenter
                     )
                 }
-
-                // Meru bead: start and end of every round
-                val meruCenter = Offset(center.x, center.y - geometry.beadOrbit)
-                drawCircle(color = progressColor, radius = geometry.meruRadius, center = meruCenter)
-                drawCircle(
-                    color = trackColor,
-                    radius = geometry.meruRadius * 0.42f,
-                    center = meruCenter
-                )
             }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {

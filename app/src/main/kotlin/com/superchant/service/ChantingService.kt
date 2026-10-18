@@ -19,6 +19,7 @@ import android.os.VibratorManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import com.superchant.DebugStrictMode
 import com.superchant.MainActivity
 import com.superchant.PerfTrace
 import com.superchant.R
@@ -63,6 +64,7 @@ class ChantingService : Service() {
     private var beadClick: BeadClick? = null
 
     override fun onCreate() {
+        DebugStrictMode.enable()
         super.onCreate()
 
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

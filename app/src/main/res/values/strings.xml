@@ -242,4 +242,88 @@
         <item quantity="one">count</item>
         <item quantity="other">counts</item>
     </plurals>
+
+    <!-- Common -->
+    <string name="common_back">Back</string>
+    <string name="common_edit">Edit</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_save">Save</string>
+    <string name="common_add">Add</string>
+    <string name="theme_light">Light theme</string>
+    <string name="theme_system">System theme</string>
+    <string name="theme_dark">Dark theme</string>
+
+    <!-- Settings -->
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_vibration">Vibration</string>
+    <string name="settings_vibrate_count_title">Vibrate on each count</string>
+    <string name="settings_vibrate_count_desc">Quick haptic feedback for every button press</string>
+    <string name="settings_count_intensity">Count intensity</string>
+    <string name="settings_vibrate_round_title">Vibrate on round complete</string>
+    <string name="settings_vibrate_round_desc">Stronger vibration when you finish a round</string>
+    <string name="settings_round_intensity">Round intensity</string>
+    <string name="settings_intensity_very_light">Very Light</string>
+    <string name="settings_intensity_light">Light</string>
+    <string name="settings_intensity_medium">Medium</string>
+    <string name="settings_intensity_strong">Strong</string>
+    <string name="settings_intensity_very_strong">Very Strong</string>
+    <string name="settings_about">About</string>
+    <string name="settings_about_tagline">A distraction-free digital mala for your spiritual practice</string>
+    <string name="settings_version">Version %1$s</string>
+
+    <!-- History -->
+    <string name="history_clear">Clear history</string>
+    <string name="history_empty_title">No sessions yet</string>
+    <string name="history_empty_message">Your chanting history will appear here</string>
+    <string name="history_today">Today</string>
+    <string name="history_this_week">This Week</string>
+    <string name="history_this_month">This Month</string>
+    <string name="history_older">Older</string>
+    <string name="history_clear_title">Clear History</string>
+    <string name="history_clear_message">Are you sure you want to clear all session history? This cannot be undone.</string>
+    <string name="history_clear_confirm">Clear</string>
+    <string name="history_all_time_stats">All Time Stats</string>
+    <string name="history_stat_counts">Counts</string>
+    <string name="history_stat_rounds">Rounds</string>
+    <string name="history_stat_sessions">Sessions</string>
+    <string name="history_total_time">Total time: %1$s</string>
+    <string name="history_less_than_minute">Less than a minute</string>
+    <!-- Compact durations: hours and minutes, minutes and seconds, seconds -->
+    <string name="history_duration_hm">%1$dh %2$dm</string>
+    <string name="history_duration_ms">%1$dm %2$ds</string>
+    <string name="history_duration_s">%1$ds</string>
+
+    <!-- Goals -->
+    <string name="goals_create_goal">Create Goal</string>
+    <string name="goals_edit_goal">Edit Goal</string>
+    <string name="goals_empty_title">No goals yet</string>
+    <string name="goals_empty_message">Create a goal to track multiple mantras\nin a single session</string>
+    <string name="goals_delete_title">Delete Goal</string>
+    <string name="goals_delete_message">Are you sure you want to delete \"%1$s\"? This action cannot be undone.</string>
+    <string name="goals_options">Options</string>
+    <plurals name="goals_more_mantras">
+        <item quantity="one">+%d more</item>
+        <item quantity="other">+%d more</item>
+    </plurals>
+    <string name="goals_start_session">Start Session</string>
+    <string name="goals_name_label">Goal Name</string>
+    <string name="goals_name_placeholder">e.g., Morning Practice</string>
+    <string name="goals_mantras">Mantras</string>
+    <string name="goals_reorder_hint">Long press to drag and reorder</string>
+    <string name="goals_no_mantras">No mantras added</string>
+    <string name="goals_no_mantras_hint">Add mantras to create your goal</string>
+    <string name="goals_total">Total</string>
+    <string name="goals_discard_title">Discard changes?</string>
+    <string name="goals_discard_message">Your changes to this goal will be lost.</string>
+    <string name="goals_discard_confirm">Discard</string>
+    <string name="goals_drag_to_reorder">Drag to reorder</string>
+    <string name="goals_add_mantra">Add Mantra</string>
+    <string name="goals_edit_mantra">Edit Mantra</string>
+    <string name="goals_mantra_name_label">Mantra Name</string>
+    <string name="goals_mantra_name_placeholder">e.g., Om Namah Shivaya</string>
+    <string name="goals_target_rounds_label">Target Rounds</string>
 </resources>

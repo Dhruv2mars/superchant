@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -95,14 +96,14 @@ fun HistoryScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                title = "History",
+                title = stringResource(R.string.history),
                 navigationIcon = { BackButton(onBackClick) },
                 actions = {
                     if (sessionHistory.isNotEmpty()) {
                         IconButton(onClick = { showClearDialog = true }) {
                             Icon(
                                 imageVector = Icons.Outlined.DeleteOutline,
-                                contentDescription = "Clear history"
+                                contentDescription = stringResource(R.string.history_clear)
                             )
                         }
                     }
@@ -123,8 +124,8 @@ fun HistoryScreen(
             ) {
                 EmptyState(
                     icon = Icons.Outlined.History,
-                    title = "No sessions yet",
-                    message = "Your chanting history will appear here",
+                    title = stringResource(R.string.history_empty_title),
+                    message = stringResource(R.string.history_empty_message),
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -149,7 +150,7 @@ fun HistoryScreen(
                     // Today section
                     if (categorizedSessions.today.isNotEmpty()) {
                         item {
-                            SectionHeader(title = "Today")
+                            SectionHeader(title = stringResource(R.string.history_today))
                         }
                         items(categorizedSessions.today, key = { it.id }) { session ->
                             SessionCard(session = session, showDate = false)
@@ -159,7 +160,7 @@ fun HistoryScreen(
                     // This Week section
                     if (categorizedSessions.thisWeek.isNotEmpty()) {
                         item {
-                            SectionHeader(title = "This Week")
+                            SectionHeader(title = stringResource(R.string.history_this_week))
                         }
                         items(categorizedSessions.thisWeek, key = { it.id }) { session ->
                             SessionCard(session = session, showDate = true)
@@ -169,7 +170,7 @@ fun HistoryScreen(
                     // This Month section
                     if (categorizedSessions.thisMonth.isNotEmpty()) {
                         item {
-                            SectionHeader(title = "This Month")
+                            SectionHeader(title = stringResource(R.string.history_this_month))
                         }
                         items(categorizedSessions.thisMonth, key = { it.id }) { session ->
                             SessionCard(session = session, showDate = true)
@@ -179,7 +180,7 @@ fun HistoryScreen(
                     // Older section
                     if (categorizedSessions.older.isNotEmpty()) {
                         item {
-                            SectionHeader(title = "Older")
+                            SectionHeader(title = stringResource(R.string.history_older))
                         }
                         items(categorizedSessions.older, key = { it.id }) { session ->
                             SessionCard(session = session, showDate = true)
@@ -198,9 +199,9 @@ fun HistoryScreen(
     // Clear confirmation dialog
     if (showClearDialog) {
         ConfirmDestructiveDialog(
-            title = "Clear History",
-            text = "Are you sure you want to clear all session history? This cannot be undone.",
-            confirmLabel = "Clear",
+            title = stringResource(R.string.history_clear_title),
+            text = stringResource(R.string.history_clear_message),
+            confirmLabel = stringResource(R.string.history_clear_confirm),
             onConfirm = {
                 preferencesRepository.write { clearSessionHistory() }
                 showClearDialog = false
@@ -238,7 +239,7 @@ private fun SummaryCard(sessions: List<SessionRecord>) {
             modifier = Modifier.padding(20.dp)
         ) {
             Text(
-                text = "All Time Stats",
+                text = stringResource(R.string.history_all_time_stats),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -249,9 +250,9 @@ private fun SummaryCard(sessions: List<SessionRecord>) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
-                StatItem(value = formatNumber(totalCounts), label = "Counts")
-                StatItem(value = formatNumber(totalRounds), label = "Rounds")
-                StatItem(value = totalSessions.toString(), label = "Sessions")
+                StatItem(value = formatNumber(totalCounts), label = stringResource(R.string.history_stat_counts))
+                StatItem(value = formatNumber(totalRounds), label = stringResource(R.string.history_stat_rounds))
+                StatItem(value = totalSessions.toString(), label = stringResource(R.string.history_stat_sessions))
             }
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -272,7 +273,7 @@ private fun SummaryCard(sessions: List<SessionRecord>) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Total time: ${formatDurationLong(totalDuration, LocalResources.current)}",
+                    text = stringResource(R.string.history_total_time, formatDurationLong(totalDuration, LocalResources.current)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -351,7 +352,7 @@ private fun SessionCard(session: SessionRecord, showDate: Boolean) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = formatDuration(session.durationMillis),
+                            text = formatDuration(session.durationMillis, LocalResources.current),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -422,15 +423,15 @@ private fun SessionCard(session: SessionRecord, showDate: Boolean) {
     }
 }
 
-private fun formatDuration(millis: Long): String {
+private fun formatDuration(millis: Long, resources: Resources): String {
     val hours = TimeUnit.MILLISECONDS.toHours(millis)
     val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60
     val seconds = TimeUnit.MILLISECONDS.toSeconds(millis) % 60
     
     return when {
-        hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes}m ${seconds}s"
-        else -> "${seconds}s"
+        hours > 0 -> resources.getString(R.string.history_duration_hm, hours, minutes)
+        minutes > 0 -> resources.getString(R.string.history_duration_ms, minutes, seconds)
+        else -> resources.getString(R.string.history_duration_s, seconds)
     }
 }
 
@@ -439,9 +440,9 @@ private fun formatDurationLong(millis: Long, resources: Resources): String {
     val minutes = (TimeUnit.MILLISECONDS.toMinutes(millis) % 60).toInt()
     
     return when {
-        hours > 0 -> "${hours}h ${minutes}m"
+        hours > 0 -> resources.getString(R.string.history_duration_hm, hours, minutes)
         minutes > 0 -> resources.getQuantityString(R.plurals.minutes_count, minutes, minutes)
-        else -> "Less than a minute"
+        else -> resources.getString(R.string.history_less_than_minute)
     }
 }
 

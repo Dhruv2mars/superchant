@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Column
@@ -106,7 +107,7 @@ fun SettingsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     Scaffold(
         topBar = {
-            AppTopBar(title = "Settings", navigationIcon = { BackButton(onBackClick) })
+            AppTopBar(title = stringResource(R.string.settings), navigationIcon = { BackButton(onBackClick) })
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.surface
@@ -181,13 +182,13 @@ fun SettingsScreen(
             }
             
             // Appearance section
-            SettingsSection(title = "Appearance") {
+            SettingsSection(title = stringResource(R.string.settings_appearance)) {
                 SettingsItem(
-                    title = "Theme",
+                    title = stringResource(R.string.settings_theme),
                     subtitle = when (themeMode) {
-                        ThemeMode.LIGHT -> "Light"
-                        ThemeMode.DARK -> "Dark"
-                        ThemeMode.SYSTEM -> "System"
+                        ThemeMode.LIGHT -> stringResource(R.string.settings_theme_light)
+                        ThemeMode.DARK -> stringResource(R.string.settings_theme_dark)
+                        ThemeMode.SYSTEM -> stringResource(R.string.settings_theme_system)
                     }
                 ) {
                     ThemeToggle(
@@ -200,11 +201,11 @@ fun SettingsScreen(
             }
             
             // Feedback section
-            SettingsSection(title = "Vibration") {
+            SettingsSection(title = stringResource(R.string.settings_vibration)) {
                 // Count vibration toggle
                 SettingsToggleItem(
-                    title = "Vibrate on each count",
-                    subtitle = "Quick haptic feedback for every button press",
+                    title = stringResource(R.string.settings_vibrate_count_title),
+                    subtitle = stringResource(R.string.settings_vibrate_count_desc),
                     checked = vibration.countEnabled,
                     onCheckedChange = { enabled ->
                         preferencesRepository.write { setCountVibrationEnabled(enabled) }
@@ -214,7 +215,7 @@ fun SettingsScreen(
                 // Count vibration intensity slider (only where the vibrator can vary its strength)
                 if (hasAmplitudeControl) {
                     SettingsSliderItem(
-                        title = "Count intensity",
+                        title = stringResource(R.string.settings_count_intensity),
                         value = vibration.countIntensity,
                         enabled = vibration.countEnabled,
                         onValueChangeFinished = { intensity ->
@@ -238,8 +239,8 @@ fun SettingsScreen(
                 
                 // Round complete vibration toggle
                 SettingsToggleItem(
-                    title = "Vibrate on round complete",
-                    subtitle = "Stronger vibration when you finish a round",
+                    title = stringResource(R.string.settings_vibrate_round_title),
+                    subtitle = stringResource(R.string.settings_vibrate_round_desc),
                     checked = vibration.roundEnabled,
                     onCheckedChange = { enabled ->
                         preferencesRepository.write { setVibrationEnabled(enabled) }
@@ -249,7 +250,7 @@ fun SettingsScreen(
                 // Round vibration intensity slider
                 if (hasAmplitudeControl) {
                     SettingsSliderItem(
-                        title = "Round intensity",
+                        title = stringResource(R.string.settings_round_intensity),
                         value = vibration.roundIntensity,
                         enabled = vibration.roundEnabled,
                         onValueChangeFinished = { intensity ->
@@ -271,24 +272,24 @@ fun SettingsScreen(
             }
             
             // About section
-            SettingsSection(title = "About") {
+            SettingsSection(title = stringResource(R.string.settings_about)) {
                 Column(
                     modifier = Modifier.padding(vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "SuperChant",
+                        text = stringResource(R.string.app_name),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "A distraction-free digital mala for your spiritual practice",
+                        text = stringResource(R.string.settings_about_tagline),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Version ${BuildConfig.VERSION_NAME}",
+                        text = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -454,7 +455,7 @@ private fun SettingsSliderItem(
     onValueChangeFinished: (Int) -> Unit
 ) {
     var dragValue by remember(value) { mutableFloatStateOf(value.toFloat()) }
-    val subtitle = getIntensityLabel(dragValue.roundToInt())
+    val subtitle = stringResource(intensityLabel(dragValue.roundToInt()))
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -509,12 +510,13 @@ private fun Context.vibrator(): Vibrator =
         getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
     }
 
-private fun getIntensityLabel(intensity: Int): String {
+@StringRes
+private fun intensityLabel(intensity: Int): Int {
     return when {
-        intensity <= 50 -> "Very Light"
-        intensity <= 100 -> "Light"
-        intensity <= 150 -> "Medium"
-        intensity <= 200 -> "Strong"
-        else -> "Very Strong"
+        intensity <= 50 -> R.string.settings_intensity_very_light
+        intensity <= 100 -> R.string.settings_intensity_light
+        intensity <= 150 -> R.string.settings_intensity_medium
+        intensity <= 200 -> R.string.settings_intensity_strong
+        else -> R.string.settings_intensity_very_strong
     }
 }

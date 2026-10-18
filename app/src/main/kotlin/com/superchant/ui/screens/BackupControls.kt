@@ -27,6 +27,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.superchant.R
@@ -50,6 +51,7 @@ internal fun BackupControls(
     snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf(false) }
 
@@ -64,9 +66,9 @@ internal fun BackupControls(
             val message = try {
                 val backup = preferencesRepository.exportBackup(System.currentTimeMillis())
                 writeText(context, uri, BackupCodec.encode(backup))
-                context.resources.getQuantityString(R.plurals.backup_exported, backup.history.size, backup.history.size, backup.goals.size)
+                resources.getQuantityString(R.plurals.backup_exported, backup.history.size, backup.history.size, backup.goals.size)
             } catch (e: Exception) {
-                context.getString(R.string.backup_export_failed)
+                resources.getString(R.string.backup_export_failed)
             }
             busy = false
             report(message)
@@ -82,13 +84,13 @@ internal fun BackupControls(
                 val result = preferencesRepository.importBackup(backup)
                 // The backup may turn the reminder on or move it
                 ReminderScheduler.sync(context.applicationContext)
-                context.resources.getQuantityString(
+                resources.getQuantityString(
                     R.plurals.backup_imported, result.sessionsAdded, result.sessionsAdded, result.goalsAdded + result.goalsUpdated
                 )
             } catch (e: BackupFormatException) {
-                context.getString(R.string.backup_not_valid)
+                resources.getString(R.string.backup_not_valid)
             } catch (e: Exception) {
-                context.getString(R.string.backup_import_failed)
+                resources.getString(R.string.backup_import_failed)
             }
             busy = false
             report(message)

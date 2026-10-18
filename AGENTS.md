@@ -37,13 +37,16 @@ All versions live in `gradle/libs.versions.toml`.
 app/src/main/kotlin/com/superchant/
 ├── MainActivity.kt                  # NavHost: home, settings, history, goals
 ├── data/
-│   ├── ChantState.kt                # ChantState (session), Goal, MantraGoal, SessionRecord
+│   ├── ChantState.kt                # ChantState (session, persisted while active), Goal, MantraGoal, SessionRecord; String IDs
+│   ├── StoredList.kt                # Fail-safe JSON list decode/encode (keeps unreadable elements), ID dedupe
+│   ├── HistoryBuckets.kt            # Today / This Week / This Month / Older grouping
 │   ├── ChantCounter.kt              # Pure increment/undo rules shared by all inputs; CountDebouncer
 │   ├── InputMode.kt                 # VOLUME / ON_SCREEN / BOTH
-│   └── PreferencesRepository.kt     # DataStore flows + setters
+│   └── PreferencesRepository.kt     # Singleton; StateFlows (null = loading) + ordered `write {}` queue
 ├── service/
 │   ├── ChantingService.kt           # Foreground service; owns ChantState via a companion StateFlow
-│   └── VolumeKeyAccessibilityService.kt  # onKeyEvent -> SharedFlow consumed by ChantingService
+│   ├── VolumeKeyAccessibilityService.kt  # onKeyEvent -> VolumeKeyFilter -> ChantingService.onVolumeKeyPressed
+│   └── VolumeKeyFilter.kt           # Which key events to consume (whole press, never repeats)
 └── ui/
     ├── components/                  # Shared composables (AppTopBar, CounterDisplay, TapToCountPad, HoldToUndoButton, ...)
     ├── screens/                     # Home, Goals, History, Settings
@@ -58,19 +61,26 @@ app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
    required). Volume mode requires both. Goals started from the Goals screen go through Home's checks.
 2. `ChantingService.start()/startWithGoal()` starts the foreground service with the mode and marks the
    session active.
-3. Volume: `VolumeKeyAccessibilityService.onKeyEvent` consumes `VOLUME_UP/DOWN` key-downs only while a
-   session is active, not paused and `ChantingService.acceptsVolumeKeys`, and emits them on a `SharedFlow`.
+3. Volume: `VolumeKeyAccessibilityService.onKeyEvent` (main thread) passes key events to `VolumeKeyFilter`, which
+   offers each new press (DOWN, repeatCount 0) to `ChantingService.onVolumeKeyPressed()`. A counted press is
+   consumed whole (DOWN, repeats, UP); presses that aren't counted (no session, paused, goal complete, or
+   on-screen-only mode, see `acceptsVolumeKeys`) pass through to the system untouched.
    On-screen: `TapToCountPad` calls `ChantingService.countFromScreen()` (one count per touch, extra fingers
    and repeats under 150 ms ignored). `ChantingService.undo()` removes the last count.
 4. Both inputs go through one `incrementCount()`, which applies `ChantCounter.increment` (108 per round, goal
    mantra advance, no counting after the goal completes) and plays the same haptics/sounds.
-5. UI screens collect `ChantingService.chantStateFlow`. There are no ViewModels.
+5. Every change to an active session is written to the `active_session` DataStore. After process death the
+   service restores it (START_STICKY restart, or `MainActivity.onStart`), and stopping saves it to history
+   under its `sessionId`, so a session is recorded once. Sessions idle for 3+ hours are saved instead of resumed.
+6. UI screens collect `ChantingService.chantStateFlow`. There are no ViewModels.
 
 ## Conventions
 
 - 4-space indent, trailing-lambda Compose style.
 - Reuse `ui/components` (e.g. `AppTopBar`, `BackButton`, `EmptyState`, `ConfirmDestructiveDialog`) instead of copying UI.
 - New persisted data classes need `@Serializable` and defaults for new fields so old JSON still decodes.
+  IDs are UUID strings (`newId()`); `LenientIdSerializer` still reads the numeric IDs of v1.1.0 data.
+- Write preferences with `preferencesRepository.write { ... }`, not a screen's coroutine scope.
 - New UI strings go in `res/values/strings.xml` (plurals for counts). Older screens still hardcode some.
 
 ## Testing on an emulator

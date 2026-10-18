@@ -1,5 +1,6 @@
 package com.superchant.ui.screens
 
+import android.content.res.Resources
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -33,27 +34,34 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.superchant.R
 import com.superchant.data.PreferencesRepository
 import com.superchant.data.SessionRecord
 import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.BackButton
 import com.superchant.ui.components.ConfirmDestructiveDialog
+import com.superchant.data.bucketSessions
+import com.superchant.data.millisUntilNextMidnight
 import com.superchant.ui.components.EmptyState
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -63,13 +71,23 @@ fun HistoryScreen(
     preferencesRepository: PreferencesRepository,
     onBackClick: () -> Unit
 ) {
-    val scope = rememberCoroutineScope()
-    val sessionHistory by preferencesRepository.sessionHistoryFlow.collectAsState(initial = emptyList())
-    var showClearDialog by remember { mutableStateOf(false) }
+    // null until loaded, so the empty state doesn't flash before the data arrives
+    val loadedHistory by preferencesRepository.sessionHistory.collectAsStateWithLifecycle()
+    val sessionHistory = loadedHistory ?: emptyList()
+    var showClearDialog by rememberSaveable { mutableStateOf(false) }
     
-    // Categorize sessions
-    val categorizedSessions = remember(sessionHistory) {
-        categorizeSessions(sessionHistory)
+    // Re-bucket when the day changes (at midnight while open, or on returning to the screen)
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LifecycleResumeEffect(Unit) {
+        now = System.currentTimeMillis()
+        onPauseOrDispose { }
+    }
+    LaunchedEffect(now) {
+        delay(millisUntilNextMidnight(now) + 1_000)
+        now = System.currentTimeMillis()
+    }
+    val categorizedSessions = remember(sessionHistory, now) {
+        bucketSessions(sessionHistory, now)
     }
     
     Scaffold(
@@ -97,7 +115,7 @@ fun HistoryScreen(
                 .padding(paddingValues)
         ) {
             AnimatedVisibility(
-                visible = sessionHistory.isEmpty(),
+                visible = loadedHistory?.isEmpty() == true,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
@@ -179,9 +197,7 @@ fun HistoryScreen(
             text = "Are you sure you want to clear all session history? This cannot be undone.",
             confirmLabel = "Clear",
             onConfirm = {
-                scope.launch {
-                    preferencesRepository.clearSessionHistory()
-                }
+                preferencesRepository.write { clearSessionHistory() }
                 showClearDialog = false
             },
             onDismiss = { showClearDialog = false }
@@ -201,10 +217,10 @@ private fun SectionHeader(title: String) {
 
 @Composable
 private fun SummaryCard(sessions: List<SessionRecord>) {
-    val totalCounts = sessions.sumOf { it.totalCounts }
-    val totalRounds = sessions.sumOf { it.totalRounds }
+    val totalCounts = remember(sessions) { sessions.sumOf { it.totalCounts } }
+    val totalRounds = remember(sessions) { sessions.sumOf { it.totalRounds } }
     val totalSessions = sessions.size
-    val totalDuration = sessions.sumOf { it.durationMillis }
+    val totalDuration = remember(sessions) { sessions.sumOf { it.durationMillis } }
     
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -251,7 +267,7 @@ private fun SummaryCard(sessions: List<SessionRecord>) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Total time: ${formatDurationLong(totalDuration)}",
+                    text = "Total time: ${formatDurationLong(totalDuration, LocalResources.current)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -349,7 +365,7 @@ private fun SessionCard(session: SessionRecord, showDate: Boolean) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "counts",
+                            text = pluralStringResource(R.plurals.counts_label, session.totalCounts),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -363,7 +379,7 @@ private fun SessionCard(session: SessionRecord, showDate: Boolean) {
                             color = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "rounds",
+                            text = pluralStringResource(R.plurals.rounds_label, session.totalRounds),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -401,46 +417,6 @@ private fun SessionCard(session: SessionRecord, showDate: Boolean) {
     }
 }
 
-// Data class for categorized sessions
-private data class CategorizedSessions(
-    val today: List<SessionRecord>,
-    val thisWeek: List<SessionRecord>,
-    val thisMonth: List<SessionRecord>,
-    val older: List<SessionRecord>
-)
-
-private fun categorizeSessions(sessions: List<SessionRecord>): CategorizedSessions {
-    // Midnight today, optionally moved to the start of the week (locale's first day) or month.
-    fun startOf(adjust: Calendar.() -> Unit = {}) = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-        adjust()
-    }.timeInMillis
-    
-    val startOfToday = startOf()
-    val startOfWeek = startOf { set(Calendar.DAY_OF_WEEK, firstDayOfWeek) }
-    val startOfMonth = startOf { set(Calendar.DAY_OF_MONTH, 1) }
-    
-    val today = mutableListOf<SessionRecord>()
-    val thisWeek = mutableListOf<SessionRecord>()
-    val thisMonth = mutableListOf<SessionRecord>()
-    val older = mutableListOf<SessionRecord>()
-    
-    // Sessions are already sorted by startTime descending (most recent first)
-    for (session in sessions) {
-        when {
-            session.startTime >= startOfToday -> today.add(session)
-            session.startTime >= startOfWeek -> thisWeek.add(session)
-            session.startTime >= startOfMonth -> thisMonth.add(session)
-            else -> older.add(session)
-        }
-    }
-    
-    return CategorizedSessions(today, thisWeek, thisMonth, older)
-}
-
 private fun formatDuration(millis: Long): String {
     val hours = TimeUnit.MILLISECONDS.toHours(millis)
     val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60
@@ -453,20 +429,20 @@ private fun formatDuration(millis: Long): String {
     }
 }
 
-private fun formatDurationLong(millis: Long): String {
+private fun formatDurationLong(millis: Long, resources: Resources): String {
     val hours = TimeUnit.MILLISECONDS.toHours(millis)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(millis) % 60
+    val minutes = (TimeUnit.MILLISECONDS.toMinutes(millis) % 60).toInt()
     
     return when {
         hours > 0 -> "${hours}h ${minutes}m"
-        minutes > 0 -> "${minutes} minutes"
+        minutes > 0 -> resources.getQuantityString(R.plurals.minutes_count, minutes, minutes)
         else -> "Less than a minute"
     }
 }
 
 private fun formatNumber(number: Int): String {
     return when {
-        number >= 1_000_000 -> String.format(Locale.getDefault(), "%.1fM", number / 1_000_000.0)
+        number >= 999_950 -> String.format(Locale.getDefault(), "%.1fM", number / 1_000_000.0)
         number >= 10_000 -> String.format(Locale.getDefault(), "%.1fK", number / 1_000.0)
         number >= 1_000 -> String.format(Locale.getDefault(), "%,d", number)
         else -> number.toString()

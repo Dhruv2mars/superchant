@@ -1,22 +1,55 @@
 package com.superchant.data
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.superchant.ui.theme.ThemeMode
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
+import java.io.IOException
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "superchant_prefs")
 
-class PreferencesRepository(private val context: Context) {
-    
+// Separate small store so the per-count session snapshot doesn't rewrite history and goals.
+private val Context.sessionDataStore: DataStore<Preferences> by preferencesDataStore(name = "active_session")
+
+data class VibrationSettings(
+    val roundEnabled: Boolean = true,
+    val countEnabled: Boolean = true,
+    val countIntensity: Int = 80,
+    val roundIntensity: Int = 255
+)
+
+/**
+ * Process-wide access to settings, goals, history and the active session.
+ *
+ * Values are exposed as StateFlows that start loading when the process starts and are null until
+ * the first read completes, so screens can tell "loading" from "empty". Writes go through [write],
+ * which runs them one at a time, in order, on an app-wide scope that outlives screens and services.
+ */
+class PreferencesRepository private constructor(private val context: Context) {
+
     private object PreferencesKeys {
         val THEME_MODE = intPreferencesKey("theme_mode")
         val VIBRATION_ENABLED = booleanPreferencesKey("vibration_enabled")
@@ -25,23 +58,56 @@ class PreferencesRepository(private val context: Context) {
         val ROUND_VIBRATION_INTENSITY = intPreferencesKey("round_vibration_intensity")
         val SESSION_HISTORY = stringPreferencesKey("session_history")
         val SAVED_GOALS = stringPreferencesKey("saved_goals")
+        val ACTIVE_SESSION = stringPreferencesKey("active_session")
         val INPUT_MODE = stringPreferencesKey("input_mode")
     }
-    
-    private val json = Json { 
-        ignoreUnknownKeys = true 
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val writes = Channel<suspend PreferencesRepository.() -> Unit>(Channel.UNLIMITED)
+
+    init {
+        scope.launch {
+            for (block in writes) {
+                try {
+                    block()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Write failed", e)
+                }
+            }
+        }
+    }
+
+    /** Queues [block]; queued writes run sequentially in submission order. */
+    fun write(block: suspend PreferencesRepository.() -> Unit) {
+        writes.trySend(block)
+    }
+
+    private val json = Json {
+        ignoreUnknownKeys = true
         encodeDefaults = true
     }
-    
+
+    // A read error (e.g. IOException) shows defaults instead of crashing every collector.
+    private val prefs: Flow<Preferences> = context.dataStore.data.catch { e ->
+        if (e is IOException) {
+            Log.e(TAG, "Reading preferences failed", e)
+            emit(emptyPreferences())
+        } else {
+            throw e
+        }
+    }
+
+    private fun <T> Flow<T>.share(): StateFlow<T?> = distinctUntilChanged().stateIn(scope, SharingStarted.Eagerly, null)
+
     // Theme Mode
-    val themeModeFlow: Flow<ThemeMode> = context.dataStore.data.map { preferences ->
-        when (preferences[PreferencesKeys.THEME_MODE] ?: 2) {
+    val themeMode: StateFlow<ThemeMode?> = prefs.map { preferences ->
+        when (preferences[PreferencesKeys.THEME_MODE]) {
             0 -> ThemeMode.LIGHT
             1 -> ThemeMode.DARK
             else -> ThemeMode.SYSTEM
         }
-    }
-    
+    }.share()
+
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_MODE] = when (mode) {
@@ -51,53 +117,47 @@ class PreferencesRepository(private val context: Context) {
             }
         }
     }
-    
+
     // Vibration settings
-    val vibrationEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[PreferencesKeys.VIBRATION_ENABLED] ?: true
-    }
-    
+    val vibrationSettings: StateFlow<VibrationSettings?> = prefs.map { preferences ->
+        val defaults = VibrationSettings()
+        VibrationSettings(
+            roundEnabled = preferences[PreferencesKeys.VIBRATION_ENABLED] ?: defaults.roundEnabled,
+            countEnabled = preferences[PreferencesKeys.COUNT_VIBRATION_ENABLED] ?: defaults.countEnabled,
+            countIntensity = preferences[PreferencesKeys.COUNT_VIBRATION_INTENSITY] ?: defaults.countIntensity,
+            roundIntensity = preferences[PreferencesKeys.ROUND_VIBRATION_INTENSITY] ?: defaults.roundIntensity
+        )
+    }.share()
+
     suspend fun setVibrationEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.VIBRATION_ENABLED] = enabled
         }
     }
-    
-    val countVibrationEnabledFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
-        preferences[PreferencesKeys.COUNT_VIBRATION_ENABLED] ?: true
-    }
-    
+
     suspend fun setCountVibrationEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.COUNT_VIBRATION_ENABLED] = enabled
         }
     }
-    
+
     // Vibration intensity settings (1-255)
-    val countVibrationIntensityFlow: Flow<Int> = context.dataStore.data.map { preferences ->
-        preferences[PreferencesKeys.COUNT_VIBRATION_INTENSITY] ?: 80 // Default light vibration
-    }
-    
     suspend fun setCountVibrationIntensity(intensity: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.COUNT_VIBRATION_INTENSITY] = intensity.coerceIn(1, 255)
         }
     }
-    
-    val roundVibrationIntensityFlow: Flow<Int> = context.dataStore.data.map { preferences ->
-        preferences[PreferencesKeys.ROUND_VIBRATION_INTENSITY] ?: 255 // Default full intensity
-    }
-    
+
     suspend fun setRoundVibrationIntensity(intensity: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.ROUND_VIBRATION_INTENSITY] = intensity.coerceIn(1, 255)
         }
     }
-    
+
     /** The chosen [InputMode], or null until the user picks one (see [InputMode.default]). */
-    val inputModeFlow: Flow<InputMode?> = context.dataStore.data.map { preferences ->
+    val inputModeFlow: Flow<InputMode?> = prefs.map { preferences ->
         InputMode.fromName(preferences[PreferencesKeys.INPUT_MODE])
-    }
+    }.distinctUntilChanged()
     
     suspend fun setInputMode(mode: InputMode) {
         context.dataStore.edit { preferences ->
@@ -106,51 +166,97 @@ class PreferencesRepository(private val context: Context) {
     }
     
     // Session history
-    val sessionHistoryFlow: Flow<List<SessionRecord>> = context.dataStore.data.map { preferences ->
-        decodeList<SessionRecord>(preferences[PreferencesKeys.SESSION_HISTORY])
-    }
-    
+    val sessionHistory: StateFlow<List<SessionRecord>?> = prefs.map { preferences ->
+        json.decodeStoredList(SessionRecord.serializer(), preferences[PreferencesKeys.SESSION_HISTORY]).items.withUniqueRecordIds()
+    }.share()
+
+    /** Adds [record] at the top, replacing a record with the same ID; keeps the last 100 sessions. */
     suspend fun addSessionRecord(record: SessionRecord) {
-        // Most recent first; keep only the last 100 sessions
-        updateList<SessionRecord>(PreferencesKeys.SESSION_HISTORY) { (listOf(record) + it).take(100) }
+        updateList(PreferencesKeys.SESSION_HISTORY, SessionRecord.serializer()) { it.upsert(record, HISTORY_LIMIT) }
     }
-    
+
     suspend fun clearSessionHistory() {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SESSION_HISTORY] = "[]"
         }
     }
-    
+
     // Goals
-    val goalsFlow: Flow<List<Goal>> = context.dataStore.data.map { preferences ->
-        decodeList<Goal>(preferences[PreferencesKeys.SAVED_GOALS])
-    }
-    
+    val goals: StateFlow<List<Goal>?> = prefs.map { preferences ->
+        json.decodeStoredList(Goal.serializer(), preferences[PreferencesKeys.SAVED_GOALS]).items.withUniqueGoalIds()
+    }.share()
+
     /** Replaces the goal with the same ID, or adds it at the top. */
     suspend fun saveGoal(goal: Goal) {
-        updateList<Goal>(PreferencesKeys.SAVED_GOALS) { goals ->
+        updateList(PreferencesKeys.SAVED_GOALS, Goal.serializer()) { goals ->
             if (goals.any { it.id == goal.id }) goals.map { if (it.id == goal.id) goal else it } else listOf(goal) + goals
         }
     }
-    
-    suspend fun deleteGoal(goalId: Long) {
-        updateList<Goal>(PreferencesKeys.SAVED_GOALS) { goals -> goals.filterNot { it.id == goalId } }
+
+    suspend fun deleteGoal(goalId: String) {
+        updateList(PreferencesKeys.SAVED_GOALS, Goal.serializer()) { goals -> goals.filterNot { it.id == goalId } }
     }
-    
-    /** Decodes a JSON list, treating missing or unreadable data as empty. */
-    private inline fun <reified T> decodeList(stored: String?): List<T> =
-        try {
-            json.decodeFromString<List<T>>(stored ?: "[]")
-        } catch (e: Exception) {
-            emptyList()
-        }
-    
-    private suspend inline fun <reified T> updateList(
+
+    /**
+     * Read-modify-write of a stored list that never loses data: elements that don't decode are
+     * written back as they were, and an unparseable value is copied to a backup key first.
+     */
+    private suspend fun <T> updateList(
         key: Preferences.Key<String>,
-        crossinline transform: (List<T>) -> List<T>
+        serializer: KSerializer<T>,
+        transform: (List<T>) -> List<T>
     ) {
         context.dataStore.edit { preferences ->
-            preferences[key] = json.encodeToString(transform(decodeList<T>(preferences[key])))
+            val stored = preferences[key]
+            val list = json.decodeStoredList(serializer, stored)
+            if (list.corrupt && stored != null) {
+                Log.e(TAG, "Unreadable ${key.name}; keeping a backup")
+                preferences[stringPreferencesKey("${key.name}_backup_${System.currentTimeMillis()}")] = stored
+            }
+            preferences[key] = json.encodeStoredList(serializer, transform(list.items), list.unreadable)
         }
+    }
+
+    // Active session: written on every change while a session runs, cleared when it is saved.
+    suspend fun loadActiveSession(): ChantState? = try {
+        context.sessionDataStore.data.first()[PreferencesKeys.ACTIVE_SESSION]
+            ?.let { json.decodeFromString(ChantState.serializer(), it) }
+    } catch (e: Exception) {
+        Log.e(TAG, "Reading the active session failed", e)
+        null
+    }
+
+    suspend fun saveActiveSession(state: ChantState) {
+        context.sessionDataStore.edit { it[PreferencesKeys.ACTIVE_SESSION] = json.encodeToString(ChantState.serializer(), state) }
+    }
+
+    /** Clears the stored active session only if it is still session [sessionId]. */
+    suspend fun clearActiveSession(sessionId: String) {
+        context.sessionDataStore.edit { preferences ->
+            val stored = preferences[PreferencesKeys.ACTIVE_SESSION] ?: return@edit
+            val storedId = runCatching { json.decodeFromString(ChantState.serializer(), stored).sessionId }.getOrNull()
+            if (storedId == null || storedId == sessionId) preferences.remove(PreferencesKeys.ACTIVE_SESSION)
+        }
+    }
+
+    /** Records [state] in history (if anything was counted), then clears it as the active session. */
+    fun finishSession(state: ChantState, endTime: Long) = write {
+        if (state.count > 0) addSessionRecord(state.toRecord(endTime))
+        clearActiveSession(state.sessionId)
+    }
+
+    companion object {
+        private const val TAG = "PreferencesRepository"
+        private const val HISTORY_LIMIT = 100
+
+        // Holds only the application context, so this can't leak an Activity.
+        @SuppressLint("StaticFieldLeak")
+        @Volatile
+        private var instance: PreferencesRepository? = null
+
+        fun get(context: Context): PreferencesRepository =
+            instance ?: synchronized(this) {
+                instance ?: PreferencesRepository(context.applicationContext).also { instance = it }
+            }
     }
 }

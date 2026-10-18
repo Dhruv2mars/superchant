@@ -1,6 +1,8 @@
 package com.superchant
 
 import android.os.Bundle
+import android.view.View
+import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,23 +12,26 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.superchant.data.Goal
 import com.superchant.data.PreferencesRepository
+import com.superchant.service.ChantingService
 import com.superchant.ui.screens.GoalsScreen
 import com.superchant.ui.screens.HistoryScreen
 import com.superchant.ui.screens.HomeScreen
 import com.superchant.ui.screens.SettingsScreen
 import com.superchant.ui.theme.SuperChantTheme
 import com.superchant.ui.theme.ThemeMode
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     
@@ -34,10 +39,21 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        val preferencesRepository = PreferencesRepository(applicationContext)
+        val preferencesRepository = PreferencesRepository.get(this)
+        
+        // Hold the first frame (the system splash stays up) until the saved theme is known,
+        // so a forced light/dark theme never flashes the system one.
+        val content = findViewById<View>(android.R.id.content)
+        content.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                val ready = preferencesRepository.themeMode.value != null
+                if (ready) content.viewTreeObserver.removeOnPreDrawListener(this)
+                return ready
+            }
+        })
         
         setContent {
-            val themeMode by preferencesRepository.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
+            val themeMode = preferencesRepository.themeMode.collectAsStateWithLifecycle().value ?: ThemeMode.SYSTEM
             
             SuperChantTheme(themeMode = themeMode) {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -112,6 +128,16 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+            }
+        }
+    }
+    
+    override fun onStart() {
+        super.onStart()
+        // A session persisted by a process that died (and wasn't restarted yet) resumes here.
+        lifecycleScope.launch {
+            if (!ChantingService.isRunning && PreferencesRepository.get(this@MainActivity).loadActiveSession() != null) {
+                ChantingService.restore(this@MainActivity)
             }
         }
     }

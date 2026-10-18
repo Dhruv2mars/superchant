@@ -21,26 +21,30 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.superchant.BuildConfig
 import com.superchant.R
+import com.superchant.data.ChantState
 import com.superchant.data.InputMode
 import com.superchant.data.PreferencesRepository
+import com.superchant.data.VibrationSettings
 import com.superchant.service.VolumeKeyAccessibilityService
 import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.BackButton
 import com.superchant.ui.components.InputModeSelector
 import com.superchant.ui.components.ThemeToggle
 import com.superchant.ui.theme.ThemeMode
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
@@ -49,14 +53,16 @@ fun SettingsScreen(
     themeMode: ThemeMode,
     onBackClick: () -> Unit
 ) {
-    val scope = rememberCoroutineScope()
-    val vibrationEnabled by preferencesRepository.vibrationEnabledFlow.collectAsState(initial = true)
-    val countVibrationEnabled by preferencesRepository.countVibrationEnabledFlow.collectAsState(initial = true)
-    val countVibrationIntensity by preferencesRepository.countVibrationIntensityFlow.collectAsState(initial = 80)
-    val roundVibrationIntensity by preferencesRepository.roundVibrationIntensityFlow.collectAsState(initial = 255)
     val context = LocalContext.current
-    val savedInputMode by preferencesRepository.inputModeFlow.collectAsState(initial = null)
-    val accessibilityEnabled = remember { VolumeKeyAccessibilityService.isAccessibilityServiceEnabled(context) }
+    val savedInputMode by preferencesRepository.inputModeFlow.collectAsStateWithLifecycle(initialValue = null)
+    // Re-checked on resume, e.g. after returning from the accessibility settings
+    var accessibilityEnabled by remember { mutableStateOf(VolumeKeyAccessibilityService.isAccessibilityServiceEnabled(context)) }
+    LifecycleResumeEffect(Unit) {
+        accessibilityEnabled = VolumeKeyAccessibilityService.isAccessibilityServiceEnabled(context)
+        onPauseOrDispose { }
+    }
+    // Loaded at app start, so the stored values (not defaults) are shown from the first frame
+    val vibration = preferencesRepository.vibrationSettings.collectAsStateWithLifecycle().value ?: VibrationSettings()
     
     Scaffold(
         topBar = {
@@ -75,7 +81,7 @@ fun SettingsScreen(
             SettingsSection(title = stringResource(R.string.settings_counting)) {
                 InputModeSelector(
                     selected = savedInputMode ?: InputMode.default(accessibilityEnabled),
-                    onSelect = { mode -> scope.launch { preferencesRepository.setInputMode(mode) } },
+                    onSelect = { mode -> preferencesRepository.write { setInputMode(mode) } },
                     accessibilityEnabled = accessibilityEnabled,
                     onSetUpAccessibility = { VolumeKeyAccessibilityService.openAccessibilitySettings(context) }
                 )
@@ -94,9 +100,7 @@ fun SettingsScreen(
                     ThemeToggle(
                         currentMode = themeMode,
                         onModeSelected = { newMode ->
-                            scope.launch {
-                                preferencesRepository.setThemeMode(newMode)
-                            }
+                            preferencesRepository.write { setThemeMode(newMode) }
                         }
                     )
                 }
@@ -108,25 +112,19 @@ fun SettingsScreen(
                 SettingsToggleItem(
                     title = "Vibrate on each count",
                     subtitle = "Quick haptic feedback for every button press",
-                    checked = countVibrationEnabled,
+                    checked = vibration.countEnabled,
                     onCheckedChange = { enabled ->
-                        scope.launch {
-                            preferencesRepository.setCountVibrationEnabled(enabled)
-                        }
+                        preferencesRepository.write { setCountVibrationEnabled(enabled) }
                     }
                 )
                 
                 // Count vibration intensity slider
                 SettingsSliderItem(
                     title = "Count intensity",
-                    subtitle = getIntensityLabel(countVibrationIntensity),
-                    value = countVibrationIntensity.toFloat(),
-                    valueRange = 1f..255f,
-                    enabled = countVibrationEnabled,
-                    onValueChange = { intensity ->
-                        scope.launch {
-                            preferencesRepository.setCountVibrationIntensity(intensity.roundToInt())
-                        }
+                    value = vibration.countIntensity,
+                    enabled = vibration.countEnabled,
+                    onValueChangeFinished = { intensity ->
+                        preferencesRepository.write { setCountVibrationIntensity(intensity) }
                     }
                 )
                 
@@ -138,26 +136,20 @@ fun SettingsScreen(
                 // Round complete vibration toggle
                 SettingsToggleItem(
                     title = "Vibrate on round complete",
-                    subtitle = "Stronger vibration when you finish 108 counts",
-                    checked = vibrationEnabled,
+                    subtitle = "Stronger vibration when you finish ${ChantState.COUNTS_PER_ROUND} counts",
+                    checked = vibration.roundEnabled,
                     onCheckedChange = { enabled ->
-                        scope.launch {
-                            preferencesRepository.setVibrationEnabled(enabled)
-                        }
+                        preferencesRepository.write { setVibrationEnabled(enabled) }
                     }
                 )
                 
                 // Round vibration intensity slider
                 SettingsSliderItem(
                     title = "Round intensity",
-                    subtitle = getIntensityLabel(roundVibrationIntensity),
-                    value = roundVibrationIntensity.toFloat(),
-                    valueRange = 1f..255f,
-                    enabled = vibrationEnabled,
-                    onValueChange = { intensity ->
-                        scope.launch {
-                            preferencesRepository.setRoundVibrationIntensity(intensity.roundToInt())
-                        }
+                    value = vibration.roundIntensity,
+                    enabled = vibration.roundEnabled,
+                    onValueChangeFinished = { intensity ->
+                        preferencesRepository.write { setRoundVibrationIntensity(intensity) }
                     }
                 )
             }
@@ -288,15 +280,19 @@ private fun SettingsToggleItem(
     }
 }
 
+/**
+ * Vibration intensity slider (1-255). The drag position is local state; [onValueChangeFinished]
+ * is called once when the drag ends, so a drag is one write instead of one per frame.
+ */
 @Composable
 private fun SettingsSliderItem(
     title: String,
-    subtitle: String? = null,
-    value: Float,
-    valueRange: ClosedFloatingPointRange<Float>,
+    value: Int,
     enabled: Boolean = true,
-    onValueChange: (Float) -> Unit
+    onValueChangeFinished: (Int) -> Unit
 ) {
+    var dragValue by remember(value) { mutableFloatStateOf(value.toFloat()) }
+    val subtitle = getIntensityLabel(dragValue.roundToInt())
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -314,22 +310,21 @@ private fun SettingsSliderItem(
                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 }
             )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (enabled) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    }
-                )
-            }
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (enabled) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                }
+            )
         }
         Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = valueRange,
+            value = dragValue,
+            onValueChange = { dragValue = it },
+            onValueChangeFinished = { onValueChangeFinished(dragValue.roundToInt()) },
+            valueRange = 1f..255f,
             enabled = enabled,
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,

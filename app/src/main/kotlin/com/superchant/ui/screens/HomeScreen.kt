@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -60,7 +61,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -80,6 +80,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.superchant.R
 import com.superchant.data.ChantState
 import com.superchant.data.Goal
@@ -99,7 +100,6 @@ import com.superchant.ui.theme.FocusBackground
 import com.superchant.ui.theme.FocusText
 import com.superchant.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 
 /**
  * Home: the counter. Idle, it shows the empty ring, the input-mode choice and Start. During a session
@@ -119,15 +119,14 @@ fun HomeScreen(
     onGoalsClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val configuration = LocalConfiguration.current
-    val chantState by ChantingService.chantStateFlow.collectAsState()
+    val chantState by ChantingService.chantStateFlow.collectAsStateWithLifecycle()
 
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    // Track if service is actually running
-    var isServiceRunning by remember { mutableStateOf(ChantingService.isRunning) }
+    // Derived from the service's state rather than set optimistically on tap, so it can't stick
+    val isServiceRunning = chantState.isActive
 
     // Track accessibility service enabled state
     var isAccessibilityEnabled by remember {
@@ -139,7 +138,7 @@ fun HomeScreen(
         preferencesRepository.inputModeFlow.map { it to true }
     }.collectAsState(initial = null to false).value
     val inputMode = savedInputMode ?: InputMode.default(isAccessibilityEnabled)
-    val setInputMode: (InputMode) -> Unit = { mode -> scope.launch { preferencesRepository.setInputMode(mode) } }
+    val setInputMode: (InputMode) -> Unit = { mode -> preferencesRepository.write { setInputMode(mode) } }
 
     val tapCounting = inputMode.usesScreen
     val volumeCounting = inputMode.usesVolumeKeys && isAccessibilityEnabled
@@ -149,19 +148,21 @@ fun HomeScreen(
     var accessibilityDialogStartsSession by remember { mutableStateOf(false) }
     var focusMode by rememberSaveable { mutableStateOf(false) }
 
-    // Update service running state
-    LaunchedEffect(chantState) {
-        isServiceRunning = ChantingService.isRunning
-    }
     LaunchedEffect(isServiceRunning) {
         if (!isServiceRunning) focusMode = false
     }
+
+    // Permission handling for notifications (Android 13+)
+    fun notificationsGranted() = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    var hasNotificationPermission by remember { mutableStateOf(notificationsGranted()) }
 
     // Re-check accessibility when returning to app (user might have enabled it in settings)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 isAccessibilityEnabled = VolumeKeyAccessibilityService.isAccessibilityServiceEnabled(context)
+                hasNotificationPermission = notificationsGranted()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -174,19 +175,6 @@ fun HomeScreen(
     FocusWindowEffect(enabled = isServiceRunning && focusMode)
     BackHandler(enabled = isServiceRunning && focusMode) { focusMode = false }
 
-    // Permission handling for notifications (Android 13+)
-    var hasNotificationPermission by remember {
-        mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            } else {
-                true
-            }
-        )
-    }
 
     // A start waiting on a dialog or the permission prompt
     var goalToStart by remember { mutableStateOf<Goal?>(null) }
@@ -199,7 +187,6 @@ fun HomeScreen(
         // Lock in the default on first use so it doesn't flip if accessibility is enabled later
         if (savedInputMode == null) setInputMode(mode)
         if (goal != null) ChantingService.startWithGoal(context, goal, mode) else ChantingService.start(context, mode)
-        isServiceRunning = true
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -207,13 +194,9 @@ fun HomeScreen(
     ) { isGranted ->
         hasNotificationPermission = isGranted
         val mode = modeToStart ?: return@rememberLauncherForActivityResult
-        // The notification is optional for on-screen counting; volume-only counting still requires it
-        if (isGranted || mode.usesScreen) {
-            beginSession(mode)
-        } else {
-            goalToStart = null
-            modeToStart = null
-        }
+        // Counting doesn't need the notification (the service runs either way), so start and say why it's missing
+        if (!isGranted) Toast.makeText(context, R.string.notifications_off_hint, Toast.LENGTH_LONG).show()
+        beginSession(mode)
     }
 
     // Accessibility is settled; ask for notifications if needed, then start
@@ -239,7 +222,6 @@ fun HomeScreen(
     val onStartStopClick: () -> Unit = {
         if (isServiceRunning) {
             ChantingService.stop(context)
-            isServiceRunning = false
         } else if (inputModeLoaded) {
             requestStart(goal = null)
         }

@@ -19,10 +19,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalDensity
@@ -169,7 +169,11 @@ fun CounterDisplay(
                         lineHeight = countSize
                     ),
                     color = countColor,
-                    modifier = Modifier.scale(scale.value)
+                    // Read in the layer block so the pop only redraws, without recomposing each frame
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = scale.value
+                        scaleY = scale.value
+                    }
                 )
                 Text(
                     text = "/ ${ChantState.COUNTS_PER_ROUND}",

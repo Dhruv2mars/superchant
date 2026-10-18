@@ -1,11 +1,15 @@
 package com.superchant.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -56,12 +60,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,22 +75,45 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.superchant.R
+import com.superchant.data.ChantState
 import com.superchant.data.Goal
 import com.superchant.data.MantraGoal
 import com.superchant.data.PreferencesRepository
+import com.superchant.data.newId
 import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.BackButton
 import com.superchant.ui.components.ConfirmDestructiveDialog
 import com.superchant.ui.components.EmptyState
-import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+
+/** An open goal editor: [goal] is null when creating. [key] identifies this opening and is the new goal's ID. */
+@Serializable
+private data class EditorRequest(val key: String = newId(), val goal: Goal? = null)
+
+private val editorRequestSaver = Saver<EditorRequest?, String>(
+    save = { request -> request?.let { Json.encodeToString(EditorRequest.serializer(), it) } },
+    restore = { Json.decodeFromString(EditorRequest.serializer(), it) }
+)
+
+private val mantraListSerializer = ListSerializer(MantraGoal.serializer())
+
+private val mantraListSaver = Saver<SnapshotStateList<MantraGoal>, String>(
+    save = { Json.encodeToString(mantraListSerializer, it.toList()) },
+    restore = { Json.decodeFromString(mantraListSerializer, it).toMutableStateList() }
+)
 
 @Composable
 fun GoalsScreen(
@@ -93,13 +121,13 @@ fun GoalsScreen(
     onBackClick: () -> Unit,
     onStartGoal: (Goal) -> Unit
 ) {
-    val scope = rememberCoroutineScope()
-    val goals by preferencesRepository.goalsFlow.collectAsState(initial = emptyList())
+    // null until loaded, so the empty state doesn't flash before the data arrives
+    val loadedGoals by preferencesRepository.goals.collectAsStateWithLifecycle()
+    val goals = loadedGoals ?: emptyList()
     
-    // Screen states
-    var showCreateScreen by remember { mutableStateOf(false) }
-    var goalToEdit by remember { mutableStateOf<Goal?>(null) }
-    var goalToDelete by remember { mutableStateOf<Goal?>(null) }
+    // Screen states (saveable, so rotation keeps an open editor and its draft)
+    var editor by rememberSaveable(stateSaver = editorRequestSaver) { mutableStateOf<EditorRequest?>(null) }
+    var goalToDeleteId by rememberSaveable { mutableStateOf<String?>(null) }
     
     Box(modifier = Modifier.fillMaxSize()) {
         // Main goals list
@@ -109,7 +137,7 @@ fun GoalsScreen(
             },
             floatingActionButton = {
                 FloatingActionButton(
-                    onClick = { showCreateScreen = true },
+                    onClick = { editor = EditorRequest() },
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
                     Icon(
@@ -120,7 +148,7 @@ fun GoalsScreen(
             },
             containerColor = MaterialTheme.colorScheme.surface
         ) { paddingValues ->
-            if (goals.isEmpty()) {
+            if (loadedGoals?.isEmpty() == true) {
                 EmptyState(
                     icon = Icons.Outlined.Flag,
                     title = "No goals yet",
@@ -139,49 +167,53 @@ fun GoalsScreen(
                         GoalCard(
                             goal = goal,
                             onStart = { onStartGoal(goal) },
-                            onEdit = { goalToEdit = goal },
-                            onDelete = { goalToDelete = goal }
+                            onEdit = { editor = EditorRequest(goal = goal) },
+                            onDelete = { goalToDeleteId = goal.id }
                         )
                     }
                 }
             }
         }
         
-        // Create/Edit Goal Full Screen
-        AnimatedVisibility(
-            visible = showCreateScreen || goalToEdit != null,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-        ) {
-            GoalEditorScreen(
-                existingGoal = goalToEdit,
-                onSave = { goal ->
-                    scope.launch {
-                        preferencesRepository.saveGoal(goal)
-                    }
-                    showCreateScreen = false
-                    goalToEdit = null
-                },
-                onCancel = {
-                    showCreateScreen = false
-                    goalToEdit = null
-                }
-            )
+        // Create/Edit Goal full screen. Each opening keeps its own request while it animates out,
+        // so the title and the goal being saved can't change mid-exit.
+        AnimatedContent(
+            targetState = editor,
+            contentKey = { it?.key },
+            transitionSpec = {
+                if (targetState != null) {
+                    (slideInVertically(initialOffsetY = { it }) + fadeIn()) togetherWith ExitTransition.None
+                } else {
+                    EnterTransition.None togetherWith (slideOutVertically(targetOffsetY = { it }) + fadeOut())
+                }.using(null) // full screen either way; no size animation
+            },
+            modifier = Modifier.fillMaxSize(),
+            label = "goalEditor"
+        ) { request ->
+            if (request != null) {
+                GoalEditorScreen(
+                    request = request,
+                    isActive = editor?.key == request.key,
+                    onSave = { goal ->
+                        preferencesRepository.write { saveGoal(goal) }
+                        editor = null
+                    },
+                    onClose = { editor = null }
+                )
+            }
         }
         
         // Delete Confirmation Dialog
-        goalToDelete?.let { goal ->
+        goals.find { it.id == goalToDeleteId }?.let { goal ->
             ConfirmDestructiveDialog(
                 title = "Delete Goal",
                 text = "Are you sure you want to delete \"${goal.name}\"? This action cannot be undone.",
                 confirmLabel = "Delete",
                 onConfirm = {
-                    scope.launch {
-                        preferencesRepository.deleteGoal(goal.id)
-                    }
-                    goalToDelete = null
+                    preferencesRepository.write { deleteGoal(goal.id) }
+                    goalToDeleteId = null
                 },
-                onDismiss = { goalToDelete = null }
+                onDismiss = { goalToDeleteId = null }
             )
         }
     }
@@ -226,7 +258,8 @@ private fun GoalCard(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${goal.mantras.size} mantra${if (goal.mantras.size != 1) "s" else ""} • ${goal.totalRounds} round${if (goal.totalRounds != 1) "s" else ""} total",
+                        text = pluralStringResource(R.plurals.mantras_count, goal.mantras.size, goal.mantras.size) +
+                            " • " + pluralStringResource(R.plurals.rounds_total, goal.totalRounds, goal.totalRounds),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -347,21 +380,35 @@ private fun GoalCard(
     }
 }
 
+/**
+ * Full-screen goal editor. [isActive] is false while it animates out; it then ignores input.
+ * Closing with unsaved changes (X or system back) asks before discarding them.
+ */
 @Composable
 private fun GoalEditorScreen(
-    existingGoal: Goal?,
+    request: EditorRequest,
+    isActive: Boolean,
     onSave: (Goal) -> Unit,
-    onCancel: () -> Unit
+    onClose: () -> Unit
 ) {
+    val existingGoal = request.goal
     val isEditing = existingGoal != null
-    var goalName by remember { mutableStateOf(existingGoal?.name ?: "") }
-    val mantras = remember { 
-        (existingGoal?.mantras?.map { it.copy() } ?: emptyList()).toMutableStateList()
-    }
-    var editingMantraIndex by remember { mutableStateOf<Int?>(null) }
-    var showAddMantra by remember { mutableStateOf(false) }
+    val initialName = existingGoal?.name ?: ""
+    val initialMantras = existingGoal?.mantras ?: emptyList()
+    var goalName by rememberSaveable { mutableStateOf(initialName) }
+    val mantras = rememberSaveable(saver = mantraListSaver) { initialMantras.toMutableStateList() }
+    var editingMantraIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    var showAddMantra by rememberSaveable { mutableStateOf(false) }
+    var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
     
     val isValid = goalName.isNotBlank() && mantras.isNotEmpty()
+    val isDirty = goalName != initialName || mantras.toList() != initialMantras
+    val requestClose = {
+        if (isDirty) showDiscardDialog = true else onClose()
+    }
+    
+    // System back closes the editor instead of leaving the Goals screen.
+    BackHandler(enabled = isActive) { requestClose() }
     
     // Reorderable state
     val listState = rememberLazyListState()
@@ -378,7 +425,7 @@ private fun GoalEditorScreen(
                 AppTopBar(
                     title = if (isEditing) "Edit Goal" else "Create Goal",
                     navigationIcon = {
-                        IconButton(onClick = onCancel) {
+                        IconButton(onClick = requestClose, enabled = isActive) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Cancel"
@@ -388,10 +435,11 @@ private fun GoalEditorScreen(
                     actions = {
                         IconButton(
                             onClick = {
-                                if (isValid) {
+                                if (isValid && isActive) {
                                     onSave(
                                         Goal(
-                                            id = existingGoal?.id ?: System.currentTimeMillis(),
+                                            // Fixed per editor opening, so a repeated save updates instead of duplicating.
+                                            id = existingGoal?.id ?: request.key,
                                             name = goalName.trim(),
                                             mantras = mantras.toList(),
                                             createdAt = existingGoal?.createdAt ?: System.currentTimeMillis()
@@ -399,7 +447,7 @@ private fun GoalEditorScreen(
                                     )
                                 }
                             },
-                            enabled = isValid
+                            enabled = isValid && isActive
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Check,
@@ -517,7 +565,7 @@ private fun GoalEditorScreen(
                                     isDragging = isDragging,
                                     elevation = elevation,
                                     onEdit = { editingMantraIndex = index },
-                                    onDelete = { mantras.removeAt(index) },
+                                    onDelete = { mantras.remove(mantra) },
                                     modifier = Modifier.longPressDraggableHandle()
                                 )
                             }
@@ -540,7 +588,7 @@ private fun GoalEditorScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "${mantras.sumOf { it.targetRounds }} rounds",
+                            text = mantras.sumOf { it.targetRounds }.let { pluralStringResource(R.plurals.rounds_count, it, it) },
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontWeight = FontWeight.SemiBold
                             ),
@@ -572,6 +620,19 @@ private fun GoalEditorScreen(
                     editingMantraIndex = null
                 },
                 onCancel = { editingMantraIndex = null }
+            )
+        }
+        
+        if (showDiscardDialog) {
+            ConfirmDestructiveDialog(
+                title = "Discard changes?",
+                text = "Your changes to this goal will be lost.",
+                confirmLabel = "Discard",
+                onConfirm = {
+                    showDiscardDialog = false
+                    onClose()
+                },
+                onDismiss = { showDiscardDialog = false }
             )
         }
     }
@@ -643,14 +704,14 @@ private fun MantraListItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${mantra.targetRounds} round${if (mantra.targetRounds != 1) "s" else ""}",
+                    text = pluralStringResource(R.plurals.rounds_count, mantra.targetRounds, mantra.targetRounds),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
             // Edit button
-            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onEdit) {
                 Icon(
                     imageVector = Icons.Default.Edit,
                     contentDescription = "Edit",
@@ -660,7 +721,7 @@ private fun MantraListItem(
             }
             
             // Delete button
-            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete",
@@ -679,8 +740,8 @@ private fun MantraEditorDialog(
     onCancel: () -> Unit
 ) {
     val isEditing = existingMantra != null
-    var mantraName by remember { mutableStateOf(existingMantra?.name ?: "") }
-    var targetRounds by remember { mutableStateOf(existingMantra?.targetRounds?.toString() ?: "1") }
+    var mantraName by rememberSaveable { mutableStateOf(existingMantra?.name ?: "") }
+    var targetRounds by rememberSaveable { mutableStateOf(existingMantra?.targetRounds?.toString() ?: "1") }
     
     val nameFocusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
@@ -690,7 +751,7 @@ private fun MantraEditorDialog(
         if (isValid) {
             onSave(
                 MantraGoal(
-                    id = existingMantra?.id ?: System.currentTimeMillis(),
+                    id = existingMantra?.id ?: newId(),
                     name = mantraName.trim(),
                     targetRounds = targetRounds.toIntOrNull() ?: 1
                 )
@@ -748,7 +809,7 @@ private fun MantraEditorDialog(
                     ),
                     shape = RoundedCornerShape(12.dp),
                     supportingText = {
-                        Text("Each round = 108 counts")
+                        Text("Each round = ${ChantState.COUNTS_PER_ROUND} counts")
                     }
                 )
             }

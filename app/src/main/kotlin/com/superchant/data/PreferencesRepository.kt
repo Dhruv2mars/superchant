@@ -44,6 +44,12 @@ data class CountingFeel(
     val pocketGuard: Boolean = true
 )
 
+/** The optional daily reminder; [minuteOfDay] is local time (e.g. 360 = 6:00). */
+data class ReminderSettings(
+    val enabled: Boolean = false,
+    val minuteOfDay: Int = 6 * 60
+)
+
 data class VibrationSettings(
     val roundEnabled: Boolean = true,
     val countEnabled: Boolean = true,
@@ -76,6 +82,8 @@ class PreferencesRepository private constructor(private val context: Context) {
         val POCKET_GUARD = booleanPreferencesKey("pocket_guard")
         val ACCESSIBILITY_CONSENT = booleanPreferencesKey("accessibility_consent")
         val DAILY_TARGET = intPreferencesKey("daily_target")
+        val REMINDER_ENABLED = booleanPreferencesKey("reminder_enabled")
+        val REMINDER_MINUTE = intPreferencesKey("reminder_minute")
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -200,6 +208,21 @@ class PreferencesRepository private constructor(private val context: Context) {
         context.dataStore.edit { it[PreferencesKeys.DAILY_TARGET] = rounds.coerceIn(0, PracticeStats.DAILY_TARGET_MAX) }
     }
 
+    val reminder: StateFlow<ReminderSettings?> = prefs.map {
+        val defaults = ReminderSettings()
+        ReminderSettings(
+            enabled = it[PreferencesKeys.REMINDER_ENABLED] ?: defaults.enabled,
+            minuteOfDay = it[PreferencesKeys.REMINDER_MINUTE]?.takeIf { m -> m in 0 until 24 * 60 } ?: defaults.minuteOfDay
+        )
+    }.share()
+
+    suspend fun setReminder(settings: ReminderSettings) {
+        context.dataStore.edit {
+            it[PreferencesKeys.REMINDER_ENABLED] = settings.enabled
+            it[PreferencesKeys.REMINDER_MINUTE] = settings.minuteOfDay.coerceIn(0, 24 * 60 - 1)
+        }
+    }
+
     /** Whether the user agreed to the accessibility service disclosure. */
     val accessibilityConsent: StateFlow<Boolean?> = prefs.map { it[PreferencesKeys.ACCESSIBILITY_CONSENT] ?: false }.share()
 
@@ -304,7 +327,9 @@ class PreferencesRepository private constructor(private val context: Context) {
                 roundIntensity = p[PreferencesKeys.ROUND_VIBRATION_INTENSITY],
                 milestonePulse = p[PreferencesKeys.MILESTONE_PULSE],
                 beadClick = p[PreferencesKeys.BEAD_CLICK],
-                pocketGuard = p[PreferencesKeys.POCKET_GUARD]
+                pocketGuard = p[PreferencesKeys.POCKET_GUARD],
+                reminderEnabled = p[PreferencesKeys.REMINDER_ENABLED],
+                reminderMinuteOfDay = p[PreferencesKeys.REMINDER_MINUTE]
             ),
             goals = json.decodeStoredList(Goal.serializer(), p[PreferencesKeys.SAVED_GOALS]).items.withUniqueGoalIds(),
             history = json.decodeStoredList(SessionRecord.serializer(), p[PreferencesKeys.SESSION_HISTORY]).items.withUniqueRecordIds()
@@ -346,6 +371,8 @@ class PreferencesRepository private constructor(private val context: Context) {
                 milestonePulse?.let { p[PreferencesKeys.MILESTONE_PULSE] = it }
                 beadClick?.let { p[PreferencesKeys.BEAD_CLICK] = it }
                 pocketGuard?.let { p[PreferencesKeys.POCKET_GUARD] = it }
+                reminderEnabled?.let { p[PreferencesKeys.REMINDER_ENABLED] = it }
+                reminderMinuteOfDay?.takeIf { it in 0 until 24 * 60 }?.let { p[PreferencesKeys.REMINDER_MINUTE] = it }
             }
 
             result = ImportResult(

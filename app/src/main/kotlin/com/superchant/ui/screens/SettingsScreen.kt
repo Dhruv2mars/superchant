@@ -55,6 +55,7 @@ import com.superchant.R
 import com.superchant.data.InputMode
 import com.superchant.data.CountingFeel
 import com.superchant.data.PreferencesRepository
+import com.superchant.data.ReminderSettings
 import com.superchant.data.RoundSize
 import com.superchant.data.VibrationSettings
 import com.superchant.service.VolumeKeyAccessibilityService
@@ -87,6 +88,7 @@ fun SettingsScreen(
     val roundSize = preferencesRepository.roundSize.collectAsStateWithLifecycle().value ?: RoundSize.DEFAULT
     val feel = preferencesRepository.countingFeel.collectAsStateWithLifecycle().value ?: CountingFeel()
     val dailyTarget = preferencesRepository.dailyTarget.collectAsStateWithLifecycle().value ?: 0
+    val reminder = preferencesRepository.reminder.collectAsStateWithLifecycle().value ?: ReminderSettings()
     val accessibilityConsent = preferencesRepository.accessibilityConsent.collectAsStateWithLifecycle().value == true
     var showAccessibilitySetup by remember { mutableStateOf(false) }
     if (showAccessibilitySetup) {
@@ -166,6 +168,15 @@ fun SettingsScreen(
                 DailyTargetItem(
                     target = dailyTarget,
                     onChange = { rounds -> preferencesRepository.write { setDailyTarget(rounds) } }
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                ReminderControls(
+                    preferencesRepository = preferencesRepository,
+                    settings = reminder,
+                    snackbarHostState = snackbarHostState
                 )
             }
             

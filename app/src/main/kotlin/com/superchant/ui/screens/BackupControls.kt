@@ -34,6 +34,7 @@ import com.superchant.data.Backup
 import com.superchant.data.BackupCodec
 import com.superchant.data.BackupFormatException
 import com.superchant.data.PreferencesRepository
+import com.superchant.reminder.ReminderScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -79,6 +80,8 @@ internal fun BackupControls(
             val message = try {
                 val backup = BackupCodec.decode(readText(context, uri))
                 val result = preferencesRepository.importBackup(backup)
+                // The backup may turn the reminder on or move it
+                ReminderScheduler.sync(context.applicationContext)
                 context.resources.getQuantityString(
                     R.plurals.backup_imported, result.sessionsAdded, result.sessionsAdded, result.goalsAdded + result.goalsUpdated
                 )

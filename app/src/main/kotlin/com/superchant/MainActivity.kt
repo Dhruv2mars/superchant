@@ -24,6 +24,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.superchant.data.Goal
 import com.superchant.data.PreferencesRepository
+import com.superchant.reminder.ReminderScheduler
 import com.superchant.service.ChantingService
 import com.superchant.ui.screens.GoalsScreen
 import com.superchant.ui.screens.HistoryScreen
@@ -134,6 +135,8 @@ class MainActivity : ComponentActivity() {
     
     override fun onStart() {
         super.onStart()
+        // Re-arm the daily reminder in case the alarm was lost (e.g. the app was force-stopped).
+        lifecycleScope.launch { ReminderScheduler.sync(applicationContext) }
         // A session persisted by a process that died (and wasn't restarted yet) resumes here.
         lifecycleScope.launch {
             if (!ChantingService.isRunning && PreferencesRepository.get(this@MainActivity).loadActiveSession() != null) {

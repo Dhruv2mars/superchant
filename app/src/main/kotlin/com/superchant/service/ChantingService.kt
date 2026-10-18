@@ -11,7 +11,10 @@ import android.content.pm.ServiceInfo
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.IBinder
+import android.os.Process
 import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -55,6 +58,14 @@ import kotlinx.serialization.json.Json
 class ChantingService : Service() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    // One background thread for sounds and notification posts, so they stay in order; [ringtone] is only
+    // touched there
+    private val soundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO.limitedParallelism(1))
+    // Haptics and the bead click are binder/audio calls: they run in order on their own high-priority
+    // thread, so neither the key event nor the frame that shows the count waits on them. [beadClick] is
+    // only touched there.
+    private val feedbackThread = HandlerThread("SC.feedback", Process.THREAD_PRIORITY_URGENT_AUDIO).apply { start() }
+    private val feedbackHandler = Handler(feedbackThread.looper)
 
     private lateinit var notificationManager: NotificationManager
     private lateinit var vibrator: Vibrator
@@ -101,9 +112,14 @@ class ChantingService : Service() {
 
     override fun onDestroy() {
         serviceScope.cancel()
-        ringtone?.stop()
-        ringtone = null
-        beadClick?.release()
+        stopPostingNotifications()
+        soundScope.launch {
+            ringtone?.stop()
+            ringtone = null
+            soundScope.cancel()
+        }
+        feedbackHandler.post { beadClick?.release() }
+        feedbackThread.quitSafely()
         // Normally stopSession() already reset the state. If the service is destroyed mid-session,
         // the persisted copy stays and is restored on the next app launch.
         if (_instance === this) {
@@ -190,7 +206,7 @@ class ChantingService : Service() {
             }
         }
 
-        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopPostingNotifications { ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE) }
         stopSelf()
     }
 
@@ -229,8 +245,9 @@ class ChantingService : Service() {
         val result = ChantCounter.increment(state) ?: return@section false
         PerfTrace.countTaken(result.state.count)
         PerfTrace.section("SC.setState") { setState(result.state.copy(lastUpdatedAt = System.currentTimeMillis())) }
-        PerfTrace.section("SC.updateNotification") { updateNotification() }
+        // Feedback first: it is what the chanter feels; the notification can follow
         PerfTrace.section("SC.feedback") { giveFeedback(result.feedback, result.state.rounds) }
+        PerfTrace.section("SC.updateNotification") { updateNotification() }
         true
     }
 
@@ -243,28 +260,31 @@ class ChantingService : Service() {
         // Feedback waits for the stored settings rather than guessing defaults.
         val settings = preferencesRepository.vibrationSettings.value
         val feel = preferencesRepository.countingFeel.value
-        if (feel?.beadClick == true) (beadClick ?: BeadClick().also { beadClick = it }).play()
-        when (feedback) {
-            CountFeedback.GOAL -> {
-                playSound(RingtoneManager.TYPE_RINGTONE)
-                if (settings?.roundEnabled == true) vibrateGoalComplete()
-            }
-            CountFeedback.SECTION -> {
-                playSound(RingtoneManager.TYPE_NOTIFICATION)
-                if (settings?.roundEnabled == true) vibrateRoundComplete(1, settings.roundIntensity)
-            }
-            CountFeedback.ROUND -> if (settings?.roundEnabled == true) vibrateRoundComplete(rounds, settings.roundIntensity)
-            CountFeedback.MILESTONE -> if (settings?.countEnabled == true) {
-                if (feel?.milestonePulse == true) {
-                    // Longer and fuller than a count tick, gentler than a round
-                    vibrator.vibrate(VibrationEffect.createOneShot(90, (settings.countIntensity * 3 / 2).coerceIn(100, 255)))
-                } else {
-                    vibrator.vibrate(VibrationEffect.createOneShot(30, settings.countIntensity))
+        feedbackHandler.post {
+            PerfTrace.section("SC.haptics") {
+                if (feel?.beadClick == true) (beadClick ?: BeadClick().also { beadClick = it }).play()
+                when (feedback) {
+                    CountFeedback.GOAL -> if (settings?.roundEnabled == true) vibrateGoalComplete()
+                    CountFeedback.SECTION -> if (settings?.roundEnabled == true) vibrateRoundComplete(1, settings.roundIntensity)
+                    CountFeedback.ROUND -> if (settings?.roundEnabled == true) vibrateRoundComplete(rounds, settings.roundIntensity)
+                    CountFeedback.MILESTONE -> if (settings?.countEnabled == true) {
+                        if (feel?.milestonePulse == true) {
+                            // Longer and fuller than a count tick, gentler than a round
+                            vibrator.vibrate(VibrationEffect.createOneShot(90, (settings.countIntensity * 3 / 2).coerceIn(100, 255)))
+                        } else {
+                            vibrator.vibrate(VibrationEffect.createOneShot(30, settings.countIntensity))
+                        }
+                    }
+                    CountFeedback.COUNT -> if (settings?.countEnabled == true) {
+                        vibrator.vibrate(VibrationEffect.createOneShot(30, settings.countIntensity))
+                    }
                 }
             }
-            CountFeedback.COUNT -> if (settings?.countEnabled == true) {
-                vibrator.vibrate(VibrationEffect.createOneShot(30, settings.countIntensity))
-            }
+        }
+        when (feedback) {
+            CountFeedback.GOAL -> playSound(RingtoneManager.TYPE_RINGTONE)
+            CountFeedback.SECTION -> playSound(RingtoneManager.TYPE_NOTIFICATION)
+            else -> Unit
         }
     }
 
@@ -291,16 +311,22 @@ class ChantingService : Service() {
         vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
     }
 
-    /** Plays the default sound of [type], falling back to the notification sound. Failures are ignored. */
+    /**
+     * Plays the default sound of [type], falling back to the notification sound. Failures are ignored.
+     * Loading a ringtone takes binder calls and a media player setup, so it runs on [soundScope], never
+     * in the key event.
+     */
     private fun playSound(type: Int) {
-        try {
-            val uri = RingtoneManager.getDefaultUri(type)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            // Only one sound at a time; stop() also releases the previous one's player.
-            ringtone?.stop()
-            ringtone = RingtoneManager.getRingtone(applicationContext, uri)?.apply { play() }
-        } catch (e: Exception) {
-            // Silently fail if sound can't be played
+        soundScope.launch {
+            try {
+                val uri = RingtoneManager.getDefaultUri(type)
+                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                // Only one sound at a time; stop() also releases the previous one's player.
+                ringtone?.stop()
+                ringtone = RingtoneManager.getRingtone(applicationContext, uri)?.apply { play() }
+            } catch (e: Exception) {
+                // Silently fail if sound can't be played
+            }
         }
     }
 
@@ -398,14 +424,34 @@ class ChantingService : Service() {
      */
     private fun updateNotification() {
         if (pendingNotification?.isActive == true) return
-        val wait = NOTIFICATION_INTERVAL_MS - (SystemClock.uptimeMillis() - lastNotifiedAt)
+        // Never right away: the post is a binder call on the main thread, and run straight after a count it
+        // would hold up the key event or the frame that shows the count
+        val wait = maxOf(NOTIFICATION_INTERVAL_MS - (SystemClock.uptimeMillis() - lastNotifiedAt), NOTIFICATION_MIN_DELAY_MS)
         pendingNotification = serviceScope.launch {
-            if (wait > 0) delay(wait)
-            if (_instance === this@ChantingService) PerfTrace.section("SC.notify") {
-                notificationManager.notify(NOTIFICATION_ID, buildNotification())
-                lastNotifiedAt = SystemClock.uptimeMillis()
+            delay(wait)
+            if (_instance !== this@ChantingService) return@launch
+            // Built here (the cached builder is main-thread only), posted in the background: it's a binder call
+            val notification = PerfTrace.section("SC.buildNotification") { buildNotification() }
+            lastNotifiedAt = SystemClock.uptimeMillis()
+            val generation = synchronized(notificationLock) { notificationGeneration }
+            soundScope.launch {
+                synchronized(notificationLock) {
+                    if (generation == notificationGeneration) PerfTrace.section("SC.notify") {
+                        notificationManager.notify(NOTIFICATION_ID, notification)
+                    }
+                }
             }
         }
+    }
+
+    // Posts in flight check the generation under this lock, and stopping bumps it under the same lock, so a
+    // post that loses the race with stopForeground can never bring the notification back after Stop.
+    private val notificationLock = Any()
+    private var notificationGeneration = 0
+
+    private inline fun stopPostingNotifications(then: () -> Unit = {}) = synchronized(notificationLock) {
+        notificationGeneration++
+        then()
     }
 
     companion object {
@@ -413,6 +459,7 @@ class ChantingService : Service() {
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "chanting_session"
         private const val NOTIFICATION_INTERVAL_MS = 250L
+        private const val NOTIFICATION_MIN_DELAY_MS = 50L
 
         // PendingIntent request codes
         private const val REQUEST_CODE_CONTENT = 100

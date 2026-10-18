@@ -33,6 +33,8 @@ Needs JDK 17 and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.propert
 ./gradlew test --tests "com.superchant.data.ChantStateTest"
 ./gradlew buildReleaseApk                           # assembleRelease, copied to ./SuperChant-v{version}.apk
 ./gradlew buildReleaseBundle                        # bundleRelease, copied to ./SuperChant-v{version}.aab
+./gradlew :app:generateReleaseBaselineProfile       # regenerate the baseline/startup profile (emulator running)
+./gradlew :baselineprofile:connectedBenchmarkReleaseAndroidTest  # Macrobenchmark: cold start and touch counting
 ```
 
 Release signing reads `RELEASE_STORE_FILE`, `RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS` and
@@ -57,14 +59,17 @@ All versions live in `gradle/libs.versions.toml`.
 app/src/main/kotlin/com/superchant/
 ├── MainActivity.kt                  # NavHost: home, settings, history, goals; handles START_COUNTING intents
 ├── AppShortcuts.kt                  # Launcher shortcuts (static + per goal) and the START_COUNTING intent
+├── PerfTrace.kt                     # SC.* trace sections (count path, ring draw, write queue) for Perfetto
+├── DebugStrictMode.kt               # Debug builds log StrictMode violations
 ├── data/
 │   ├── ChantState.kt                # ChantState (session, persisted while active; ROUND_SIZE = 108), Goal, MantraGoal, SessionRecord; String IDs
-│   ├── PracticeStats.kt             # Daily totals, streak, per-mantra totals, heatmap levels (pure)
+│   ├── PracticeStats.kt             # HistoryStats (totals, daily, per-mantra), streak, heatmap levels (pure)
 │   ├── Backup.kt                    # Export/import JSON format, lenient decode, merge rules
 │   ├── StoredList.kt                # Fail-safe JSON list decode/encode (keeps unreadable elements), ID dedupe
 │   ├── HistoryBuckets.kt            # Today / This Week / This Month / Older grouping
 │   ├── ChantCounter.kt              # Pure increment rules shared by all inputs; CountDebouncer
-│   └── PreferencesRepository.kt     # Singleton; StateFlows (null = loading) + ordered `write {}` queue
+│   ├── LatestWins.kt                # Coalesces queued saves (the per-count active-session write)
+│   └── PreferencesRepository.kt     # Singleton; StateFlows (null = loading) + ordered `write {}` queue; 3 DataStores
 ├── service/
 │   ├── ChantingService.kt           # Foreground service; owns ChantState via a companion StateFlow
 │   ├── VolumeKeyAccessibilityService.kt  # onKeyEvent -> VolumeKeyFilter -> ChantingService.onVolumeKeyPressed
@@ -84,7 +89,13 @@ app/src/main/kotlin/com/superchant/
     ├── screens/                     # Home, Goals, History, Settings (+ BackupControls, ReminderControls used by Settings)
     └── theme/                       # Material 3 colors, typography, ThemeMode, Motion (easing tokens, pressScale)
 app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
+app/src/release/generated/baselineProfiles/  # Generated baseline + startup profile (checked in)
+baselineprofile/                     # Build/test-only module: profile generator and Macrobenchmarks
 ```
+
+Storage is three Preferences DataStores: `superchant_prefs` (small settings), `history` (session history and
+goals as JSON; moved out of `superchant_prefs` once by `moveHistory`, so settings writes and the
+theme read before the first frame never touch megabytes of history) and `active_session`.
 
 ## How counting works
 
@@ -107,14 +118,17 @@ app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
 4. Both inputs go through one `incrementCount()`, which applies `ChantCounter.increment` (rounds of 108,
    a milestone every 27 beads, goal mantra advance, no counting after the goal completes) and plays the same
    haptics/sounds (plus the optional bead click). There is no undo; Stop is a single tap.
-5. Every change to an active session is written to the `active_session` DataStore. After process death the
+5. Every change to an active session is written to the `active_session` DataStore (off the main thread;
+   snapshots that pile up behind a slow write collapse into the newest, `LatestWins`). After process death the
    service restores it (START_STICKY restart, or `MainActivity.onStart`), and stopping saves it to history
    under its `sessionId`, so a session is recorded once. Sessions idle for 3+ hours are saved instead of resumed.
 6. UI screens collect `ChantingService.chantStateFlow`. There are no ViewModels. Home reads the count lazily
    (`SessionUi.state` is a lambda) so only the counter recomposes per count; keep it that way. Animated values
    (pad reveal, toggle fill, press scale) are read in draw/layer lambdas so they never recompose.
-7. Insights (streak, heatmap, per-mantra totals) are computed from the stored history by `PracticeStats`;
-   each goal session's `SessionRecord.mantras` holds its per-mantra breakdown.
+7. Insights (streak, heatmap, per-mantra totals) are computed from the stored history by `PracticeStats`,
+   once per history change and off the main thread (`PreferencesRepository.historyStats`); never derive
+   them from the session list in composition. Each goal session's `SessionRecord.mantras` holds its
+   per-mantra breakdown.
 8. Removed features leave stored data behind: prefs `input_mode`, `round_size`, `pocket_guard` and
    `roundSize`/`inputMode`/`pocketGuard` fields in old sessions and backups are never read (JSON uses
    `ignoreUnknownKeys`). Don't reuse those keys. A restored active session's rounds and goal progress are
@@ -162,6 +176,11 @@ Done means verified, not just compiled:
    device tools (`device_open`) and drive it with the returned agent-device CLI. Pass `-s <serial>` to adb.
 3. For UI changes, take screenshots (light, dark, a small screen such as `adb shell wm size 720x1280`, and reset after).
 4. Only the counter may recompose on each count (Home reads the count lazily). Don't add per-frame work in composition.
+5. For performance work, measure the release build with Perfetto: the `SC.*` sections (`SC.increment`,
+   `SC.countToDraw` from a count to the ring drawing it, `SC.ringDraw`, `SC.write`) show the count path.
+   Emulator frames are dominated by the emulated GPU, so compare main-thread time and frame counts, not jank %.
+   Note: the app's own accessibility service makes Compose treat accessibility as on (semantics diffing on every
+   change), so measure with it enabled, as volume-button users run.
 
 ### Simulating volume keys
 

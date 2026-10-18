@@ -90,6 +90,12 @@
         <item quantity="other">%1$d of %2$d rounds so far today.</item>
     </plurals>
 
+    <!-- Fast access -->
+    <string name="shortcut_start_short">Start counting</string>
+    <string name="shortcut_start_long">Start a chanting session</string>
+    <string name="shortcut_start_goal">Start %1$s</string>
+    <string name="tile_start">Tap to start</string>
+
     <!-- Backup -->
     <string name="backup_title">Your data</string>
     <string name="backup_desc">Everything stays on this phone. Export a backup file to keep your history, goals and settings safe or move them to a new phone. Importing adds to what is here and never deletes.</string>

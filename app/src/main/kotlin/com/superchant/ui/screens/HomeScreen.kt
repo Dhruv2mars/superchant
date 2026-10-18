@@ -114,14 +114,15 @@ import kotlinx.coroutines.flow.map
  * it shows controls (hold-to-undo, focus, Stop) above the goal strip and a large tap-to-count pad, which
  * takes all remaining space so the controls and goal never get pushed off-screen.
  *
- * [pendingGoal] is a goal started from the Goals screen; it goes through the same permission checks as Start.
+ * [pendingStart] is a start requested elsewhere (a goal on the Goals screen, a launcher shortcut or the
+ * Quick Settings tile); it goes through the same permission checks as Start.
  */
 @Composable
 fun HomeScreen(
     themeMode: ThemeMode,
     preferencesRepository: PreferencesRepository,
-    pendingGoal: Goal?,
-    onPendingGoalHandled: () -> Unit,
+    pendingStart: StartRequest?,
+    onPendingStartHandled: () -> Unit,
     onSettingsClick: () -> Unit,
     onHistoryClick: () -> Unit,
     onGoalsClick: () -> Unit
@@ -259,11 +260,12 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(pendingGoal, inputModeLoaded) {
-        val goal = pendingGoal ?: return@LaunchedEffect
+    LaunchedEffect(pendingStart, inputModeLoaded) {
+        val request = pendingStart ?: return@LaunchedEffect
         if (!inputModeLoaded) return@LaunchedEffect
-        onPendingGoalHandled()
-        requestStart(goal)
+        onPendingStartHandled()
+        // A plain "start counting" while a session runs just shows it; a goal starts over (saving the current one)
+        if (request.goal != null || !isServiceRunning) requestStart(request.goal)
     }
 
     // Accessibility Setup Dialog
@@ -435,6 +437,9 @@ fun HomeScreen(
         }
     }
 }
+
+/** A session start asked for from outside Home; [goal] null is a free session. */
+data class StartRequest(val goal: Goal?)
 
 /**
  * Everything the session layouts need, resolved once in [HomeScreen]. [state] is read lazily by the

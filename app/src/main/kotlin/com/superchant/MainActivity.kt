@@ -1,5 +1,6 @@
 package com.superchant
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.view.ViewTreeObserver
@@ -12,6 +13,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,7 +24,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.superchant.data.Goal
 import com.superchant.data.PreferencesRepository
 import com.superchant.reminder.ReminderScheduler
 import com.superchant.service.ChantingService
@@ -30,8 +31,11 @@ import com.superchant.ui.screens.GoalsScreen
 import com.superchant.ui.screens.HistoryScreen
 import com.superchant.ui.screens.HomeScreen
 import com.superchant.ui.screens.SettingsScreen
+import com.superchant.ui.screens.StartRequest
 import com.superchant.ui.theme.SuperChantTheme
 import com.superchant.ui.theme.ThemeMode
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -41,6 +45,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         
         val preferencesRepository = PreferencesRepository.get(this)
+        // Not on recreation (e.g. rotation), or the same start would run again
+        if (savedInstanceState == null) launchRequest.value = AppShortcuts.parse(intent)
         
         // Hold the first frame (the system splash stays up) until the saved theme is known,
         // so a forced light/dark theme never flashes the system one.
@@ -59,8 +65,20 @@ class MainActivity : ComponentActivity() {
             SuperChantTheme(themeMode = themeMode) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
-                    // Goal picked on the Goals screen; Home starts it after its permission checks
-                    var pendingGoal by remember { mutableStateOf<Goal?>(null) }
+                    // A start from the Goals screen, a shortcut or the tile; Home runs it after its permission checks
+                    var pendingStart by remember { mutableStateOf<StartRequest?>(null) }
+                    val launchStart by launchRequest
+                    LaunchedEffect(launchStart) {
+                        val request = launchStart ?: return@LaunchedEffect
+                        launchRequest.value = null
+                        val goals = preferencesRepository.goals.filterNotNull().first()
+                        // A shortcut to a deleted goal falls back to a free session
+                        val goal = request.goalId?.let { id -> goals.firstOrNull { it.id == id } }
+                        pendingStart = StartRequest(goal)
+                        navController.popBackStack("home", inclusive = false)
+                    }
+                    val goals by preferencesRepository.goals.collectAsStateWithLifecycle()
+                    LaunchedEffect(goals) { goals?.let { AppShortcuts.updateGoalShortcuts(this@MainActivity, it) } }
                     
                     NavHost(
                         navController = navController,
@@ -94,8 +112,8 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 themeMode = themeMode,
                                 preferencesRepository = preferencesRepository,
-                                pendingGoal = pendingGoal,
-                                onPendingGoalHandled = { pendingGoal = null },
+                                pendingStart = pendingStart,
+                                onPendingStartHandled = { pendingStart = null },
                                 onSettingsClick = { navController.navigate("settings") },
                                 onHistoryClick = { navController.navigate("history") },
                                 onGoalsClick = { navController.navigate("goals") }
@@ -122,7 +140,7 @@ class MainActivity : ComponentActivity() {
                                 preferencesRepository = preferencesRepository,
                                 onBackClick = { navController.popBackStack() },
                                 onStartGoal = { goal ->
-                                    pendingGoal = goal
+                                    pendingStart = StartRequest(goal)
                                     navController.popBackStack()
                                 }
                             )
@@ -133,6 +151,14 @@ class MainActivity : ComponentActivity() {
         }
     }
     
+    /** A start asked for by the intent that opened the app (launcher shortcut, Quick Settings tile). */
+    private val launchRequest = mutableStateOf<AppShortcuts.Request?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        AppShortcuts.parse(intent)?.let { launchRequest.value = it }
+    }
+
     override fun onStart() {
         super.onStart()
         // Re-arm the daily reminder in case the alarm was lost (e.g. the app was force-stopped).

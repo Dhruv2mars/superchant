@@ -5,10 +5,10 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -21,10 +21,13 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -113,68 +116,23 @@ fun CounterDisplay(
                 .aspectRatio(1f)
         ) {
             val drawnCount = state.count
-            Canvas(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                PerfTrace.countDrawn(drawnCount)
-                PerfTrace.section("SC.ringDraw") {
-                    val outer = size.minDimension / 2
-                    val geometry = MalaGeometry.forRing(outerRadius = outer, density = density)
-                    val center = Offset(size.width / 2, size.height / 2)
-                    val ringRadius = geometry.ringRadius
-
-                    drawCircle(
-                        color = trackColor,
-                        radius = ringRadius,
-                        center = center,
-                        style = Stroke(width = geometry.strokeWidth)
-                    )
-
-                    if (glow.value > 0f) {
-                        drawCircle(
-                            color = progressColor.copy(alpha = 0.35f * glow.value),
-                            radius = ringRadius,
-                            center = center,
-                            style = Stroke(width = geometry.strokeWidth * (1f + 2.5f * glow.value))
-                        )
+            Spacer(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+                    // Its own layer, so the tap pad's press overlay doesn't re-record the ring
+                    .graphicsLayer()
+                    .drawWithCache {
+                        // Geometry, bead positions and strokes are built once per size (and count), not per frame
+                        val ring = RingCache(MalaGeometry.forRing(outerRadius = size.minDimension / 2, density = density), size)
+                        onDrawBehind {
+                            PerfTrace.countDrawn(drawnCount)
+                            PerfTrace.section("SC.ringDraw") {
+                                drawRing(ring, animatedProgress.value, glow.value, progressColor, trackColor)
+                            }
+                        }
                     }
-
-                    val sweepAngle = animatedProgress.value * 360f
-                    if (sweepAngle > 0) {
-                        drawArc(
-                            color = progressColor,
-                            startAngle = -90f,
-                            sweepAngle = sweepAngle,
-                            useCenter = false,
-                            topLeft = Offset(center.x - ringRadius, center.y - ringRadius),
-                            size = Size(ringRadius * 2, ringRadius * 2),
-                            style = Stroke(width = geometry.strokeWidth, cap = StrokeCap.Round)
-                        )
-                    }
-
-                    // Beads sit between the meru gap at the top; bead i lights once its share of the round is done.
-                    val beadCount = geometry.beadCount
-                    for (i in 0 until beadCount) {
-                        val angle = MalaGeometry.beadAngle(i, beadCount)
-                        val isLit = animatedProgress.value >= (i + 1f) / beadCount - 0.0001f
-                        drawCircle(
-                            color = if (isLit) progressColor else trackColor,
-                            radius = if (isLit) geometry.beadRadius else geometry.beadRadius * 0.62f,
-                            center = Offset(
-                                center.x + geometry.beadOrbit * cos(angle).toFloat(),
-                                center.y + geometry.beadOrbit * sin(angle).toFloat()
-                            )
-                        )
-                    }
-
-                    // Meru bead: start and end of every round
-                    val meruCenter = Offset(center.x, center.y - geometry.beadOrbit)
-                    drawCircle(color = progressColor, radius = geometry.meruRadius, center = meruCenter)
-                    drawCircle(
-                        color = trackColor,
-                        radius = geometry.meruRadius * 0.42f,
-                        center = meruCenter
-                    )
-                }
-            }
+            )
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
@@ -207,6 +165,65 @@ fun CounterDisplay(
             }
         }
     }
+}
+
+/** Everything about the ring that only depends on its size, so animation frames just draw. */
+private class RingCache(val geometry: MalaGeometry, size: Size) {
+    val center = Offset(size.width / 2, size.height / 2)
+    val arcTopLeft = Offset(center.x - geometry.ringRadius, center.y - geometry.ringRadius)
+    val arcSize = Size(geometry.ringRadius * 2, geometry.ringRadius * 2)
+    val trackStroke = Stroke(width = geometry.strokeWidth)
+    val arcStroke = Stroke(width = geometry.strokeWidth, cap = StrokeCap.Round)
+    val meruCenter = Offset(center.x, center.y - geometry.beadOrbit)
+    val beadCenters = Array(geometry.beadCount) { i ->
+        val angle = MalaGeometry.beadAngle(i, geometry.beadCount)
+        Offset(
+            center.x + geometry.beadOrbit * cos(angle).toFloat(),
+            center.y + geometry.beadOrbit * sin(angle).toFloat()
+        )
+    }
+}
+
+private fun DrawScope.drawRing(ring: RingCache, progress: Float, glow: Float, progressColor: Color, trackColor: Color) {
+    val geometry = ring.geometry
+    drawCircle(color = trackColor, radius = geometry.ringRadius, center = ring.center, style = ring.trackStroke)
+
+    if (glow > 0f) {
+        drawCircle(
+            color = progressColor.copy(alpha = 0.35f * glow),
+            radius = geometry.ringRadius,
+            center = ring.center,
+            style = Stroke(width = geometry.strokeWidth * (1f + 2.5f * glow))
+        )
+    }
+
+    val sweepAngle = progress * 360f
+    if (sweepAngle > 0) {
+        drawArc(
+            color = progressColor,
+            startAngle = -90f,
+            sweepAngle = sweepAngle,
+            useCenter = false,
+            topLeft = ring.arcTopLeft,
+            size = ring.arcSize,
+            style = ring.arcStroke
+        )
+    }
+
+    // Beads sit between the meru gap at the top; bead i lights once its share of the round is done.
+    val beadCount = geometry.beadCount
+    for (i in 0 until beadCount) {
+        val isLit = progress >= (i + 1f) / beadCount - 0.0001f
+        drawCircle(
+            color = if (isLit) progressColor else trackColor,
+            radius = if (isLit) geometry.beadRadius else geometry.beadRadius * 0.62f,
+            center = ring.beadCenters[i]
+        )
+    }
+
+    // Meru bead: start and end of every round
+    drawCircle(color = progressColor, radius = geometry.meruRadius, center = ring.meruCenter)
+    drawCircle(color = trackColor, radius = geometry.meruRadius * 0.42f, center = ring.meruCenter)
 }
 
 /** Sizes for the mala ring, derived from the space available so beads never crowd or vanish. */

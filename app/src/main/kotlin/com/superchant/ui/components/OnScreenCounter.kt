@@ -2,6 +2,7 @@ package com.superchant.ui.components
 
 import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -21,11 +22,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +55,7 @@ import com.superchant.R
 import com.superchant.data.CountDebouncer
 import com.superchant.ui.theme.EaseOutStrong
 import com.superchant.ui.theme.pressScale
+import kotlinx.coroutines.flow.collectLatest
 
 /**
  * The counter area. While [enabled] (touch counting on, not paused) a soft tinted surface grows in under
@@ -71,8 +75,16 @@ fun TapToCountPad(
 ) {
     val currentOnCount by rememberUpdatedState(onCount)
     val debouncer = remember { CountDebouncer() }
+    // The press is never read in composition (only by the animation below, which is read only while drawing),
+    // so a tap doesn't recompose the pad. Like animateFloatAsState, a press and release within one frame
+    // cancel out instead of animating.
     var pressed by remember { mutableStateOf(false) }
-    val pressAlpha by animateFloatAsState(if (pressed) 0.10f else 0f, tween(if (pressed) 40 else 220), label = "press")
+    val pressAlpha = remember { Animatable(0f) }
+    LaunchedEffect(pressAlpha) {
+        snapshotFlow { pressed }.collectLatest { down ->
+            pressAlpha.animateTo(if (down) 0.10f else 0f, tween(if (down) 40 else 220))
+        }
+    }
     // Reveal grows in a little slower than it recedes: turning taps on is the moment worth noticing
     val reveal by animateFloatAsState(
         targetValue = if (enabled) 1f else 0f,
@@ -107,7 +119,8 @@ fun TapToCountPad(
             }
             .drawWithContent {
                 drawContent()
-                if (pressAlpha > 0f) drawRect(pressedColor.copy(alpha = pressAlpha))
+                val alpha = pressAlpha.value
+                if (alpha > 0f) drawRect(pressedColor.copy(alpha = alpha))
             }
             .pointerInput(enabled) {
                 if (!enabled) return@pointerInput

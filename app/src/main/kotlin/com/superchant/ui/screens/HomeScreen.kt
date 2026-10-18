@@ -414,6 +414,9 @@ private data class SessionSummary(val counts: Int, val rounds: Int, val minutes:
 
 private const val SUMMARY_VISIBLE_MS = 6_000L
 
+/** The empty ring shown while idle; one instance, so the idle ring can skip recomposition. */
+private val IdleState = ChantState()
+
 /** How long the one-time touch-counting hint stays up, after a short beat for the screen to settle. */
 /** The session and volume readiness that touch counting was last turned on for automatically; see HomeScreen. */
 private var autoTouchHandled: String? = null
@@ -476,7 +479,7 @@ private fun CounterArea(
     modifier: Modifier = Modifier
 ) {
     if (!isActive) {
-        CounterDisplay(state = ChantState(), isDarkTheme = isDarkTheme, modifier = modifier)
+        CounterDisplay(state = IdleState, isDarkTheme = isDarkTheme, modifier = modifier)
         return
     }
     val state = session.state()

@@ -10,7 +10,7 @@
     <!-- Accessibility Service -->
     <string name="accessibility_service_label">SuperChant Volume Counter</string>
     <string name="accessibility_service_summary">Allows volume buttons to count chants without changing volume</string>
-    <string name="accessibility_service_description">SuperChant uses this accessibility service to detect volume button presses during your chanting session.\n\nWhen enabled, pressing volume up or down will increment your count instead of changing the volume.\n\nThis service only activates when you start a chanting session and has no access to your screen content or other apps.</string>
+    <string name="accessibility_service_description">SuperChant uses this accessibility service only to count volume button presses while a chanting session is running.\n\nDuring a session, volume up or down adds a count instead of changing the volume. At all other times the buttons work as usual.\n\nThe service cannot see your screen, what you type, or other apps. It collects and shares nothing, and SuperChant has no internet access.</string>
     
     <!-- Accessibility Setup -->
     <string name="accessibility_setup_title">Enable Volume Counter</string>
@@ -18,6 +18,20 @@
     <string name="accessibility_setup_instructions">1. Tap \"Open Settings\" below\n2. Find \"SuperChant Volume Counter\"\n3. Toggle it ON\n4. Return to the app</string>
     <string name="open_settings">Open Settings</string>
     
+    <!-- Accessibility prominent disclosure -->
+    <string name="disclosure_title">Before you turn on volume counting</string>
+    <string name="disclosure_intro">To count with the volume buttons, even with the screen off, SuperChant uses an Android accessibility service. Please read what it does.</string>
+    <string name="disclosure_does_title">What it does</string>
+    <string name="disclosure_does_1">Detects volume up and down presses, only while a chanting session is running and not paused.</string>
+    <string name="disclosure_does_2">Turns those presses into counts instead of changing the volume. At all other times the buttons work as usual.</string>
+    <string name="disclosure_never_title">What it never does</string>
+    <string name="disclosure_never_1">Never reads your screen, what you type, or anything in other apps.</string>
+    <string name="disclosure_never_2">Never collects, stores, or shares any data. SuperChant has no internet access.</string>
+    <string name="disclosure_never_3">Never performs actions for you or changes your settings.</string>
+    <string name="disclosure_turn_off">You can turn it off at any time in Settings › Accessibility. On-screen counting works without it.</string>
+    <string name="disclosure_agree">I agree</string>
+    <string name="disclosure_decline">Not now</string>
+
     <!-- Restricted Settings (Android 13+) -->
     <string name="restricted_settings_title">Setup Required</string>
     <string name="restricted_settings_message">Since this app was installed outside the Play Store, you may need to allow restricted settings before enabling accessibility.</string>

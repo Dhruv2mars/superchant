@@ -74,6 +74,7 @@ class PreferencesRepository private constructor(private val context: Context) {
         val MILESTONE_PULSE = booleanPreferencesKey("milestone_pulse")
         val BEAD_CLICK = booleanPreferencesKey("bead_click")
         val POCKET_GUARD = booleanPreferencesKey("pocket_guard")
+        val ACCESSIBILITY_CONSENT = booleanPreferencesKey("accessibility_consent")
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -187,6 +188,13 @@ class PreferencesRepository private constructor(private val context: Context) {
 
     suspend fun setPocketGuard(enabled: Boolean) {
         context.dataStore.edit { it[PreferencesKeys.POCKET_GUARD] = enabled }
+    }
+
+    /** Whether the user agreed to the accessibility service disclosure. */
+    val accessibilityConsent: StateFlow<Boolean?> = prefs.map { it[PreferencesKeys.ACCESSIBILITY_CONSENT] ?: false }.share()
+
+    suspend fun setAccessibilityConsent(agreed: Boolean) {
+        context.dataStore.edit { it[PreferencesKeys.ACCESSIBILITY_CONSENT] = agreed }
     }
 
     /** The chosen [InputMode], or null until the user picks one (see [InputMode.default]). */

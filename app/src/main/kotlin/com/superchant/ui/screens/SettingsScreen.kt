@@ -48,6 +48,7 @@ import com.superchant.data.PreferencesRepository
 import com.superchant.data.RoundSize
 import com.superchant.data.VibrationSettings
 import com.superchant.service.VolumeKeyAccessibilityService
+import com.superchant.ui.components.AccessibilitySetupDialog
 import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.BackButton
 import com.superchant.ui.components.InputModeSelector
@@ -75,6 +76,19 @@ fun SettingsScreen(
     val vibration = preferencesRepository.vibrationSettings.collectAsStateWithLifecycle().value ?: VibrationSettings()
     val roundSize = preferencesRepository.roundSize.collectAsStateWithLifecycle().value ?: RoundSize.DEFAULT
     val feel = preferencesRepository.countingFeel.collectAsStateWithLifecycle().value ?: CountingFeel()
+    val accessibilityConsent = preferencesRepository.accessibilityConsent.collectAsStateWithLifecycle().value == true
+    var showAccessibilitySetup by remember { mutableStateOf(false) }
+    if (showAccessibilitySetup) {
+        AccessibilitySetupDialog(
+            consented = accessibilityConsent,
+            onConsent = { preferencesRepository.write { setAccessibilityConsent(true) } },
+            onDismiss = { showAccessibilitySetup = false },
+            onOpenSettings = {
+                showAccessibilitySetup = false
+                VolumeKeyAccessibilityService.openAccessibilitySettings(context)
+            }
+        )
+    }
     
     Scaffold(
         topBar = {
@@ -95,7 +109,7 @@ fun SettingsScreen(
                     selected = savedInputMode ?: InputMode.default(accessibilityEnabled),
                     onSelect = { mode -> preferencesRepository.write { setInputMode(mode) } },
                     accessibilityEnabled = accessibilityEnabled,
-                    onSetUpAccessibility = { VolumeKeyAccessibilityService.openAccessibilitySettings(context) }
+                    onSetUpAccessibility = { showAccessibilitySetup = true }
                 )
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 12.dp),

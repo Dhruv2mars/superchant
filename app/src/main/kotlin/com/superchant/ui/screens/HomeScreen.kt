@@ -92,6 +92,7 @@ import com.superchant.data.PreferencesRepository
 import com.superchant.data.RoundSize
 import com.superchant.service.ChantingService
 import com.superchant.service.VolumeKeyAccessibilityService
+import com.superchant.ui.components.AccessibilitySetupDialog
 import com.superchant.ui.components.AppTopBar
 import com.superchant.ui.components.CounterDisplay
 import com.superchant.ui.components.FocusWindowEffect
@@ -166,6 +167,7 @@ fun HomeScreen(
 
     // Setup dialog, shown on Start (volume counting without accessibility) or from "Set up"
     var showAccessibilityDialog by remember { mutableStateOf(false) }
+    val accessibilityConsent = preferencesRepository.accessibilityConsent.collectAsStateWithLifecycle().value == true
     var accessibilityDialogStartsSession by remember { mutableStateOf(false) }
     var focusMode by rememberSaveable { mutableStateOf(false) }
 
@@ -266,6 +268,8 @@ fun HomeScreen(
     // Accessibility Setup Dialog
     if (showAccessibilityDialog) {
         AccessibilitySetupDialog(
+            consented = accessibilityConsent,
+            onConsent = { preferencesRepository.write { setAccessibilityConsent(true) } },
             onDismiss = {
                 showAccessibilityDialog = false
                 goalToStart = null
@@ -844,208 +848,6 @@ private fun MantraList(
                     }
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun AccessibilitySetupDialog(
-    onDismiss: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onCountByTapping: () -> Unit
-) {
-    val context = LocalContext.current
-    val needsRestrictedSettings = remember {
-        VolumeKeyAccessibilityService.needsRestrictedSettingsPermission(context)
-    }
-
-    if (needsRestrictedSettings) {
-        // Android 13+ sideloaded app - show two-step flow
-        RestrictedSettingsDialog(
-            onDismiss = onDismiss,
-            onOpenAppInfo = {
-                VolumeKeyAccessibilityService.openAppSettings(context)
-            },
-            onOpenAccessibility = onOpenSettings,
-            onCountByTapping = onCountByTapping
-        )
-    } else {
-        // Standard flow - just open accessibility settings
-        SimpleAccessibilityDialog(
-            onDismiss = onDismiss,
-            onOpenSettings = onOpenSettings,
-            onCountByTapping = onCountByTapping
-        )
-    }
-}
-
-/** Escape hatch for anyone who can't or won't grant accessibility. */
-@Composable
-private fun CountByTappingButton(onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Text(text = stringResource(R.string.count_by_tapping), style = MaterialTheme.typography.labelMedium)
-    }
-}
-
-@Composable
-private fun SimpleAccessibilityDialog(
-    onDismiss: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onCountByTapping: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(R.string.accessibility_setup_title),
-                style = MaterialTheme.typography.headlineSmall
-            )
-        },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text(
-                    text = stringResource(R.string.accessibility_setup_message),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.accessibility_setup_instructions),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                CountByTappingButton(onClick = onCountByTapping)
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onOpenSettings,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Text(stringResource(R.string.open_settings))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        }
-    )
-}
-
-@Composable
-private fun RestrictedSettingsDialog(
-    onDismiss: () -> Unit,
-    onOpenAppInfo: () -> Unit,
-    onOpenAccessibility: () -> Unit,
-    onCountByTapping: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(R.string.restricted_settings_title),
-                style = MaterialTheme.typography.headlineSmall
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState())
-            ) {
-                Text(
-                    text = stringResource(R.string.restricted_settings_message),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Primary action - Open Accessibility Settings
-                SetupStepCard(
-                    title = stringResource(R.string.restricted_settings_step2),
-                    description = stringResource(R.string.restricted_settings_step2_desc),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                    titleColor = Color.Unspecified
-                ) {
-                    Button(
-                        onClick = onOpenAccessibility,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Text(
-                            text = stringResource(R.string.enable_accessibility),
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Secondary info - If toggle is blocked
-                SetupStepCard(
-                    title = stringResource(R.string.restricted_settings_step1),
-                    description = stringResource(R.string.restricted_settings_step1_desc),
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    titleColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ) {
-                    OutlinedButton(
-                        onClick = onOpenAppInfo,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = stringResource(R.string.open_app_info),
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                CountByTappingButton(onClick = onCountByTapping)
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        }
-    )
-}
-
-@Composable
-private fun SetupStepCard(
-    title: String,
-    description: String,
-    containerColor: Color,
-    titleColor: Color,
-    action: @Composable () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontWeight = FontWeight.SemiBold
-                ),
-                color = titleColor
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            action()
         }
     }
 }

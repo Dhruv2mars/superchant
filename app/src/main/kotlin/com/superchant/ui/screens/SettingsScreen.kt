@@ -302,38 +302,40 @@ fun SettingsScreen(
 /** Rounds per day, stepped through common values; 0 is off. */
 @Composable
 private fun DailyTargetItem(target: Int, onChange: (Int) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(modifier = Modifier.weight(1f)) {
+    // The stepper shares the title's line and the description spans the full width, so it fits narrow screens
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = stringResource(R.string.daily_target_title),
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
             )
+            FilledTonalIconButton(
+                onClick = { onChange(DAILY_TARGET_STEPS.lastOrNull { it < target } ?: 0) },
+                enabled = target > 0
+            ) {
+                Icon(Icons.Outlined.Remove, contentDescription = stringResource(R.string.daily_target_decrease))
+            }
             Text(
-                text = stringResource(R.string.daily_target_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = if (target > 0) pluralStringResource(R.plurals.rounds_count, target, target) else stringResource(R.string.daily_target_off),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(min = 84.dp)
             )
-        }
-        FilledTonalIconButton(
-            onClick = { onChange(DAILY_TARGET_STEPS.lastOrNull { it < target } ?: 0) },
-            enabled = target > 0
-        ) {
-            Icon(Icons.Outlined.Remove, contentDescription = stringResource(R.string.daily_target_decrease))
+            FilledTonalIconButton(
+                onClick = { onChange(DAILY_TARGET_STEPS.firstOrNull { it > target } ?: target) },
+                enabled = target < DAILY_TARGET_STEPS.last()
+            ) {
+                Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.daily_target_increase))
+            }
         }
         Text(
-            text = if (target > 0) pluralStringResource(R.plurals.rounds_count, target, target) else stringResource(R.string.daily_target_off),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.widthIn(min = 84.dp)
+            text = stringResource(R.string.daily_target_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        FilledTonalIconButton(
-            onClick = { onChange(DAILY_TARGET_STEPS.firstOrNull { it > target } ?: target) },
-            enabled = target < DAILY_TARGET_STEPS.last()
-        ) {
-            Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.daily_target_increase))
-        }
     }
 }
 

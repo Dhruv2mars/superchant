@@ -22,6 +22,13 @@ object AppShortcuts {
     fun parse(intent: Intent?): Request? =
         if (intent?.action == ACTION_START_COUNTING) Request(intent.getStringExtra(EXTRA_GOAL_ID)) else null
 
+    /** Tells the launcher a shortcut was used, so it can rank and suggest it. */
+    fun reportUsed(context: Context, request: Request) {
+        ShortcutManagerCompat.reportShortcutUsed(context, request.goalId?.let { "goal_$it" } ?: STATIC_START_ID)
+    }
+
+    private const val STATIC_START_ID = "start_counting"
+
     fun startIntent(context: Context, goalId: String? = null): Intent =
         Intent(context, MainActivity::class.java)
             .setAction(ACTION_START_COUNTING)

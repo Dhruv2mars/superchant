@@ -89,10 +89,19 @@ private fun BroadcastReceiver.runAsync(block: suspend () -> Unit) {
 /** Re-arms the reminder after boot, app updates and clock or time zone changes (protected system broadcasts). */
 class ReminderRescheduleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // Exported for these system broadcasts only; ignore anything else sent to it
+        if (intent.action !in RESCHEDULE_ACTIONS) return
         val appContext = context.applicationContext
         runAsync { ReminderScheduler.sync(appContext) }
     }
 }
+
+private val RESCHEDULE_ACTIONS = setOf(
+    Intent.ACTION_BOOT_COMPLETED,
+    Intent.ACTION_MY_PACKAGE_REPLACED,
+    Intent.ACTION_TIME_CHANGED,
+    Intent.ACTION_TIMEZONE_CHANGED
+)
 
 /**
  * The alarm itself (not exported). Posts the reminder unless it isn't wanted: turned off, a session is

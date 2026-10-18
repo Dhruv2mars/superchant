@@ -71,6 +71,7 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(launchStart) {
                         val request = launchStart ?: return@LaunchedEffect
                         launchRequest.value = null
+                        AppShortcuts.reportUsed(this@MainActivity, request)
                         val goals = preferencesRepository.goals.filterNotNull().first()
                         // A shortcut to a deleted goal falls back to a free session
                         val goal = request.goalId?.let { id -> goals.firstOrNull { it.id == id } }

@@ -161,8 +161,14 @@
     <string name="round_size_custom_value">Custom: %d</string>
     <string name="round_size_custom_title">Custom round size</string>
     <string name="round_size_range">From %1$d to %2$d</string>
-    <string name="round_size_each_round">Each round = %d counts</string>
-    <string name="round_size_beads_per_round">%d beads/round</string>
+    <plurals name="round_size_each_round">
+        <item quantity="one">Each round = %d count</item>
+        <item quantity="other">Each round = %d counts</item>
+    </plurals>
+    <plurals name="round_size_beads_per_round">
+        <item quantity="one">%d bead/round</item>
+        <item quantity="other">%d beads/round</item>
+    </plurals>
 
     <!-- Session -->
     <string name="status_paused">Paused</string>

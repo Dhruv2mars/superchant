@@ -19,7 +19,7 @@
         android:supportsRtl="true"
         android:enableOnBackInvokedCallback="true"
         android:theme="@style/Theme.SuperChant"
-        tools:targetApi="31">
+        tools:targetApi="33">
 
         <activity
             android:name=".MainActivity"

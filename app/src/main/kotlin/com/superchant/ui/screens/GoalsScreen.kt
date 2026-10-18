@@ -272,7 +272,7 @@ private fun GoalCard(
                     Text(
                         text = pluralStringResource(R.plurals.mantras_count, goal.mantras.size, goal.mantras.size) +
                             " • " + pluralStringResource(R.plurals.rounds_total, goal.totalRounds, goal.totalRounds) +
-                            (goal.roundSize?.let { " • " + stringResource(R.string.round_size_beads_per_round, it) } ?: ""),
+                            (goal.roundSize?.let { " • " + pluralStringResource(R.plurals.round_size_beads_per_round, it, it) } ?: ""),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -841,7 +841,7 @@ private fun MantraEditorDialog(
                     ),
                     shape = RoundedCornerShape(12.dp),
                     supportingText = {
-                        Text(stringResource(R.string.round_size_each_round, roundSize))
+                        Text(pluralStringResource(R.plurals.round_size_each_round, roundSize, roundSize))
                     }
                 )
             }

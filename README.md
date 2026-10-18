@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/Dhruv2mars/superchant/releases/latest"><img src="https://img.shields.io/github/v/release/Dhruv2mars/superchant?label=latest&color=%23C4956A" alt="Latest Release"></a>
-  <img src="https://img.shields.io/badge/kotlin-2.0.21-blue?logo=kotlin" alt="Kotlin">
+  <img src="https://img.shields.io/badge/kotlin-2.4-blue?logo=kotlin" alt="Kotlin">
   <img src="https://img.shields.io/badge/jetpack--compose-Material%203-blue?logo=jetpackcompose" alt="Jetpack Compose">
   <img src="https://img.shields.io/badge/minSdk-26-green?logo=android" alt="Min SDK">
   <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
@@ -62,16 +62,16 @@ Get the latest APK from [GitHub Releases](https://github.com/Dhruv2mars/supercha
 git clone https://github.com/Dhruv2mars/superchant.git
 cd superchant
 ./gradlew assembleDebug        # Debug APK
-./gradlew buildReleaseApk       # Signed release APK
+./gradlew buildReleaseApk      # Release APK, copied to ./SuperChant-v{version}.apk
 ```
 
-**Requirements:** Android Studio Hedgehog+ / JDK 17
+**Requirements:** JDK 17 and the Android SDK. Release builds use the keys in `local.properties` when present and fall back to the debug key otherwise.
 
 ## Tech Stack
 
 | Layer | Tech |
 |-------|------|
-| Language | Kotlin 2.0.21 |
+| Language | Kotlin 2.4 |
 | UI | Jetpack Compose + Material 3 |
 | Navigation | Jetpack Navigation Compose |
 | State | StateFlow + Foreground Service |

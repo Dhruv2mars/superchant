@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds install as com.superchant.dev next to the Play Store app; label them so they're easy to tell apart. -->
+<resources>
+    <string name="app_name">SuperChant Dev</string>
+    <string name="accessibility_service_label">SuperChant Dev Volume Counter</string>
+</resources>

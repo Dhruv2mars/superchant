@@ -41,7 +41,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.android.awaitFrame
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import kotlinx.serialization.json.Json
 
 /**
@@ -424,11 +426,14 @@ class ChantingService : Service() {
      */
     private fun updateNotification() {
         if (pendingNotification?.isActive == true) return
-        // Never right away: the post is a binder call on the main thread, and run straight after a count it
-        // would hold up the key event or the frame that shows the count
-        val wait = maxOf(NOTIFICATION_INTERVAL_MS - (SystemClock.uptimeMillis() - lastNotifiedAt), NOTIFICATION_MIN_DELAY_MS)
+        val wait = NOTIFICATION_INTERVAL_MS - (SystemClock.uptimeMillis() - lastNotifiedAt)
         pendingNotification = serviceScope.launch {
-            delay(wait)
+            if (wait > 0) delay(wait)
+            // Right after the next frame (the one showing the count) is drawn: neither inside the key event or
+            // tap nor ahead of that frame, and not later either (posts landing mid-animation measured ~40% more
+            // SystemUI CPU).
+            awaitFrame()
+            yield()
             if (_instance !== this@ChantingService) return@launch
             // Built here (the cached builder is main-thread only), posted in the background: it's a binder call
             val notification = PerfTrace.section("SC.buildNotification") { buildNotification() }
@@ -459,7 +464,6 @@ class ChantingService : Service() {
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "chanting_session"
         private const val NOTIFICATION_INTERVAL_MS = 250L
-        private const val NOTIFICATION_MIN_DELAY_MS = 50L
 
         // PendingIntent request codes
         private const val REQUEST_CODE_CONTENT = 100

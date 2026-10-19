@@ -29,7 +29,7 @@ Needs JDK 17 and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in `local.propert
 
 ```bash
 ./gradlew assembleDebug assembleRelease lint test   # full check
-./gradlew installDebug                              # install on a device/emulator
+./gradlew installDebug                              # install "SuperChant Dev" (com.superchant.dev) on a device/emulator
 ./gradlew test --tests "com.superchant.data.ChantStateTest"
 ./gradlew buildReleaseApk                           # assembleRelease, copied to ./SuperChant-v{version}.apk
 ./gradlew buildReleaseBundle                        # bundleRelease, copied to ./SuperChant-v{version}.aab
@@ -45,7 +45,8 @@ signed with the debug key, so it still builds and installs locally.
 |---------|-------|
 | Package / namespace | `com.superchant` |
 | minSdk / targetSdk / compileSdk | 26 / 36 / 37 |
-| Version | `versionName`/`versionCode` in `app/build.gradle.kts` (bump only when a release is approved) |
+| Version | Date-based, computed in `app/build.gradle.kts`: `versionName` 2.YYYY.DDD, `versionCode` YYDDDNN (`-PbuildNumber=NN` for a second upload the same day) |
+| Variants | `release` = `com.superchant` (Play Store); `debug` = `com.superchant.dev` "SuperChant Dev", installs side by side |
 | JVM target | 17 |
 | Toolchain | AGP 9 (built-in Kotlin), Gradle 9, Kotlin 2.4 |
 
@@ -169,9 +170,10 @@ Shell-injected keys (`adb shell input keyevent KEYCODE_VOLUME_UP`) skip the acce
 they never reach `onKeyEvent`. Use a virtual uinput keyboard so the keys take the real hardware path:
 
 ```bash
-adb shell settings put secure enabled_accessibility_services com.superchant/com.superchant.service.VolumeKeyAccessibilityService
+PKG=com.superchant      # release APK; use com.superchant.dev for debug builds
+adb shell settings put secure enabled_accessibility_services $PKG/com.superchant.service.VolumeKeyAccessibilityService
 adb shell settings put secure accessibility_enabled 1
-adb shell pm grant com.superchant android.permission.POST_NOTIFICATIONS
+adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS
 # Register a device with KEY_VOLUMEDOWN/UP (114/115), then press VOLUME_UP once (EV_KEY=1).
 printf '%s\n' \
   '{"id":1,"command":"register","name":"Volume Keys","vid":4660,"pid":22136,"bus":"usb","configuration":[{"type":"UI_SET_EVBIT","data":[1]},{"type":"UI_SET_KEYBIT","data":[114,115]}]}' \
@@ -186,7 +188,10 @@ printf '%s\n' \
 - Work on a branch and open a PR against `main`; don't push to `main` directly. Put verification evidence in the
   PR description. Screenshots go on the orphan `ux-evidence` branch (one folder per PR), never in `main`.
 - Never commit `local.properties`, keystores, APK/AAB files, `TASKS.md` or local agent state (`.claude/settings*.json`).
-- Release builds: `./gradlew buildReleaseBundle` with the upload key in `local.properties`. Play App Signing is on;
-  the app is a draft on Google Play, and a personal developer account needs a closed test (12+ testers, 14 days)
-  before production.
+- Releases go through Google Play only. The owner uses the Play Store install (internal testing track) as their
+  daily app, so every upload to internal testing updates it. Build with `./gradlew bundleRelease`, signed with the
+  upload key that `local.properties` points to (`RELEASE_*`; keystore kept outside the repo, never committed).
+  Play App Signing is on. A personal developer account needs a closed test (12+ testers, 14 days) before production.
+- Day-to-day testing on the owner's phone uses the debug build ("SuperChant Dev") over wireless adb, so it never
+  touches the Play install or its data.
 - For JavaScript tooling (e.g. `bunx skills`), use bun.

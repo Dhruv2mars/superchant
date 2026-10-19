@@ -102,6 +102,9 @@ app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
    offers each new press (DOWN, repeatCount 0) to `ChantingService.onVolumeKeyPressed()`. A counted press is
    consumed whole (DOWN, repeats, UP); presses that aren't counted (no session, paused, goal complete, or no
    disclosure consent) pass through to the system untouched.
+   While the screen is off, Android sends volume keys straight to the media session and never to accessibility
+   services, so volume counting needs the screen on (lock screen and other apps are fine). Don't claim
+   screen-off counting in the app, listing or Play declarations.
    Touch: while touch counting is on, `TapToCountPad` calls `ChantingService.countFromScreen()` (one count per
    touch, extra fingers and repeats under 150 ms ignored) and Home keeps the screen awake (`KeepScreenOn`,
    a window flag) unless paused or the goal is complete. Off, the pad ignores touches and the screen may sleep.
@@ -185,8 +188,16 @@ printf '%s\n' \
 
 ## Workflow
 
-- Work on a branch and open a PR against `main`; don't push to `main` directly. Put verification evidence in the
-  PR description. Screenshots go on the orphan `ux-evidence` branch (one folder per PR), never in `main`.
+- Branches: `dev` is the default and integration branch; `main` is production. Open PRs against `dev`; never
+  push to `dev` or `main` directly.
+  - CI (`.github/workflows/ci.yml`) runs build, lint, test and an INTERNET-permission guard on every PR.
+  - Every push to `dev` builds a signed bundle and uploads it to the Play **internal testing** track
+    (`release-internal.yml`), so the owner's Play Store install updates within minutes.
+  - Merging `dev` into `main` promotes that same bundle (`promote.yml`, `scripts/play_promote.py`) to the track
+    in repo variable `PLAY_PROMOTE_TRACK` (`alpha` = closed testing until production access is granted).
+  - Secrets: `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_KEYSTORE_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`.
+- Put verification evidence in the PR description. Screenshots go on the orphan `ux-evidence` branch (one folder
+  per PR), never in `dev`/`main`. Play Store listing assets under `docs/play-store/` are the exception.
 - Never commit `local.properties`, keystores, APK/AAB files, `TASKS.md` or local agent state (`.claude/settings*.json`).
 - Releases go through Google Play only. The owner uses the Play Store install (internal testing track) as their
   daily app, so every upload to internal testing updates it. Build with `./gradlew bundleRelease`, signed with the

@@ -20,7 +20,7 @@
     
     <!-- Accessibility prominent disclosure -->
     <string name="disclosure_title">Before you turn on volume counting</string>
-    <string name="disclosure_intro">To count with the volume buttons, even with the screen off, SuperChant uses an Android accessibility service. Please read what it does.</string>
+    <string name="disclosure_intro">To count with the volume buttons, even on the lock screen or in another app, SuperChant uses an Android accessibility service. Please read what it does.</string>
     <string name="disclosure_does_title">What it does</string>
     <string name="disclosure_does_1">Detects volume up and down presses, only while a chanting session is running and not paused.</string>
     <string name="disclosure_does_2">Turns those presses into counts instead of changing the volume. At all other times the buttons work as usual.</string>
@@ -145,8 +145,8 @@
     <string name="touch_counting_hint">Turn touch counting on or off here</string>
     <string name="volume_buttons_offer">Count with volume buttons</string>
     <string name="volume_buttons_title">Volume buttons</string>
-    <string name="volume_buttons_on">Volume up or down counts during a session, even with the screen off.</string>
-    <string name="volume_buttons_off">Count with volume up or down, even with the screen off. Needs the accessibility service.</string>
+    <string name="volume_buttons_on">Volume up or down counts during a session while the screen is on, even on the lock screen.</string>
+    <string name="volume_buttons_off">Count with volume up or down, even on the lock screen. Needs the accessibility service.</string>
     <string name="volume_buttons_set_up">Set up</string>
     <string name="ok">OK</string>
 

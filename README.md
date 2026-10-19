@@ -20,7 +20,7 @@
 
 ## What is SuperChant?
 
-SuperChant is a minimalist Android app to count mantras using your phone's **volume buttons** — no screen needed. Keep your phone in your pocket, face-down, or with the screen off and stay focused on your practice.
+SuperChant is a minimalist Android app to count mantras using your phone's **volume buttons**, without looking at the screen: count from the lock screen or while another app is open, and stay focused on your practice.
 
 Built for japa meditation, mantra chanting, prayer counting, and any repetitive spiritual practice.
 
@@ -30,9 +30,10 @@ Built for japa meditation, mantra chanting, prayer counting, and any repetitive 
 - Press volume up or down to increment your count, or tap the screen (no permissions needed)
 - 108 beads per round, like a traditional mala
 - Touch counting is one switch on the session screen: on, the counter is the tap target and the screen
-  stays awake; off, only the volume buttons count and the phone can go in your pocket
+  stays awake; off, only the volume buttons count
 - A calm mala ring: beads, a meru bead, a soft glow when a round completes
-- Works with screen off or in any other app
+- Volume buttons count on the lock screen or in any other app while the screen is on (Android doesn't
+  deliver button presses to accessibility services while the screen is off)
 - Foreground service with persistent notification
 - Pause and resume from Home, the notification or the Quick Settings tile
 - Optional milestone pulse every 27 beads and an optional soft bead click

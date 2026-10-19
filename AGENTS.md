@@ -203,6 +203,25 @@ printf '%s\n' \
   daily app, so every upload to internal testing updates it. Build with `./gradlew bundleRelease`, signed with the
   upload key that `local.properties` points to (`RELEASE_*`; keystore kept outside the repo, never committed).
   Play App Signing is on. A personal developer account needs a closed test (12+ testers, 14 days) before production.
-- Day-to-day testing on the owner's phone uses the debug build ("SuperChant Dev") over wireless adb, so it never
-  touches the Play install or its data.
+- Day-to-day testing on the owner's phone uses the debug build ("SuperChant Dev"), so it never touches the Play
+  install or its data. See "Getting a build on the owner's phone" below.
+
+### Getting a build on the owner's phone
+
+1. **Play (the real app, `com.superchant`):** merge a PR into `dev`. `release-internal.yml` uploads it to internal
+   testing and the Play Store install updates itself. Nothing else to do. This is the only way to update the real
+   app: it is signed by Play App Signing, so a sideloaded `com.superchant` can't install over it, and uninstalling
+   it loses practice history.
+2. **SuperChant Dev (`com.superchant.dev`), no cable:** every push to `dev` also runs `dev-build.yml`, which puts
+   `SuperChant-Dev.apk` on a private draft release (tag `dev-latest`). On the phone, signed in to GitHub, open
+   https://github.com/Dhruv2mars/superchant/releases, take the draft at the top and install it (allow the browser
+   to install apps once). Link to the Releases page, not the draft's own URL: that one changes on every edit.
+   CI signs it with the Mac's debug key (secret `DEBUG_KEYSTORE_BASE64`), so it and local builds update each other.
+3. **SuperChant Dev, cable or wireless adb:** `./gradlew installDebug`. The Mac's Wi-Fi is usually behind Proton VPN,
+   which blocks LAN connections, so serving the APK over Wi-Fi from the Mac doesn't reach the phone.
+
+Play release state (2026-10-19): the upload key was reset and Google hadn't activated it yet, so uploads failed with
+"The upload certificate ... is not yet valid because it has been recently reset". `PLAY_RELEASES_ENABLED` stays
+`false` until a dispatched `release-internal.yml` succeeds. `promote.yml` (internal → alpha) also fails until a first
+closed-testing release is created by hand in Play Console (the app is still a "draft app").
 - For JavaScript tooling (e.g. `bunx skills`), use bun.

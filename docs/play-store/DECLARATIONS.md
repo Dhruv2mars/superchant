@@ -37,9 +37,17 @@ What the app does (verified):
   `MediaSessionService: Nothing is playing on the music stream. Skipping volume event`), so the declaration
   doesn't claim screen-off counting.
 
-### Is your app an accessibility tool?
-**No.** SuperChant isn't designed for people with disabilities, so `isAccessibilityTool` stays false and the
-app relies on the prominent disclosure and consent instead.
+### Console form (as captured Oct 19, 2026)
+- Accessibility-tool status isn't a question: Console reads it from the manifest ("The isAccessibilityTool
+  attribute has not been set ... you've declared that your app is not an accessibility tool"). That's correct:
+  SuperChant isn't designed for people with disabilities, so it relies on the prominent disclosure and consent.
+- **Usage** ("Why does your app need to use the AccessibilityServices API?"): **App functionality** only.
+- **Sensitive data** ("Do you collect and/or share any personal or sensitive user data using the
+  AccessibilityServices API?"): **No**.
+- **Prominent disclosure**: the YouTube link to the accessibility video, plus the checkbox "I acknowledge that my
+  video meets the video requirements of prominent disclosure".
+- The form has no free-text fields. The texts below are for any follow-up questions from Play review, an
+  appeal, or a field Console adds later.
 
 ### Core functionality that uses the Accessibility API
 ```
@@ -84,9 +92,11 @@ What the app does (verified):
 - It ends on Stop (notification, app or tile flow), which saves the session to history and calls
   `stopForeground(REMOVE)` and `stopSelf()`. A session idle for 3+ hours is saved, not resumed, after a restart.
 
-### Foreground service type / task
-- Type: **Special use** (`specialUse`), subtype `chanting_counter`.
-- If Play lists task types, choose **Other** and use the texts below.
+### Console form
+- "What tasks require your app to use the FOREGROUND_SERVICE_SPECIAL_USE permission?" under **Special use**:
+  check **Other** (the only option). That reveals the description, impact and video fields; fill them with the
+  texts below and the foreground-service video link.
+- Type in the manifest: `specialUse`, subtype `chanting_counter`.
 
 ### Describe the user-initiated task
 ```
@@ -111,22 +121,23 @@ the session.
 
 ## 3. Re-check of the 10 declarations completed on Jan 3, 2026
 
-Recommended answers for today's app (`2.YYYY.DDD`, target SDK 36). "Saved" is what the Console showed in the
-Oct 19 read-only audit, where captured.
+Recommended answers for today's app (`2.YYYY.DDD`, target SDK 36), compared with the saved answers from the
+Oct 19 read-only Console audit. **All saved answers are still correct; none need changing.** The 2 open items
+are the Accessibility and Foreground service declarations above.
 
 | Declaration | Correct answer today | Why (evidence) |
 |-------------|----------------------|----------------|
 | Privacy policy | `https://github.com/dhruv2mars/superchant/blob/main/PRIVACY_POLICY.md` | URL returns 200; repo is public. Policy updated Oct 19 (on `dev` until merged to `main`) |
 | Ads | No, the app has no ads | No ad SDKs; no INTERNET permission |
 | App access | All functionality is available without special access | No login or account; accessibility setup is user-controlled and shown in the videos |
-| Content rating | Reference/utility-type app; "No" to violence, sexual content, language, controlled substances, gambling; no user interaction or content sharing, no location sharing, no digital purchases → Everyone / PEGI 3 | Static counter; no user-generated content |
+| Content rating | Saved: category "All Other App Types", Everyone / PEGI 3 / USK 0 / IARC 3+, no descriptors. "No" to violence, sexual content, language, controlled substances, gambling; no user interaction or content sharing, no location sharing, no digital purchases → Everyone / PEGI 3 | Static counter; no user-generated content |
 | Target audience and content | 13+ is fine (saved: 13–15, 16–17, 18+). Not designed for children; no appeal-to-children elements | Avoids the Families policy; keep as is |
-| News app | No | |
+| News app | Not listed in Console for this app | Nothing to answer |
 | Data safety | **No data collected, no data shared** (keep) | See below |
 | Government apps | No | |
 | Financial features | None | |
 | Health apps | My app has no health features (keep) | A mantra counter: no health data, sensors or health claims. Judgement call: meditation-type features are listed in Play's health categories, but SuperChant tracks counts of a religious practice, not wellbeing |
-| Advertising ID | No, the app doesn't use advertising ID | No `com.google.android.gms.permission.AD_ID` in the merged manifest; no Play services |
+| Advertising ID | No (saved) | No `com.google.android.gms.permission.AD_ID` in the merged manifest; no Play services |
 
 ### Data safety reasoning ("does not collect or share")
 - **No collection.** Play defines collection as transmitting data off the device from your app. SuperChant has no

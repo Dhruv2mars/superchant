@@ -102,6 +102,9 @@ app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
    offers each new press (DOWN, repeatCount 0) to `ChantingService.onVolumeKeyPressed()`. A counted press is
    consumed whole (DOWN, repeats, UP); presses that aren't counted (no session, paused, goal complete, or no
    disclosure consent) pass through to the system untouched.
+   While the screen is off, Android sends volume keys straight to the media session and never to accessibility
+   services, so volume counting needs the screen on (lock screen and other apps are fine). Don't claim
+   screen-off counting in the app, listing or Play declarations.
    Touch: while touch counting is on, `TapToCountPad` calls `ChantingService.countFromScreen()` (one count per
    touch, extra fingers and repeats under 150 ms ignored) and Home keeps the screen awake (`KeepScreenOn`,
    a window flag) unless paused or the goal is complete. Off, the pad ignores touches and the screen may sleep.

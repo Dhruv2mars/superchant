@@ -1,6 +1,6 @@
 # Privacy Policy for SuperChant
 
-**Last updated:** October 18, 2026
+**Last updated:** October 19, 2026
 
 ## Overview
 
@@ -25,7 +25,8 @@ The following data is stored on your device:
 - **Active session** - The progress of a session that is running, so it can resume if Android closes
   the app. It is deleted when you stop the session.
 
-This data is stored using Android's DataStore.
+This data is stored using Android's DataStore. Your goal names also appear as launcher shortcuts
+(long-press the app icon), which Android keeps on your device.
 
 ## Export and Import
 
@@ -54,15 +55,17 @@ You can turn off backup for your device (or for SuperChant) in Android settings 
 
 ## Accessibility Service
 
-SuperChant uses Android's Accessibility Service **solely** to detect volume button presses during active chanting sessions. This allows you to count without looking at your screen.
+SuperChant uses Android's Accessibility Service **solely** to count volume button presses during a chanting
+session, so you can count without looking at your screen, including on the lock screen or while another app
+is open.
 
 Before you're sent to Android's accessibility settings, SuperChant shows this disclosure in the app and
 asks you to agree.
 
 **What the Accessibility Service does:**
 - Detects when volume up/down buttons are pressed
-- Only activates during an active chanting session
-- Increments your count when a volume button is pressed
+- Counts a press, instead of changing the volume, only while a chanting session is running and not paused
+- At all other times, and for every other key, lets the press through untouched without keeping it
 
 **What the Accessibility Service does NOT do:**
 - Read any screen content

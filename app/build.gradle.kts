@@ -11,6 +11,16 @@ val localProps = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
+// versionCode = MAJOR*1_000_000 + MINOR*10_000 + PATCH*100 + BUILD, derived from versionName so the two
+// never drift. BUILD (0-99, `-PbuildNumber=N`) allows re-uploading the same version to Play; codes only go up.
+val appVersionName = "2.0.0"
+val appVersionCode = run {
+    val (major, minor, patch) = appVersionName.split(".").map(String::toInt)
+    val build = (findProperty("buildNumber") as String?)?.toInt() ?: 0
+    require(minor < 100 && patch < 100 && build < 100) { "version part out of range" }
+    major * 1_000_000 + minor * 10_000 + patch * 100 + build
+}
+
 android {
     namespace = "com.superchant"
     compileSdk = 37
@@ -19,8 +29,8 @@ android {
         applicationId = "com.superchant"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     signingConfigs {

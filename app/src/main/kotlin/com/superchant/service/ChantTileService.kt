@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Quick Settings tile. Idle, it opens the app and starts counting; during a session it shows the count
- * and pauses or resumes, which helps volume-button users who chant with the screen off.
+ * and pauses or resumes, which helps volume-button users who chant with the app in the background.
  */
 class ChantTileService : TileService() {
 

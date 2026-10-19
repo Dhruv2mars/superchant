@@ -180,10 +180,10 @@ fun HomeScreen(
     KeepScreenOn(enabled = isServiceRunning && touchCounting && !isPaused && !isGoalComplete)
 
     // A session that volume buttons can't count (restored from an older version, or the service was turned
-    // off) gets touch counting, once per session and readiness change, so switching it off by hand sticks
-    // across navigation and rotation.
+    // off) gets touch counting, once per session and readiness change. The marker lives as long as the
+    // process (which the session's service keeps alive), so switching it off by hand sticks across
+    // navigation, rotation and reopening the app.
     val sessionId by remember { derivedStateOf { chantStateHolder.value.run { sessionId.takeIf { isActive } } } }
-    var autoTouchHandled by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(sessionId, volumeReady, savedConsent != null) {
         if (sessionId == null || savedConsent == null) return@LaunchedEffect
         val key = "$sessionId:$volumeReady"
@@ -411,6 +411,9 @@ private data class SessionSummary(val counts: Int, val rounds: Int, val minutes:
 private const val SUMMARY_VISIBLE_MS = 6_000L
 
 /** How long the one-time touch-counting hint stays up, after a short beat for the screen to settle. */
+/** The session and volume readiness that touch counting was last turned on for automatically; see HomeScreen. */
+private var autoTouchHandled: String? = null
+
 private const val TOUCH_HINT_DELAY_MS = 600L
 private const val TOUCH_HINT_VISIBLE_MS = 5_000L
 
@@ -515,14 +518,21 @@ private fun SessionControls(
     modifier: Modifier = Modifier
 ) {
     val tooltipState = rememberTooltipState(isPersistent = true)
+    // Latched, so marking the hint seen (which flips showTouchHint) doesn't cancel it mid-display
+    var hintPending by remember { mutableStateOf(false) }
     LaunchedEffect(session.showTouchHint) {
-        if (!session.showTouchHint) return@LaunchedEffect
+        if (session.showTouchHint) {
+            hintPending = true
+            session.onTouchHintShown()
+        }
+    }
+    LaunchedEffect(hintPending) {
+        if (!hintPending) return@LaunchedEffect
         delay(TOUCH_HINT_DELAY_MS)
         launch { tooltipState.show() }
-        // Seen once it shows, even if the session ends before it fades
-        session.onTouchHintShown()
         delay(TOUCH_HINT_VISIBLE_MS)
         tooltipState.dismiss()
+        hintPending = false
     }
     Row(
         modifier = modifier,

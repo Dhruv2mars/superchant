@@ -359,8 +359,8 @@ class PreferencesRepository private constructor(private val context: Context) {
     suspend fun loadActiveSession(): ChantState? = try {
         context.sessionDataStore.data.first()[PreferencesKeys.ACTIVE_SESSION]
             ?.let { json.decodeFromString(ChantState.serializer(), it) }
-            // Older versions allowed other round sizes; rounds always follow the count at 108 now
-            ?.let { it.copy(rounds = it.count / ChantState.ROUND_SIZE) }
+            // Older versions allowed other round sizes; rounds and goal progress follow the count at 108 now
+            ?.normalizedRounds()
     } catch (e: Exception) {
         Log.e(TAG, "Reading the active session failed", e)
         null

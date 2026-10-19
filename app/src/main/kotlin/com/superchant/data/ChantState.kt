@@ -87,6 +87,23 @@ data class ChantState(
     }
 
     /**
+     * Rounds and goal progress recomputed from [count] at 108 beads, for a session persisted by an older
+     * version that allowed other round sizes. A session already counted at 108 comes back unchanged.
+     */
+    fun normalizedRounds(): ChantState {
+        val totalRounds = count / ROUND_SIZE
+        val mantras = activeGoal?.mantras.orEmpty()
+        var index = 0
+        var remaining = totalRounds
+        while (index < mantras.size - 1 && remaining >= mantras[index].targetRounds.coerceAtLeast(1)) {
+            remaining -= mantras[index].targetRounds.coerceAtLeast(1)
+            index++
+        }
+        return if (mantras.isEmpty()) copy(rounds = totalRounds)
+        else copy(rounds = totalRounds, currentMantraIndex = index, mantraRoundsCompleted = remaining)
+    }
+
+    /**
      * Decides what to do with a session persisted by a process that no longer exists: resume it,
      * or, if it was last touched more than [STALE_AFTER_MS] ago (e.g. before a reboot), save it to
      * history as ending at its last activity.

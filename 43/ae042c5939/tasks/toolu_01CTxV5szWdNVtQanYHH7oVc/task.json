@@ -1,0 +1,15 @@
+{
+  "tool_use_id": "toolu_01CTxV5szWdNVtQanYHH7oVc",
+  "agent_id": "a6d254d317b4e3ab3",
+  "subagent_type": "general-purpose",
+  "task_description": "Release dev, promote to main",
+  "token_usage": {
+    "input_tokens": 14,
+    "cache_creation_tokens": 50601,
+    "cache_read_tokens": 160653,
+    "output_tokens": 2468,
+    "api_call_count": 7
+  },
+  "started_at": "2026-10-19T23:29:59.759883+05:30",
+  "completed_at": "2026-10-20T00:06:15.150408+05:30"
+}

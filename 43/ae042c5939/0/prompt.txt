@@ -1,0 +1,21 @@
+<task-notification>
+<task-id>bsal74rzd</task-id>
+<tool-use-id>toolu_01Pu8DHYLNRWRrCaoqTpxgP2</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-dhruv2mars-dev-github-superchant/254c08d6-241e-4c9c-8bb9-22bf88ae230a/tasks/bsal74rzd.output</output-file>
+<status>failed</status>
+<summary>Background command "Wait for CI, merge PR 14, watch dev APK build" failed with exit code 144</summary>
+</task-notification>
+
+---
+
+why the release link had 2, i tried both. both can't install coz of blocked by play protect. figure out and be ambitious
+
+---
+
+<task-notification>
+<task-id>bbprtkeyn</task-id>
+<tool-use-id>toolu_01SYkDP9nigXpzaWwSNmQ6Gt</tool-use-id>
+<output-file>/private/tmp/claude-501/-Users-dhruv2mars-dev-github-superchant/254c08d6-241e-4c9c-8bb9-22bf88ae230a/tasks/bbprtkeyn.output</output-file>
+<status>failed</status>
+<summary>Background command "Merge PR 14 only if CI green, then watch APK build" failed with exit code 144</summary>
+</task-notification>

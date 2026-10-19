@@ -1,9 +1,8 @@
 name: CI
 
 on:
-  pull_request:
-  push:
-    branches-ignore: [dev, main]  # dev/main pushes run the release workflows, which include these checks
+  pull_request:  # dev/main pushes run the release workflows, which repeat these checks
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}

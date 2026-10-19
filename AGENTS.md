@@ -185,8 +185,16 @@ printf '%s\n' \
 
 ## Workflow
 
-- Work on a branch and open a PR against `main`; don't push to `main` directly. Put verification evidence in the
-  PR description. Screenshots go on the orphan `ux-evidence` branch (one folder per PR), never in `main`.
+- Branches: `dev` is the default and integration branch; `main` is production. Open PRs against `dev`; never
+  push to `dev` or `main` directly.
+  - CI (`.github/workflows/ci.yml`) runs build, lint, test and an INTERNET-permission guard on every PR.
+  - Every push to `dev` builds a signed bundle and uploads it to the Play **internal testing** track
+    (`release-internal.yml`), so the owner's Play Store install updates within minutes.
+  - Merging `dev` into `main` promotes that same bundle (`promote.yml`, `scripts/play_promote.py`) to the track
+    in repo variable `PLAY_PROMOTE_TRACK` (`alpha` = closed testing until production access is granted).
+  - Secrets: `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_KEYSTORE_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`.
+- Put verification evidence in the PR description. Screenshots go on the orphan `ux-evidence` branch (one folder
+  per PR), never in `dev`/`main`. Play Store listing assets under `docs/play-store/` are the exception.
 - Never commit `local.properties`, keystores, APK/AAB files, `TASKS.md` or local agent state (`.claude/settings*.json`).
 - Releases go through Google Play only. The owner uses the Play Store install (internal testing track) as their
   daily app, so every upload to internal testing updates it. Build with `./gradlew bundleRelease`, signed with the

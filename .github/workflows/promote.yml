@@ -1,0 +1,35 @@
+name: Promote to Play
+
+# Merging dev into main promotes the exact bundle the owner has been using from internal testing.
+# Target track: repo variable PLAY_PROMOTE_TRACK (default "alpha" = closed testing; "production" once allowed).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      track:
+        description: Track to promote the latest internal release to
+        default: alpha
+
+concurrency:
+  group: promote
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    # Off until the Play upload key is active and the first release exists (repo variable PLAY_RELEASES_ENABLED).
+    if: vars.PLAY_RELEASES_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: play
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet google-auth requests
+      - name: Promote latest internal release
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          TARGET_TRACK: ${{ inputs.track || vars.PLAY_PROMOTE_TRACK || 'alpha' }}
+        run: python scripts/play_promote.py com.superchant internal "$TARGET_TRACK"

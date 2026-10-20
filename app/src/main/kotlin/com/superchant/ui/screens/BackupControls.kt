@@ -90,8 +90,10 @@ internal fun BackupControls(
         scope.launch {
             val message = try {
                 val text = readText(context, uri)
-                val backup = withContext(Dispatchers.Default) { BackupCodec.decode(text) }
-                val result = preferencesRepository.importBackup(backup)
+                // Off the main thread too: DataStore runs the merge in the caller's context
+                val (backup, result) = withContext(Dispatchers.Default) {
+                    BackupCodec.decode(text).let { it to preferencesRepository.importBackup(it) }
+                }
                 // The backup may turn the reminder on; without the notification permission here it
                 // could never show, so it stays off until turned on in Settings (which asks for it)
                 if (backup.settings.reminderEnabled == true && !canPostNotifications(context)) {

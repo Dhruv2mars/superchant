@@ -62,10 +62,13 @@ import com.superchant.data.bucketSessions
 import com.superchant.data.millisUntilNextMidnight
 import com.superchant.ui.components.EmptyState
 import com.superchant.ui.components.InsightsCard
+import com.superchant.ui.components.rememberZone
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
+import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 @Composable
@@ -92,6 +95,8 @@ fun HistoryScreen(
     val categorizedSessions = remember(sessionHistory, now) {
         bucketSessions(sessionHistory, now)
     }
+    // Session times follow the phone's current time zone
+    val zone = rememberZone()
     
     Scaffold(
         topBar = {
@@ -153,7 +158,7 @@ fun HistoryScreen(
                             SectionHeader(title = stringResource(R.string.history_today))
                         }
                         items(categorizedSessions.today, key = { it.id }) { session ->
-                            SessionCard(session = session, showDate = false)
+                            SessionCard(session = session, showDate = false, zone = zone)
                         }
                     }
                     
@@ -163,7 +168,7 @@ fun HistoryScreen(
                             SectionHeader(title = stringResource(R.string.history_this_week))
                         }
                         items(categorizedSessions.thisWeek, key = { it.id }) { session ->
-                            SessionCard(session = session, showDate = true)
+                            SessionCard(session = session, showDate = true, zone = zone)
                         }
                     }
                     
@@ -173,7 +178,7 @@ fun HistoryScreen(
                             SectionHeader(title = stringResource(R.string.history_this_month))
                         }
                         items(categorizedSessions.thisMonth, key = { it.id }) { session ->
-                            SessionCard(session = session, showDate = true)
+                            SessionCard(session = session, showDate = true, zone = zone)
                         }
                     }
                     
@@ -183,7 +188,7 @@ fun HistoryScreen(
                             SectionHeader(title = stringResource(R.string.history_older))
                         }
                         items(categorizedSessions.older, key = { it.id }) { session ->
-                            SessionCard(session = session, showDate = true)
+                            SessionCard(session = session, showDate = true, zone = zone)
                         }
                     }
                     
@@ -303,9 +308,9 @@ private fun StatItem(value: String, label: String) {
 }
 
 @Composable
-private fun SessionCard(session: SessionRecord, showDate: Boolean) {
-    val dateFormat = remember { SimpleDateFormat("EEE, MMM d", Locale.getDefault()) }
-    val timeFormat = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+private fun SessionCard(session: SessionRecord, showDate: Boolean, zone: ZoneId) {
+    val dateFormat = remember(zone) { SimpleDateFormat("EEE, MMM d", Locale.getDefault()).apply { timeZone = TimeZone.getTimeZone(zone) } }
+    val timeFormat = remember(zone) { SimpleDateFormat("h:mm a", Locale.getDefault()).apply { timeZone = TimeZone.getTimeZone(zone) } }
     
     Card(
         modifier = Modifier.fillMaxWidth(),

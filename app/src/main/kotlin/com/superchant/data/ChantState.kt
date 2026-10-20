@@ -178,6 +178,15 @@ data class Goal(
 ) {
     val totalRounds: Int
         get() = mantras.sumOf { it.targetRounds }
+
+    /** What the goal editor allows: a name, and at least one named mantra with 1 to [MAX_TARGET_ROUNDS] rounds. */
+    val isValid: Boolean
+        get() = name.isNotBlank() && mantras.isNotEmpty() &&
+            mantras.all { it.name.isNotBlank() && it.targetRounds in 1..MAX_TARGET_ROUNDS }
+
+    companion object {
+        const val MAX_TARGET_ROUNDS = 999
+    }
 }
 
 /** Rounds and counts of one mantra within a session. */

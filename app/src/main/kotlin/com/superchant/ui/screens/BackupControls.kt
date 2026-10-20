@@ -70,8 +70,11 @@ internal fun BackupControls(
         busy = true
         scope.launch {
             val message = try {
-                val backup = preferencesRepository.exportBackup(System.currentTimeMillis())
-                writeText(context, uri, BackupCodec.encode(backup))
+                // Off the main thread: years of history take a while to decode and encode
+                val (backup, text) = withContext(Dispatchers.Default) {
+                    preferencesRepository.exportBackup(System.currentTimeMillis()).let { it to BackupCodec.encode(it) }
+                }
+                writeText(context, uri, text)
                 resources.getQuantityString(R.plurals.backup_exported, backup.history.size, backup.history.size, backup.goals.size)
             } catch (e: Exception) {
                 resources.getString(R.string.backup_export_failed)
@@ -86,7 +89,8 @@ internal fun BackupControls(
         busy = true
         scope.launch {
             val message = try {
-                val backup = BackupCodec.decode(readText(context, uri))
+                val text = readText(context, uri)
+                val backup = withContext(Dispatchers.Default) { BackupCodec.decode(text) }
                 val result = preferencesRepository.importBackup(backup)
                 // The backup may turn the reminder on; without the notification permission here it
                 // could never show, so it stays off until turned on in Settings (which asks for it)

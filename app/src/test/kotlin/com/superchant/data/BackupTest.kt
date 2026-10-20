@@ -74,6 +74,43 @@ class BackupTest {
     }
 
     @Test
+    fun goalsTheEditorCouldNotMakeAreSkipped() {
+        val text = """
+            {"app":"SuperChant","format":1,"goals":[
+              {"id":"ok","name":"Fine","mantras":[{"id":"m","name":"Om","targetRounds":999}]},
+              {"id":"blank","name":"  ","mantras":[{"id":"m","name":"Om","targetRounds":1}]},
+              {"id":"none","name":"No mantras","mantras":[]},
+              {"id":"zero","name":"Zero","mantras":[{"id":"m","name":"Om","targetRounds":0}]},
+              {"id":"huge","name":"Huge","mantras":[{"id":"m","name":"Om","targetRounds":1000}]},
+              {"id":"unnamed","name":"Unnamed mantra","mantras":[{"id":"m","name":" ","targetRounds":1}]}
+            ]}
+        """.trimIndent()
+        assertEquals(listOf("ok"), BackupCodec.decode(text).goals.map { it.id })
+    }
+
+    @Test
+    fun entriesWithoutIdsGetStableIdsSoReimportingAddsNothing() {
+        val text = """
+            {"app":"SuperChant","format":1,
+             "goals":[{"name":"By hand","mantras":[{"name":"Om","targetRounds":1},{"id":null,"name":"Ram","targetRounds":2}]}],
+             "history":[{"startTime":1,"endTime":2,"totalCounts":108,"totalRounds":1},
+                        {"id":null,"startTime":3,"endTime":4,"totalCounts":5,"totalRounds":0},
+                        {"startTime":1,"endTime":2,"totalCounts":108,"totalRounds":1}]}
+        """.trimIndent()
+        val first = BackupCodec.decode(text)
+        val second = BackupCodec.decode(text)
+        assertEquals(3, first.history.map { it.id }.toSet().size)
+        assertEquals(first.history, second.history)
+        assertEquals(first.goals.map { it.id }, second.goals.map { it.id })
+        assertEquals(first.goals.single().mantras, second.goals.single().mantras)
+
+        val history = BackupCodec.mergeHistory(BackupCodec.mergeHistory(emptyList(), first.history), second.history)
+        assertEquals(3, history.size)
+        val goals = BackupCodec.mergeGoals(BackupCodec.mergeGoals(emptyList(), first.goals), second.goals)
+        assertEquals(1, goals.size)
+    }
+
+    @Test
     fun rejectsOtherFilesAndNewerFormats() {
         assertThrows(BackupFormatException::class.java) { BackupCodec.decode("not json") }
         assertThrows(BackupFormatException::class.java) { BackupCodec.decode("[]") }

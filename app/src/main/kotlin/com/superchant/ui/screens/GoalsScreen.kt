@@ -78,6 +78,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -574,6 +577,9 @@ private fun GoalEditorScreen(
                                     elevation = elevation,
                                     onEdit = { editingMantraIndex = index },
                                     onDelete = { mantras.remove(mantra) },
+                                    // Dragging needs a long press and a drag; screen readers get these instead
+                                    onMoveUp = if (index > 0) { { mantras.add(index - 1, mantras.removeAt(index)) } } else null,
+                                    onMoveDown = if (index < mantras.lastIndex) { { mantras.add(index + 1, mantras.removeAt(index)) } } else null,
                                     modifier = Modifier.longPressDraggableHandle()
                                 )
                             }
@@ -654,12 +660,22 @@ private fun MantraListItem(
     elevation: Dp,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onMoveUp: (() -> Unit)?,
+    onMoveDown: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
+    val moveUpLabel = stringResource(R.string.goals_move_up)
+    val moveDownLabel = stringResource(R.string.goals_move_down)
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(elevation, RoundedCornerShape(12.dp)),
+            .shadow(elevation, RoundedCornerShape(12.dp))
+            .semantics {
+                customActions = listOfNotNull(
+                    onMoveUp?.let { move -> CustomAccessibilityAction(moveUpLabel) { move(); true } },
+                    onMoveDown?.let { move -> CustomAccessibilityAction(moveDownLabel) { move(); true } }
+                )
+            },
         colors = CardDefaults.cardColors(
             containerColor = if (isDragging) {
                 MaterialTheme.colorScheme.primaryContainer

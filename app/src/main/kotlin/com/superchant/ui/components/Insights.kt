@@ -50,21 +50,34 @@ import com.superchant.data.millisUntilNextMidnight
 import kotlinx.coroutines.delay
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import java.time.temporal.WeekFields
 import java.util.Locale
+import java.util.TimeZone
 
-/** Today's date, updated at midnight and whenever the screen resumes. */
+/** The time zone days are counted in, re-read whenever the screen resumes (e.g. after travelling). */
 @Composable
-fun rememberToday(): LocalDate {
-    var today by remember { mutableStateOf(LocalDate.now()) }
+fun rememberZone(): ZoneId {
+    var zone by remember { mutableStateOf(ZoneId.systemDefault()) }
     LifecycleResumeEffect(Unit) {
-        today = LocalDate.now()
+        zone = ZoneId.systemDefault()
         onPauseOrDispose { }
     }
-    LaunchedEffect(today) {
-        delay(millisUntilNextMidnight(System.currentTimeMillis()) + 1_000)
-        today = LocalDate.now()
+    return zone
+}
+
+/** Today's date in [zone], updated at midnight and whenever the screen resumes. */
+@Composable
+fun rememberToday(zone: ZoneId): LocalDate {
+    var today by remember(zone) { mutableStateOf(LocalDate.now(zone)) }
+    LifecycleResumeEffect(zone) {
+        today = LocalDate.now(zone)
+        onPauseOrDispose { }
+    }
+    LaunchedEffect(today, zone) {
+        delay(millisUntilNextMidnight(System.currentTimeMillis(), TimeZone.getTimeZone(zone)) + 1_000)
+        today = LocalDate.now(zone)
     }
     return today
 }
@@ -76,8 +89,9 @@ fun InsightsCard(
     dailyTarget: Int,
     modifier: Modifier = Modifier
 ) {
-    val today = rememberToday()
-    val daily = remember(sessions) { PracticeStats.dailyTotals(sessions) }
+    val zone = rememberZone()
+    val today = rememberToday(zone)
+    val daily = remember(sessions, zone) { PracticeStats.dailyTotals(sessions, zone) }
     val streak = remember(daily, today, dailyTarget) { PracticeStats.streak(daily, today, dailyTarget) }
     val mantras = remember(sessions) { PracticeStats.mantraTotals(sessions) }
 
@@ -282,8 +296,9 @@ fun TodayLine(
     modifier: Modifier = Modifier
 ) {
     if (sessions.isEmpty() && dailyTarget == 0) return
-    val today = rememberToday()
-    val daily = remember(sessions) { PracticeStats.dailyTotals(sessions) }
+    val zone = rememberZone()
+    val today = rememberToday(zone)
+    val daily = remember(sessions, zone) { PracticeStats.dailyTotals(sessions, zone) }
     val streak = remember(daily, today, dailyTarget) { PracticeStats.streak(daily, today, dailyTarget) }
     val rounds = daily[today]?.rounds ?: 0
     val todayText = if (dailyTarget > 0) {

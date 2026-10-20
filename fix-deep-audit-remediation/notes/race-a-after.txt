@@ -1,0 +1,19 @@
+Race (a) on FIXED release 2.2026.293 (commit 2dace30, emulator-5554), 2026-10-20, same ~3070-session history.
+Each run: Start, 5 touch counts, HOME or BACK, then in one shell: STOP service action + am start MainActivity; checked 3 s later.
+
+Warning: Activity not started, intent has been delivered to currently running top-most instance.
+run 1 (KEYCODE_HOME) sid=12e01583 services_running=0
+active_session: none
+history has 12e01583-e695-4f4e-ab9b-ed318fe4fd32: [(5, None)]
+Warning: Activity not started, intent has been delivered to currently running top-most instance.
+run 2 (KEYCODE_BACK) sid=0000e471 services_running=0
+active_session: none
+history has 0000e471-25b5-4bb5-879e-fca28e69570e: [(5, None)]
+Warning: Activity not started, intent has been delivered to currently running top-most instance.
+run 3 (KEYCODE_HOME) sid=13049da8 services_running=0
+active_session: none
+history has 13049da8-0524-479d-8e49-34fe15d5e705: [(5, None)]
+Warning: Activity not started, intent has been delivered to currently running top-most instance.
+run 4 (KEYCODE_BACK) sid=e3acf619 services_running=0
+active_session: none
+history has e3acf619-bd00-4d8b-b908-159156a1655c: [(5, None)]

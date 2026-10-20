@@ -1,0 +1,51 @@
+F1 on FIXED release: a stored goal named '   ' (as an older version's import could store) added to saved_goals, then cold launch:
+LaunchState: COLD
+crash buffer lines: 0; focus: com.superchant/com.superchant.MainActivity}
+dynamic shortcuts:
+shortLabel=Add contact
+shortLabel=Battery
+shortLabel=Compose
+shortLabel=Evening Japa
+shortLabel=Explore
+shortLabel=Home
+shortLabel=Images
+shortLabel=Morning Sadhana
+shortLabel=New alarm
+shortLabel=New contact
+shortLabel=New conversation
+shortLabel=New event
+shortLabel=New tab
+shortLabel=New timer
+shortLabel=Scan
+shortLabel=Screen saver
+shortLabel=Search
+shortLabel=Shorts
+shortLabel=Start
+shortLabel=Start counting
+shortLabel=Subscriptions
+shortLabel=Upload
+shortLabel=Voice search
+shortLabel=Wi‑Fi
+shortLabel=Work
+
+Before/after with the same data: unfixed release (APK pulled from the emulator at 20:17, before the fix):
+Success
+LaunchState: WARM
+-> reinstall FIXED release:
+Success
+LaunchState: WARM
+crash buffer lines: 0; focus: com.superchant/com.superchant.MainActivity}
+
+Retry with an EMPTY name (""): Android's shortcut builder rejects only empty labels, so '   ' never crashed either build.
+Unfixed release:
+Success
+LaunchState: COLD
+10-20 21:07:58.558 10110 10110 E AndroidRuntime: FATAL EXCEPTION: main
+10-20 21:07:58.558 10110 10110 E AndroidRuntime: java.lang.IllegalArgumentException: Shortcut must have a non-empty label
+-> FIXED release:
+Success
+LaunchState: WARM
+crash buffer lines: 0; focus: com.superchant/com.superchant.MainActivity}
+id=goal_15bf60ec-d0cd-49f3-b71e-45122169c619	shortLabel=Morning Sadhana
+id=goal_515825fd-da95-4ec7-b610-0e5a33b6f994	shortLabel=Evening Japa
+id=start_counting	shortLabel=Start counting

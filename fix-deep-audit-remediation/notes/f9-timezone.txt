@@ -1,0 +1,9 @@
+F9 timezone change while History is open (emulator-5554, release builds)
+Tue Oct 20 21:18:01 IST 2026
+installed unfixed
+IST times:           9:03 PM
+after -> New York:   9:03 PM   (device: 11:48_EDT)
+installed fixed
+IST times:           9:03 PM
+after -> New York:   11:33 AM   (device: 11:48_EDT)
+crash lines:        0

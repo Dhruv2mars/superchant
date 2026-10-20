@@ -1,0 +1,25 @@
+F8: backup export/import work on the main thread
+Method: release builds on emulator-5554 (Pixel 9, API 35, 4 cores); 3,076-session history (1.59 MB backup).
+Looper slow-dispatch log for the app's main thread (setprop log.looper.10224.main.slow 40): every main-thread
+message that took 40 ms or more. Settings > Export (system picker, SAVE), then Settings > Import of that export.
+"r9"/"s9" = the obfuscated Compose UI coroutine dispatcher (coroutine work on Main); Choreographer = frame rendering.
+
+UNFIXED (dev, c34403b)
+  export  "Exported 3076 sessions and 3 goals"   coroutine on Main: 656 ms (decode + encode of the whole history)
+  import  "Imported 0 new sessions and 3 goals"  coroutine on Main: 237 ms + 84 ms
+
+FIXED v1 (decode/encode moved off Main; importBackup still called from the UI scope)
+  export  coroutine on Main: none
+  import  coroutine on Main: 179 ms  <- DataStore runs the edit {} transform in the caller's context
+          (DataStoreImpl$transformAndWrite$2 -> withContext(callerContext) in datastore-core 1.2.1)
+
+FIXED v2 (final: the import merge runs inside withContext(Dispatchers.Default) too)
+  run 1  export: none   import: none
+  run 2  export: none   import: none
+  run 4  export: none   import: none
+  (run 3's import never ran: the picker had switched to grid view and the file tap missed; harness issue)
+
+Remaining slow messages in every build (unfixed included) are Choreographer frames when the app returns from
+the system file picker: 41-411 ms, one 674 ms outlier (v2 run 1); the import frames in v2 runs 2/4 peaked at 185/200 ms.
+Re-import of an export added 0 sessions in every run (idempotent).
+Raw: /tmp/sc-remed/f8/{unfixed,fixed}-slow-3k.txt, fixed-v2-slow-3k.txt, fixed-v2-slow-3k-more.txt

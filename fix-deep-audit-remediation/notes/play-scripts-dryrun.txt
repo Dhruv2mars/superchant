@@ -1,0 +1,13 @@
+old NN 12:01 / 12:14: 48 48
+new NN after 2629348 exists: 49
+Promoted 2629348 (tree 1a2b3c4d5e6f) ['2629348'] from internal to alpha
+('POST', 'edits', None)
+('GET', 'edits/E1/bundles', None)
+('GET', 'edits/E1/apks', None)
+('GET', 'edits/E1/tracks', None)
+('DELETE', 'edits/E1', None)
+('POST', 'edits', None)
+('GET', 'edits/E1/tracks/internal', None)
+('PUT', 'edits/E1/tracks/alpha', {'track': 'alpha', 'releases': [{'versionCodes': ['2629348'], 'status': 'completed', 'name': '2629348 (tree 1a2b3c4d5e6f)', 'releaseNotes': [{'language': 'en-US', 'text': 'x'}]}]})
+('POST', 'edits/E1:commit', None)
+exit: No completed internal release was built from this source (tree 000000000000); internal has ['2629349 (tree ffffffffffff)', '2629348 (tree 1a2b3c4d5e6f)']. Wait for (or re-run) the internal upload of this source, then re-run this workflow.

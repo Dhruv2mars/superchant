@@ -1,0 +1,6 @@
+Race (a) on unfixed release 2.2026.293 (emulator-5554), 2026-10-20, history inflated to ~3000 sessions (835 KB):
+1. Free session, 3 touch counts (sessionId aec9c170-aa1b-4bff-a7b0-1cb071571384); HOME pressed.
+2. Same shell: am startservice ... -a com.superchant.action.STOP ; am start -n com.superchant/.MainActivity
+Result after 3 s: Home shows "Count 3 of 108" with Stop; ChantingService isForeground=true;
+history has {"id":"aec9c170-...","totalCounts":3}; active_session.preferences_pb is 0 bytes.
+-> The stopped session was saved AND resumed, and the running copy is no longer persisted.

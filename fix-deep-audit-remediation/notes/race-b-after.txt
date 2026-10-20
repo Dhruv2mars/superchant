@@ -1,0 +1,23 @@
+Race (b) on FIXED release 2.2026.293 (commit 2dace30, emulator-5554), 2026-10-20.
+1. Goal shortcut intent for Morning Sadhana, 7 touch counts:
+active_session: {'sessionId': '10f3ada5-a5ec-4fa0-9369-a929e37c933f', 'count': 7, 'isPaused': False, 'touchCounting': True, 'lastUpdatedAt': 1792510398651} goal: Morning Sadhana
+history entries: 3074
+2. am force-stop com.superchant; 3. plain START_COUNTING intent (cold):
+LaunchState: COLD
+active_session: {'sessionId': '10f3ada5-a5ec-4fa0-9369-a929e37c933f', 'count': 7, 'isPaused': False, 'touchCounting': True, 'lastUpdatedAt': 1792510398651} goal: Morning Sadhana
+history entries: 3074
+history has 10f3ada5-a5ec-4fa0-9369-a929e37c933f: []
+service: 1 running
+
+Tile variant: am force-stop, then cmd statusbar click-tile (cold):
+active_session: {'sessionId': '10f3ada5-a5ec-4fa0-9369-a929e37c933f', 'count': 7, 'isPaused': False, 'touchCounting': True, 'lastUpdatedAt': 1792510398651} goal: Morning Sadhana
+history entries: 3074
+history has 10f3ada5-a5ec-4fa0-9369-a929e37c933f: []
+service: 0 running; focus: com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}
+
+Tile, real tap: am force-stop; swipe open Quick Settings; tap the inactive 'SuperChant / Tap to start' tile (cold):
+active_session: {'sessionId': '10f3ada5-a5ec-4fa0-9369-a929e37c933f', 'count': 7, 'isPaused': False, 'touchCounting': True, 'lastUpdatedAt': 1792510398651} goal: Morning Sadhana
+history entries: 3074
+history has 10f3ada5-a5ec-4fa0-9369-a929e37c933f: []
+service: 2 running; focus: com.superchant/com.superchant.MainActivity}
+(Note: in the click-tile attempt above, the tile service of the force-stopped package only bound ~18 s later; logcat then shows START_COUNTING from the tile at 21:03:58.984 and the app sending RESTORE at 21:04:00.783, i.e. the same resume. The real-tap run below is the clean check.)

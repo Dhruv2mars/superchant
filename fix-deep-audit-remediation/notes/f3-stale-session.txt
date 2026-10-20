@@ -1,0 +1,6 @@
+F3 on FIXED release (emulator-5554): active session 10f3ada5-a5ec-4fa0-9369-a929e37c933f (Morning Sadhana, 7 counts) rewritten with lastUpdatedAt = now - 4 h, app force-stopped, then cold launch:
+LaunchState: WARM
+active_session: none
+history entries: 3075
+history has 10f3ada5-a5ec-4fa0-9369-a929e37c933f: [(7, 'Morning Sadhana')]
+service: 0 ChantingService running; crash buffer lines: 0

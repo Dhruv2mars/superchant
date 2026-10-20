@@ -1,0 +1,14 @@
+[fixed] export: text="Exported 3076 sessions and 3 goals"
+[fixed]      1 Slow dispatch took 92ms c=android.view.Choreographer$FrameDisplayEventReceiver@2a2558c
+[fixed]      1 Slow dispatch took 80ms c=android.view.Choreographer$FrameDisplayEventReceiver@2a2558c
+[fixed]      1 Slow dispatch took 267ms c=android.view.Choreographer$FrameDisplayEventReceiver@2a2558c
+[fixed]      1 Slow dispatch took 182ms c=android.view.Choreographer$FrameDisplayEventReceiver@2a2558c
+[fixed]      1 Slow delivery took 92ms c=s9@473a742
+[fixed]      1 Slow delivery took 265ms c=s9@473a742
+[fixed] import of that export: text="Imported 0 new sessions and 3 goals"
+[fixed]      1 Slow dispatch took 93ms c=android.view.Choreographer$FrameDisplayEventReceiver@2a2558c
+[fixed]      1 Slow dispatch took 376ms c=android.view.Choreographer$FrameDisplayEventReceiver@2a2558c
+[fixed]      1 Slow dispatch took 179ms c=s9@473a742
+[fixed]      1 Slow dispatch took 101ms c=android.view.Choreographer$FrameDisplayEventReceiver@2a2558c
+[fixed]      1 Slow delivery took 56ms c=AwaitContinuation(DispatchedContinuation[Dispatchers.Main.immediate,
+[fixed]      1 Slow delivery took 174ms c=android.view.Choreographer$FrameDisplayEventReceiver@2a2558c

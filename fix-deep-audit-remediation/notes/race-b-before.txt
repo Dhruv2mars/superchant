@@ -1,0 +1,6 @@
+Race (b) on unfixed release 2.2026.293 (emulator-5554), 2026-10-20:
+1. Started goal "Morning Sadhana" via goal shortcut intent; 7 touch counts; active_session persisted count=7 with activeGoal.
+2. am force-stop com.superchant
+3. am start -a com.superchant.action.START_COUNTING -n com.superchant/.MainActivity (plain, no goal)
+Result: Home shows "Count 0 of 108" free session; active_session now count=0 activeGoal=null;
+history gained {"totalCounts":7,"goalName":"Morning Sadhana"} -> goal session ended instead of resumed.

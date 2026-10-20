@@ -1,0 +1,14 @@
+F10 on FIXED release: goal editor for Morning Sadhana, accessibility tree read through UiAutomation (same connection as 'uiautomator dump'):
+node [Drag to reorder | 1 | Om Namah Shivaya | 4 rounds | Edit | Delete] custom actions: Move down
+node [Drag to reorder | 2 | Gayatri Mantra | 1 round | Edit | Delete] custom actions: Move up, Move down
+node [Drag to reorder | 3 | Mahamrityunjaya Mantra | 2 rounds | Edit | Delete] custom actions: Move up
+> perform 'Move down' on the first mantra row:
+performed Move down on Drag to reorder | 1 | Om Namah Shivaya
+node [Drag to reorder | 1 | Gayatri Mantra | 1 round | Edit | Delete] custom actions: Move down
+node [Drag to reorder | 2 | Om Namah Shivaya | 4 rounds | Edit | Delete] custom actions: Move down, Move up
+node [Drag to reorder | 3 | Mahamrityunjaya Mantra | 2 rounds | Edit | Delete] custom actions: Move up
+> perform 'Move up' on the last mantra row:
+performed Move up on Drag to reorder | 3 | Mahamrityunjaya Mantra
+node [Drag to reorder | 1 | Gayatri Mantra | 1 round | Edit | Delete] custom actions: Move down
+node [Drag to reorder | 2 | Mahamrityunjaya Mantra | 2 rounds | Edit | Delete] custom actions: Move up, Move down
+node [Drag to reorder | 3 | Om Namah Shivaya | 4 rounds | Edit | Delete] custom actions: Move up

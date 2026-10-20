@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZonedDateTime
@@ -32,11 +33,27 @@ object ReminderTime {
 
     fun isValid(minuteOfDay: Int) = minuteOfDay in 0 until 24 * 60
 
+    /** How late a reminder that hasn't fired yet is still kept: the alarm's delivery window. */
+    const val GRACE_MINUTES = 15L
+
     /** The next time strictly after [now] at [minuteOfDay] local time (a DST gap moves it later). */
     fun nextTrigger(now: ZonedDateTime, minuteOfDay: Int): ZonedDateTime {
         val time = LocalTime.of(minuteOfDay / 60, minuteOfDay % 60)
         val today = ZonedDateTime.of(now.toLocalDate(), time, now.zone)
         return if (today.isAfter(now)) today else ZonedDateTime.of(now.toLocalDate().plusDays(1), time, now.zone)
+    }
+
+    /**
+     * The reminder to schedule when re-syncing at [now] (opening the app, boot, a clock change). One that
+     * was due in the last [GRACE_MINUTES] and hasn't been handled (fired, or the setting changed) since its
+     * time is kept, though slightly in the past, so the alarm still fires; re-syncing within its window
+     * used to replace it with tomorrow's. [handledThrough] is epoch millis, 0 if never; a value ahead
+     * of [now] (the clock was set back) counts as now.
+     */
+    fun syncTrigger(now: ZonedDateTime, minuteOfDay: Int, handledThrough: Long): ZonedDateTime {
+        val graceStart = now.minusMinutes(GRACE_MINUTES)
+        val handled = Instant.ofEpochMilli(minOf(handledThrough, now.toInstant().toEpochMilli())).atZone(now.zone)
+        return nextTrigger(if (handled.isAfter(graceStart)) handled else graceStart, minuteOfDay)
     }
 }
 
@@ -50,20 +67,23 @@ object ReminderScheduler {
     private const val REQUEST_CODE = 200
 
     fun schedule(context: Context, minuteOfDay: Int, now: ZonedDateTime = ZonedDateTime.now()) {
+        setAlarm(context, ReminderTime.nextTrigger(now, minuteOfDay))
+    }
+
+    private fun setAlarm(context: Context, trigger: ZonedDateTime) {
         val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return
-        val trigger = ReminderTime.nextTrigger(now, minuteOfDay).toInstant().toEpochMilli()
-        alarmManager.setWindow(AlarmManager.RTC_WAKEUP, trigger, WINDOW_MS, pendingIntent(context))
+        alarmManager.setWindow(AlarmManager.RTC_WAKEUP, trigger.toInstant().toEpochMilli(), WINDOW_MS, pendingIntent(context))
     }
 
     fun cancel(context: Context) {
         context.getSystemService(AlarmManager::class.java)?.cancel(pendingIntent(context))
     }
 
-    /** Matches the alarm to the stored settings. */
+    /** Matches the alarm to the stored settings, keeping one that is due but hasn't fired yet. */
     suspend fun sync(context: Context) {
-        val repository = PreferencesRepository.get(context)
-        val settings = repository.reminder.filterNotNull().first()
-        if (settings.enabled) schedule(context, settings.minuteOfDay) else cancel(context)
+        val (settings, handledThrough) = PreferencesRepository.get(context).afterWrites { loadReminder() }
+        if (!settings.enabled) return cancel(context)
+        setAlarm(context, ReminderTime.syncTrigger(ZonedDateTime.now(), settings.minuteOfDay, handledThrough))
     }
 
     private fun pendingIntent(context: Context): PendingIntent = PendingIntent.getBroadcast(
@@ -114,7 +134,10 @@ class ReminderReceiver : BroadcastReceiver() {
         if (intent.action != ACTION_REMIND) return
         val appContext = context.applicationContext
         runAsync {
+            val firedAt = System.currentTimeMillis()
             remindIfNeeded(appContext)
+            // Today's reminder is done, so the sync below schedules tomorrow's
+            PreferencesRepository.get(appContext).write { setReminderHandledThrough(firedAt) }
             ReminderScheduler.sync(appContext)
         }
     }

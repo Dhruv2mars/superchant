@@ -45,7 +45,7 @@ signed with the debug key, so it still builds and installs locally.
 |---------|-------|
 | Package / namespace | `com.superchant` |
 | minSdk / targetSdk / compileSdk | 26 / 36 / 37 |
-| Version | Date-based, computed in `app/build.gradle.kts`: `versionName` 2.YYYY.DDD, `versionCode` YYDDDNN (`-PbuildNumber=NN` for a second upload the same day) |
+| Version | Date-based, computed in `app/build.gradle.kts`: `versionName` 2.YYYY.DDD, `versionCode` YYDDDNN (`-PreleaseDate=YYYY-MM-DD`, `-PbuildNumber=NN`; CI takes NN one above the highest code Play has that day, `scripts/play_version.py`) |
 | Variants | `release` = `com.superchant` (Play Store); `debug` = `com.superchant.dev` "SuperChant Dev", installs side by side |
 | JVM target | 17 |
 | Toolchain | AGP 9 (built-in Kotlin), Gradle 9, Kotlin 2.4 |
@@ -190,11 +190,15 @@ printf '%s\n' \
 
 - Branches: `dev` is the default and integration branch; `main` is production. Open PRs against `dev`; never
   push to `dev` or `main` directly.
-  - CI (`.github/workflows/ci.yml`) runs build, lint, test and an INTERNET-permission guard on every PR.
+  - CI (`.github/workflows/ci.yml`) runs build, lint, test, the release script tests (`scripts/test_play.py`)
+    and an INTERNET-permission guard on every PR.
   - Every push to `dev` builds a signed bundle and uploads it to the Play **internal testing** track
-    (`release-internal.yml`), so the owner's Play Store install updates within minutes.
-  - Merging `dev` into `main` promotes that same bundle (`promote.yml`, `scripts/play_promote.py`) to the track
-    in repo variable `PLAY_PROMOTE_TRACK` (`alpha` = closed testing until production access is granted).
+    (`release-internal.yml`), so the owner's Play Store install updates within minutes. The release is named
+    `<versionCode> (tree <first 12 hex digits of the source tree>)`.
+  - Merging `dev` into `main` promotes the internal release built from main's exact source tree (`promote.yml`,
+    `scripts/play_promote.py`) to the track in repo variable `PLAY_PROMOTE_TRACK` (`alpha` = closed testing until
+    production access is granted). If no completed internal release matches, it fails instead of promoting
+    another build; re-run it once the matching `dev` upload has finished.
   - Secrets: `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_KEYSTORE_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`.
 - Put verification evidence in the PR description. Screenshots go on the orphan `ux-evidence` branch (one folder
   per PR), never in `dev`/`main`. Play Store listing assets under `docs/play-store/` are the exception.

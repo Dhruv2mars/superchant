@@ -25,6 +25,10 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --quiet google-auth requests
 
       - name: Signing config
         env:
@@ -40,15 +44,29 @@ jobs:
             echo "RELEASE_KEY_PASSWORD=$UPLOAD_KEYSTORE_PASSWORD"
           } > local.properties
 
-      # versionCode YYDDDNN: NN = quarter-hour of the IST day (0-95), so every build that day sorts higher.
+      # versionCode YYDDDNN (IST day): NN is one above the highest code Play has for the day, so every upload
+      # sorts higher and a re-run never reuses a code. The release name carries the source tree, which
+      # promote.yml uses to find the bundle built from main's exact source.
       - name: Version
         id: version
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
-          n=$(( (10#$(TZ=Asia/Kolkata date +%H) * 60 + 10#$(TZ=Asia/Kolkata date +%M)) / 15 ))
-          echo "build_number=$n" >> "$GITHUB_OUTPUT"
+          date=$(TZ=Asia/Kolkata date +%F)
+          day=$(date -d "$date" +%y%j)
+          n=$(python scripts/play_version.py com.superchant "$day")
+          tree=$(git rev-parse 'HEAD^{tree}')
+          {
+            echo "release_date=$date"
+            echo "build_number=$n"
+            echo "release_name=$day$(printf %02d "$n") (tree ${tree:0:12})"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Check and build
-        run: ./gradlew lint test bundleRelease -PbuildNumber=${{ steps.version.outputs.build_number }}
+        run: >-
+          ./gradlew lint test bundleRelease
+          -PreleaseDate=${{ steps.version.outputs.release_date }}
+          -PbuildNumber=${{ steps.version.outputs.build_number }}
 
       - name: "Guard - no INTERNET permission"
         run: |
@@ -70,6 +88,7 @@ jobs:
           packageName: com.superchant
           releaseFiles: app/build/outputs/bundle/release/app-release.aab
           track: internal
+          releaseName: ${{ steps.version.outputs.release_name }}
           status: completed
           whatsNewDirectory: whatsnew
 

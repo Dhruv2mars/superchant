@@ -33,7 +33,7 @@ object ReminderTime {
 
     fun isValid(minuteOfDay: Int) = minuteOfDay in 0 until 24 * 60
 
-    /** How late a reminder that hasn't fired yet is still kept: the alarm's delivery window. */
+    /** How late yesterday's reminder (or one never marked handled) is still kept: the alarm's delivery window. */
     const val GRACE_MINUTES = 15L
 
     /** The next time strictly after [now] at [minuteOfDay] local time (a DST gap moves it later). */
@@ -44,16 +44,20 @@ object ReminderTime {
     }
 
     /**
-     * The reminder to schedule when re-syncing at [now] (opening the app, boot, a clock change). One that
-     * was due in the last [GRACE_MINUTES] and hasn't been handled (fired, or the setting changed) since its
-     * time is kept, though slightly in the past, so the alarm still fires; re-syncing within its window
-     * used to replace it with tomorrow's. [handledThrough] is epoch millis, 0 if never; a value ahead
-     * of [now] (the clock was set back) counts as now.
+     * The reminder to schedule when re-syncing at [now] (opening the app, boot, an update, a clock change).
+     * Today's reminder that hasn't been handled (fired, or the setting changed) since its time is kept,
+     * however late, so the alarm still fires: Doze and battery saver can hold it for hours, and re-syncing
+     * used to replace it with tomorrow's. Yesterday's is kept only within [GRACE_MINUTES]. [handledThrough]
+     * is epoch millis; 0 (never recorded, set up before it was) also keeps only [GRACE_MINUTES], and a
+     * value ahead of [now] (the clock was set back) counts as now.
      */
     fun syncTrigger(now: ZonedDateTime, minuteOfDay: Int, handledThrough: Long): ZonedDateTime {
         val graceStart = now.minusMinutes(GRACE_MINUTES)
+        // Just before midnight, so a reminder at 0:00 is today's
+        val today = now.toLocalDate().atStartOfDay(now.zone).minusNanos(1)
+        val keepFrom = if (handledThrough == 0L || graceStart.isBefore(today)) graceStart else today
         val handled = Instant.ofEpochMilli(minOf(handledThrough, now.toInstant().toEpochMilli())).atZone(now.zone)
-        return nextTrigger(if (handled.isAfter(graceStart)) handled else graceStart, minuteOfDay)
+        return nextTrigger(if (handled.isAfter(keepFrom)) handled else keepFrom, minuteOfDay)
     }
 }
 

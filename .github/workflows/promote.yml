@@ -1,6 +1,7 @@
 name: Promote to Play
 
-# Merging dev into main promotes the exact bundle the owner has been using from internal testing.
+# Merging dev into main promotes the internal testing bundle built from main's exact source (matched by
+# git tree, see release-internal.yml); it fails instead of promoting a different build.
 # Target track: repo variable PLAY_PROMOTE_TRACK (default "alpha" = closed testing; "production" once allowed).
 on:
   push:
@@ -8,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       track:
-        description: Track to promote the latest internal release to
+        description: Track to promote this commit's internal release to
         default: alpha
 
 concurrency:
@@ -28,8 +29,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install --quiet google-auth requests
-      - name: Promote latest internal release
+      - name: Promote the internal release built from this commit
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           TARGET_TRACK: ${{ inputs.track || vars.PLAY_PROMOTE_TRACK || 'alpha' }}
-        run: python scripts/play_promote.py com.superchant internal "$TARGET_TRACK"
+        run: python scripts/play_promote.py com.superchant internal "$TARGET_TRACK" "$(git rev-parse 'HEAD^{tree}')"

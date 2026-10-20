@@ -4,6 +4,7 @@ build/
 *.aab
 *.dex
 *.class
+__pycache__/
 
 # Gradle / Kotlin
 .gradle/

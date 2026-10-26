@@ -62,6 +62,8 @@ export function Icon({ name, size = 24, color = 'onSurfaceVariant' }: { name: Ic
   return (
     <View style={{ width: size, height: size }} accessible={false} importantForAccessibility="no-hide-descendants">
       <Text
+        accessible={false}
+        importantForAccessibility="no"
         style={{
           fontFamily: FILLED[name] ? 'MaterialSymbolsFilled' : 'MaterialSymbols',
           fontSize: size,

@@ -2,15 +2,25 @@
 
 Instructions for coding agents (Codex reads this file; Claude Code reads it through `CLAUDE.md`).
 
-SuperChant is a native Kotlin/Jetpack Compose Android app: a calm, offline digital japa mala. It counts
-chants (108 per round) with the volume keys and/or on-screen taps. An AccessibilityService intercepts
-volume key presses, a foreground service owns the session state, and DataStore Preferences persists
-settings, goals and history (as JSON via kotlinx.serialization).
+SuperChant is a calm digital japa mala. It counts chants (108 per round) with the volume keys and/or on-screen
+taps. Two apps live in this repo:
+
+- **`app/`: the native Kotlin/Jetpack Compose Android app**, on Google Play today. An AccessibilityService
+  intercepts volume key presses, a foreground service owns the session state, and DataStore Preferences
+  persists settings, goals and history (as JSON via kotlinx.serialization).
+- **`expo/`: the Expo (React Native) app for iOS and Android** that will replace `app/` on Play when Dhruv
+  decides to switch (same package `com.superchant`, same upload key, same data). See "The Expo app" below.
+
+Until the switch, keep `app/`, its CI and the Play pipeline working; changes to shared behavior go into both.
 
 ## Product rules (don't break these)
 
-- **No INTERNET permission, ever.** No network, analytics, crash reporting, ads or accounts. Check the merged
-  release manifest when adding a dependency.
+- **No network except app updates.** The Expo app may go online only to check for and download updates
+  (EAS Update, `u.expo.dev` and `assets.eascdn.net`); its Android release build trusts TLS for those hosts
+  only. No analytics, crash reporting (expo-updates' `Expo-Fatal-Error` header is blanked), ads or accounts.
+  The Kotlin app still has no INTERNET permission. Check the merged release manifest when adding a dependency
+  (`expo-notifications` links Firebase; don't add it).
+- **OTA updates are for fixes and polish** (App Review 2.5.2); new features ship in store builds.
 - **A round is always 108.** There is no round-size setting.
 - **Counting stays simple:** volume buttons count whenever the accessibility service is set up; touch counting
   is one on/off toggle on the session screen. No input-mode chooser, no undo, no hold-to-stop, no focus mode,
@@ -20,6 +30,7 @@ settings, goals and history (as JSON via kotlinx.serialization).
   The service never reads screen content (`canRetrieveWindowContent=false`, no event types). If you change what
   the service or the `specialUse` foreground service does, the Play Console declarations, `PRIVACY_POLICY.md`
   and `docs/play-store/STORE_LISTING.md` must be updated to match.
+- **iOS never counts volume buttons** (App Review 2.5.9). iPhone counts taps and shows a Live Activity.
 - Keep it minimal and quiet: add a feature only if it clearly helps someone while they chant.
 
 ## Commands
@@ -123,6 +134,51 @@ app/src/test/kotlin/com/superchant/  # JVM unit tests (JUnit 4)
    `roundSize`/`inputMode`/`pocketGuard` fields in old sessions and backups are never read (JSON uses
    `ignoreUnknownKeys`). Don't reuse those keys. A restored active session's rounds and goal progress are
    recomputed from its count at 108 (`ChantState.normalizedRounds`).
+
+## The Expo app (`expo/`)
+
+Expo SDK 58 (React Native 0.88, expo-router), bun, TypeScript. `ios/` and `android/` are generated
+(Continuous Native Generation): configure them in `app.config.ts` and the config plugins, never by hand.
+
+**The count loop is native on each platform; JavaScript never runs per count.**
+- Android: `modules/superchant-native/android` is the Kotlin app's engine moved into a local Expo module with
+  its class names unchanged (`com.superchant.service.*`, `com.superchant.data.*`, ...), so an enabled
+  accessibility service, an added tile and the DataStore files carry over on update. The Compose ring and tap
+  pad are a native view (`CounterView`) that collects `ChantingService.chantStateFlow` itself. The bridge
+  (`com/superchant/bridge/SuperchantNativeModule.kt`) sends JS only coarse session changes (start, stop,
+  pause, a round, goal progress), settings, goals and history.
+- iOS: `modules/superchant-native/ios` runs the session in Swift (`SessionEngine`, Core Haptics, the bead
+  click, a SwiftUI `CounterView`, the Live Activity with a `LiveActivityIntent` pause/resume button). Storage
+  is TypeScript (`src/core/repository.ts`, the Kotlin repository's rules over UserDefaults).
+  `targets/widget` is the Live Activity extension (`@bacons/apple-targets`); its `Shared.swift` copies
+  `ChantActivityAttributes` and `TogglePauseIntent` from `ios/LiveActivity.swift`, keep them identical.
+- JS (`src/`): screens in `src/app` (Home, Goals, goal-editor, History, Settings), UI kit in `src/ui`, pure
+  cores in `src/core` (kotlinx-compatible JSON, model and counting rules, stored lists, backup codec, stats,
+  reminder plan), platform layer in `src/native/platform.{android,ios}.ts`, strings in `src/i18n/strings.ts`.
+
+```bash
+cd expo
+bun install
+bun run test            # TS cores in three time zones (UTC, New York, Kolkata)
+bun run test:swift      # Swift model against the Kotlin vectors (swiftc, no Xcode needed)
+bunx tsc --noEmit
+bunx expo prebuild --clean            # regenerate android/ and ios/
+cd android && ./gradlew :superchant-native:testDebugUnitTest :app:assembleRelease
+bunx expo run:ios --configuration Release   # needs Xcode
+```
+
+- **Golden fixtures.** `app/src/test/.../GoldenFixturesTest.kt` runs the Kotlin decoders, encoders and counting
+  rules over edge cases and writes `expo/src/core/__fixtures__/golden.json`
+  (`GOLDEN_WRITE=1 ./gradlew test --tests "com.superchant.data.GoldenFixturesTest" --rerun`); the TS and Swift
+  tests replay it byte for byte. Change a rule in Kotlin, regenerate, and make TS and Swift match.
+- **Kotlin in two places.** Until the switch, engine changes in `app/src/main/kotlin` must be copied to
+  `expo/modules/superchant-native/android` (the module's tests are the app's JVM tests).
+- Debug builds are `com.superchant.dev` ("SuperChant Dev") like the Kotlin app; the release is signed from the
+  repo-root `local.properties` `RELEASE_*` keys, or the debug key without them.
+- Versions use the same date scheme (`RELEASE_DATE`, `BUILD_NUMBER` env vars), so an Expo build is a normal
+  Play update over the Kotlin app.
+- Updates: set `EAS_PROJECT_ID` (and optionally `EAS_UPDATE_CHANNEL`) to enable expo-updates; without it the
+  build runs only its embedded bundle.
 
 ## Design and motion skills
 

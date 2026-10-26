@@ -135,3 +135,12 @@ now `dev`).
 ## Declarations
 Accessibility API, foreground service and the re-check of the other App content answers:
 see [`DECLARATIONS.md`](DECLARATIONS.md).
+
+## When Play switches to the Expo build
+
+The Expo app (`expo/`) checks for app updates online, so two pieces of the listing change on switch day:
+
+- Full description, "YOUR DATA STAYS WITH YOU", first bullet:
+  `• No account, no ads and no analytics. SuperChant goes online only to check for app updates and never sends your practice data anywhere.`
+- Screenshot 8 caption: "No account, no ads, no tracking" (re-render `08-private.png` with `docs/play-store/tools`).
+

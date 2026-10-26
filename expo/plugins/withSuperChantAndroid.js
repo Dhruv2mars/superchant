@@ -2,7 +2,7 @@
 // generated android/ project: the "SuperChant Dev" debug package next to the Play app, launcher shortcuts, backup
 // rules, release signing from the untracked local.properties, the exact launcher icon vectors, and a release-only
 // network lockdown that lets TLS reach the update servers and nothing else.
-const { withAppBuildGradle, withAndroidManifest, withDangerousMod, AndroidConfig } = require('expo/config-plugins');
+const { withAppBuildGradle, withAndroidManifest, withDangerousMod, withGradleProperties, AndroidConfig } = require('expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
@@ -167,4 +167,13 @@ function withGradle(config) {
   });
 }
 
-module.exports = (config) => withGradle(withManifest(withFiles(config)));
+// R8 and lint over the Compose + React Native release build need more than the template's 512 MB metaspace
+function withMemory(config) {
+  return withGradleProperties(config, (cfg) => {
+    cfg.modResults = cfg.modResults.filter((p) => !(p.type === 'property' && p.key === 'org.gradle.jvmargs'));
+    cfg.modResults.push({ type: 'property', key: 'org.gradle.jvmargs', value: '-Xmx4096m -XX:MaxMetaspaceSize=1536m' });
+    return cfg;
+  });
+}
+
+module.exports = (config) => withMemory(withGradle(withManifest(withFiles(config))));

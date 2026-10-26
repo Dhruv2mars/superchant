@@ -153,3 +153,34 @@ are the Accessibility and Foreground service declarations above.
   the reminder) all stay on the device.
 - Unconfirmed: Play's help doesn't mention Android Auto Backup specifically. The treatment above is the common
   reading (checked support.google.com/googleplay/android-developer/answer/10787469 on Oct 19).
+
+## 4. When Play switches to the Expo build (`expo/`)
+
+The answers above describe the Kotlin app (`app/`), which has no INTERNET permission. The Expo app adds
+INTERNET for one purpose, EAS Update (checking for and downloading app updates from `u.expo.dev` and
+`assets.eascdn.net`). Its release build trusts TLS certificates for those two hosts only
+(`network_security_config.xml`, written by `expo/plugins/withSuperChantAndroid.js`), so it cannot reach any
+other server. Before the first Expo upload, resubmit these:
+
+**Accessibility, "What the service does not access or do"** (replace the last sentence):
+```
+The service declares no accessibility event types, sets canRetrieveWindowContent="false", and never reads the screen or other apps. It doesn't perform gestures or actions and doesn't change settings. It ignores every key other than volume up/down and keeps no record of any key. It only consumes volume presses that it counts during a running, unpaused session; at all other times the buttons change the volume as usual. The service collects no data; the app's only network use is checking for app updates, which carries no accessibility or practice data.
+```
+
+**Accessibility, "Data collected through the Accessibility API"**:
+```
+None. Nothing is stored, logged or sent. The app's only network request is an app-update check that contains no accessibility data.
+```
+
+**Ads**: still "No"; evidence becomes "no ad SDKs; the only network use is EAS Update".
+
+**Data safety** (recommendation, a judgement call): each update check sends a random per-install ID
+(`EAS-Client-ID`) that Expo keeps to count monthly updated installs. Declare it rather than keep "No data
+collected":
+- Data type: *Device or other IDs*. Collected: yes. Shared: no (Expo is a service provider processing it for
+  the app).
+- Purpose: *App functionality*. Processed ephemerally: no. Required (users can't turn it off): yes.
+- Encrypted in transit: yes. Users can request deletion: no (it isn't linked to a person).
+
+The `Expo-Fatal-Error` header that expo-updates would otherwise send (the text of the last fatal error) is
+blanked in `app.config.ts`, so no crash data leaves the device.

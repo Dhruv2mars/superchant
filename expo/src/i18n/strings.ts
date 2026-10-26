@@ -1,4 +1,5 @@
-// Generated from app/src/main/res/values/strings.xml (the Kotlin app); keep the two in step.
+// From the Kotlin app's res/values/strings.xml; this is now the source for the Expo app's strings. Differences:
+// the network lines (the Expo app goes online for app updates only).
 // Placeholders follow Android: %s/%d, or %1$s/%2$d by position.
 
 export const strings = {
@@ -10,7 +11,7 @@ export const strings = {
   "action_resume": "Resume",
   "accessibility_service_label": "SuperChant Volume Counter",
   "accessibility_service_summary": "Allows volume buttons to count chants without changing volume",
-  "accessibility_service_description": "SuperChant uses this accessibility service only to count volume button presses while a chanting session is running.\n\nDuring a session, volume up or down adds a count instead of changing the volume. At all other times the buttons work as usual.\n\nThe service cannot see your screen, what you type, or other apps. It collects and shares nothing, and SuperChant has no internet access.",
+  "accessibility_service_description": "SuperChant uses this accessibility service only to count volume button presses while a chanting session is running.\n\nDuring a session, volume up or down adds a count instead of changing the volume. At all other times the buttons work as usual.\n\nThe service cannot see your screen, what you type, or other apps. It collects and shares nothing. SuperChant goes online only to check for app updates.",
   "accessibility_setup_title": "Enable Volume Counter",
   "accessibility_setup_message": "To count chants with volume buttons, SuperChant needs accessibility permission.\n\nThis allows the app to detect button presses without changing your volume.",
   "accessibility_setup_instructions": "1. Tap \"Open Settings\" below\n2. Find \"SuperChant Volume Counter\"\n3. Toggle it ON\n4. Return to the app",
@@ -22,7 +23,7 @@ export const strings = {
   "disclosure_does_2": "Turns those presses into counts instead of changing the volume. At all other times the buttons work as usual.",
   "disclosure_never_title": "What it never does",
   "disclosure_never_1": "Never reads your screen, what you type, or anything in other apps.",
-  "disclosure_never_2": "Never collects, stores, or shares any data. SuperChant has no internet access.",
+  "disclosure_never_2": "Never collects, stores, or shares any data. SuperChant goes online only to check for app updates.",
   "disclosure_never_3": "Never performs actions for you or changes your settings.",
   "disclosure_turn_off": "You can turn it off at any time in Settings › Accessibility. On-screen counting works without it.",
   "disclosure_agree": "I agree",

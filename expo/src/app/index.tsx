@@ -30,9 +30,12 @@ const KEEP_AWAKE_TAG = 'touch-counting';
 /** The session and volume readiness touch counting was last turned on for automatically (process-wide). */
 let autoTouchHandled: string | null = null;
 
-/** Whether the accessibility service is on, re-checked whenever the app comes back (Android). */
-function useVolumeServiceEnabled(): boolean {
+/** Whether the accessibility service is on, re-checked whenever the app comes back or consent changes (Android). */
+function useVolumeServiceEnabled(consent: boolean): boolean {
   const [enabled, setEnabled] = useState(() => platform.volume?.isServiceEnabled() ?? false);
+  useEffect(() => {
+    if (platform.volume) setEnabled(platform.volume.isServiceEnabled());
+  }, [consent]);
   useEffect(() => {
     if (!platform.volume) return;
     const sub = AppState.addEventListener('change', (s) => {
@@ -65,8 +68,8 @@ export default function Home() {
   const goalKey = useSession((s) => (s.activeGoal ? `${s.activeGoal.id}:${s.currentMantraIndex}:${s.mantraRoundsCompleted}` : null));
   const pendingStart = useAppState((s) => s.pendingStart);
 
-  const serviceEnabled = useVolumeServiceEnabled();
   const consent = settings?.accessibilityConsent === true;
+  const serviceEnabled = useVolumeServiceEnabled(consent);
   const volumeReady = !ios && serviceEnabled && consent;
   const [showSetup, setShowSetup] = useState(false);
 

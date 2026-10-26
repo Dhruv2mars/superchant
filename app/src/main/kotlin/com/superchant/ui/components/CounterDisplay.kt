@@ -237,7 +237,7 @@ internal data class MalaGeometry(
             // plus one bead gap plus a bead radius, i.e. (meru - bead radius) + pitch, so the beads get
             // circumference - 2 * (meru - bead radius), shared as (beads + 1) pitches.
             val beadArc = (2 * PI * beadOrbit).toFloat() - 2 * (meruRadius - beadRadius)
-            val maxBeads = (beadArc / (beadRadius * MIN_SPACING_RADII)).toInt() - 1
+            val maxBeads = ((2 * PI * beadOrbit) / (beadRadius * MIN_SPACING_RADII)).toInt() - 2
             val beadCount = beadsToShow(maxBeads)
             val beadPitch = beadArc / (beadCount + 1)
             return MalaGeometry(

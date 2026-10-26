@@ -35,9 +35,9 @@ class MalaGeometryTest {
 
     @Test
     fun meruBeadClearsItsNeighboursLikeTheBeadsClearEachOther() {
-        // Phone-sized and small rings, at 108, 54 and 36 beads
-        for (outer in listOf(1000f, 410f, 250f)) {
+        for ((outer, beads) in listOf(1000f to 108, 410f to 54, 198f to 36)) {
             val g = MalaGeometry.forRing(outerRadius = outer, density = 2.625f)
+            assertEquals("bead count at outer=$outer", beads, g.beadCount)
             fun position(angle: Double) = Pair(g.beadOrbit * cos(angle), g.beadOrbit * sin(angle))
             fun distance(a: Double, b: Double): Double {
                 val (ax, ay) = position(a)

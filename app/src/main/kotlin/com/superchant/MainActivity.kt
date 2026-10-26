@@ -167,11 +167,11 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         // Re-arm the daily reminder in case the alarm was lost (e.g. the app was force-stopped).
         lifecycleScope.launch { ReminderScheduler.sync(applicationContext) }
-        // A session persisted by a process that died (and wasn't restarted yet) resumes here.
+        // A session persisted by a process that died (and wasn't restarted yet) resumes here. Read after
+        // queued writes, so a session stopped just before reopening the app isn't brought back.
         lifecycleScope.launch {
-            if (!ChantingService.isRunning && PreferencesRepository.get(this@MainActivity).loadActiveSession() != null) {
-                ChantingService.restore(this@MainActivity)
-            }
+            val saved = PreferencesRepository.get(this@MainActivity).afterWrites { loadActiveSession() }
+            if (saved != null && !ChantingService.isRunning) ChantingService.restore(this@MainActivity)
         }
     }
 }

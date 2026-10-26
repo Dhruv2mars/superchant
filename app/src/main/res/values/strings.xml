@@ -301,6 +301,8 @@
     <string name="goals_discard_message">Your changes to this goal will be lost.</string>
     <string name="goals_discard_confirm">Discard</string>
     <string name="goals_drag_to_reorder">Drag to reorder</string>
+    <string name="goals_move_up">Move up</string>
+    <string name="goals_move_down">Move down</string>
     <string name="goals_add_mantra">Add Mantra</string>
     <string name="goals_edit_mantra">Edit Mantra</string>
     <string name="goals_mantra_name_label">Mantra Name</string>

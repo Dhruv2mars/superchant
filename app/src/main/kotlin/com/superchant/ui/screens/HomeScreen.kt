@@ -63,6 +63,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -88,6 +89,7 @@ import com.superchant.R
 import com.superchant.data.ChantState
 import com.superchant.data.Goal
 import com.superchant.data.PreferencesRepository
+import com.superchant.data.RestoreAction
 import com.superchant.service.ChantingService
 import com.superchant.service.VolumeKeyAccessibilityService
 import com.superchant.ui.components.AccessibilitySetupDialog
@@ -103,6 +105,7 @@ import com.superchant.ui.theme.ThemeMode
 import com.superchant.ui.theme.pressScale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 /**
  * Home: the counter. Idle, it shows the empty ring and Start. During a session it shows the controls
@@ -192,9 +195,9 @@ fun HomeScreen(
         if (!volumeReady && !chantStateHolder.value.touchCounting) ChantingService.setTouchCounting(true)
     }
 
-    // A start waiting on the permission prompt
-    var goalToStart by remember { mutableStateOf<Goal?>(null) }
-    var startPending by remember { mutableStateOf(false) }
+    // A start waiting on the permission prompt; saved, so rotating while the prompt shows doesn't drop it
+    var goalToStart by rememberSaveable(stateSaver = goalSaver) { mutableStateOf<Goal?>(null) }
+    var startPending by rememberSaveable { mutableStateOf(false) }
 
     fun beginSession() {
         val goal = goalToStart
@@ -241,9 +244,18 @@ fun HomeScreen(
     LaunchedEffect(pendingStart, savedConsent) {
         val request = pendingStart ?: return@LaunchedEffect
         if (savedConsent == null) return@LaunchedEffect
+        // A plain "start counting" while a session runs just shows it; a goal starts over (saving the current one).
+        // A session still to be restored after the process died (a cold start from a shortcut or the tile)
+        // counts as running: it is resumed, not ended.
+        val restorable = request.goal == null && !isServiceRunning && preferencesRepository.afterWrites {
+            loadActiveSession()?.restoreAction(System.currentTimeMillis()) is RestoreAction.Resume
+        }
+        // Only after reading: clearing the request changes this effect's key and cancels it
         onPendingStartHandled()
-        // A plain "start counting" while a session runs just shows it; a goal starts over (saving the current one)
-        if (request.goal != null || !isServiceRunning) requestStart(request.goal)
+        when {
+            restorable -> ChantingService.restore(context)
+            request.goal != null || !isServiceRunning -> requestStart(request.goal)
+        }
     }
 
     if (showAccessibilityDialog) {
@@ -436,6 +448,11 @@ private fun SessionSavedLine(summary: SessionSummary) {
 
 /** A session start asked for from outside Home; [goal] null is a free session. */
 data class StartRequest(val goal: Goal?)
+
+private val goalSaver = Saver<Goal?, String>(
+    save = { goal -> goal?.let { Json.encodeToString(Goal.serializer(), it) } },
+    restore = { Json.decodeFromString(Goal.serializer(), it) }
+)
 
 /**
  * Everything the session layouts need, resolved once in [HomeScreen]. [state] is read lazily by the

@@ -36,6 +36,25 @@ class ReminderTimeTest {
     }
 
     @Test
+    fun syncKeepsADueReminderThatHasNotFiredYet() {
+        val six = 6 * 60
+        fun millis(t: ZonedDateTime) = t.toInstant().toEpochMilli()
+        val firedYesterday = millis(at(2026, 10, 17, 6, 3))
+        // Opening the app at 6:05 before today's 6:00 alarm was delivered keeps it (it fires right away)
+        assertEquals(at(2026, 10, 18, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 6, 5), six, firedYesterday))
+        assertEquals(at(2026, 10, 18, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 6, 5), six, 0))
+        assertEquals(at(2026, 10, 18, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 5, 0), six, firedYesterday))
+        // Already fired, or the setting just changed: tomorrow's
+        assertEquals(at(2026, 10, 19, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 6, 5), six, millis(at(2026, 10, 18, 6, 1))))
+        // Past the delivery window nothing is sent late
+        assertEquals(at(2026, 10, 19, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 6, 30), six, firedYesterday))
+        // The clock was set back: a handled time in the future counts as now
+        val future = millis(at(2026, 10, 25, 6, 0))
+        assertEquals(at(2026, 10, 18, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 5, 0), six, future))
+        assertEquals(at(2026, 10, 19, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 6, 5), six, future))
+    }
+
+    @Test
     fun validMinutes() {
         assertTrue(ReminderTime.isValid(0))
         assertTrue(ReminderTime.isValid(1439))

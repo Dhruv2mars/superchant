@@ -9,7 +9,6 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Dhruv2mars/superchant/releases/latest"><img src="https://img.shields.io/github/v/release/Dhruv2mars/superchant?label=latest&color=%23C4956A" alt="Latest Release"></a>
   <img src="https://img.shields.io/badge/kotlin-2.4-blue?logo=kotlin" alt="Kotlin">
   <img src="https://img.shields.io/badge/jetpack--compose-Material%203-blue?logo=jetpackcompose" alt="Jetpack Compose">
   <img src="https://img.shields.io/badge/minSdk-26-green?logo=android" alt="Min SDK">
@@ -67,7 +66,8 @@ Built for japa meditation, mantra chanting, prayer counting, and any repetitive 
 
 ## Download
 
-Get the latest APK from [GitHub Releases](https://github.com/Dhruv2mars/superchant/releases/latest).
+SuperChant is released through Google Play only. It is in testing and not public yet; until it is, build it
+from source.
 
 ## Build from Source
 

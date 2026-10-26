@@ -45,7 +45,7 @@ signed with the debug key, so it still builds and installs locally.
 |---------|-------|
 | Package / namespace | `com.superchant` |
 | minSdk / targetSdk / compileSdk | 26 / 36 / 37 |
-| Version | Date-based, computed in `app/build.gradle.kts`: `versionName` 2.YYYY.DDD, `versionCode` YYDDDNN (`-PbuildNumber=NN` for a second upload the same day) |
+| Version | Date-based, computed in `app/build.gradle.kts`: `versionName` 2.YYYY.DDD, `versionCode` YYDDDNN (`-PreleaseDate=YYYY-MM-DD`, `-PbuildNumber=NN`; CI takes NN one above the highest code Play has that day, `scripts/play_version.py`) |
 | Variants | `release` = `com.superchant` (Play Store); `debug` = `com.superchant.dev` "SuperChant Dev", installs side by side |
 | JVM target | 17 |
 | Toolchain | AGP 9 (built-in Kotlin), Gradle 9, Kotlin 2.4 |
@@ -190,11 +190,15 @@ printf '%s\n' \
 
 - Branches: `dev` is the default and integration branch; `main` is production. Open PRs against `dev`; never
   push to `dev` or `main` directly.
-  - CI (`.github/workflows/ci.yml`) runs build, lint, test and an INTERNET-permission guard on every PR.
+  - CI (`.github/workflows/ci.yml`) runs build, lint, test, the release script tests (`scripts/test_play.py`)
+    and an INTERNET-permission guard on every PR.
   - Every push to `dev` builds a signed bundle and uploads it to the Play **internal testing** track
-    (`release-internal.yml`), so the owner's Play Store install updates within minutes.
-  - Merging `dev` into `main` promotes that same bundle (`promote.yml`, `scripts/play_promote.py`) to the track
-    in repo variable `PLAY_PROMOTE_TRACK` (`alpha` = closed testing until production access is granted).
+    (`release-internal.yml`), so the owner's Play Store install updates within minutes. The release is named
+    `<versionCode> (tree <first 12 hex digits of the source tree>)`.
+  - Merging `dev` into `main` promotes the internal release built from main's exact source tree (`promote.yml`,
+    `scripts/play_promote.py`) to the track in repo variable `PLAY_PROMOTE_TRACK` (`alpha` = closed testing until
+    production access is granted). If no completed internal release matches, it fails instead of promoting
+    another build; re-run it once the matching `dev` upload has finished.
   - Secrets: `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_KEYSTORE_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`.
 - Put verification evidence in the PR description. Screenshots go on the orphan `ux-evidence` branch (one folder
   per PR), never in `dev`/`main`. Play Store listing assets under `docs/play-store/` are the exception.
@@ -204,5 +208,27 @@ printf '%s\n' \
   upload key that `local.properties` points to (`RELEASE_*`; keystore kept outside the repo, never committed).
   Play App Signing is on. A personal developer account needs a closed test (12+ testers, 14 days) before production.
 - Day-to-day testing on the owner's phone uses the debug build ("SuperChant Dev") over wireless adb, so it never
-  touches the Play install or its data.
+  touches the Play install or its data. See "Getting a build on the owner's phone" below.
+
+### Getting a build on the owner's phone
+
+The phone is a Realme RMX3392 in India. Play Protect's enhanced fraud protection there blocks installing any APK
+that declares an accessibility service from a browser, messaging app or file manager, so a downloaded
+SuperChant APK never installs. Only Play and adb installs work.
+
+1. **Play (the real app, `com.superchant`):** merge a PR into `dev`; `release-internal.yml` uploads it to internal
+   testing and the Play Store install updates itself. A sideloaded `com.superchant` (upload- or debug-signed)
+   can't be updated by Play later, so never sideload the release package.
+2. **SuperChant Dev (`com.superchant.dev`) over wireless adb:** phone and Mac on the same Wi-Fi, then
+   `./gradlew installDebug` (or `adb -s <ip:port> install -r app-debug.apk`). Pairing is done once per phone:
+   Developer options → Wireless debugging → Pair device with pairing code, then `adb pair <ip>:<pairing port> <code>`.
+   The connect port changes when wireless debugging restarts, and adb's built-in mDNS discovery doesn't see the
+   phone from this Mac. Find the phone's IP from `arp -an` and its open ports with a quick TCP scan of 30000-50000,
+   then `adb connect <ip>:<port>`. QR pairing failed here (`protocol fault`), so use the pairing code.
+   A USB cable with USB debugging also works.
+
+Play release state (2026-10-26): uploads to internal testing work again (the reset upload key went active on
+2026-10-21) and `PLAY_RELEASES_ENABLED` is `true`. The app is still a "draft app" until its first review, so
+`promote.yml` (internal → alpha) can fail until the closed-testing track has a release set up in Play Console.
+
 - For JavaScript tooling (e.g. `bunx skills`), use bun.

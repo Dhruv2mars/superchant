@@ -4,9 +4,12 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import java.util.UUID
 
 /**
  * A complete, human-readable copy of the user's data: settings, goals and history. Written and read
@@ -60,9 +63,9 @@ object BackupCodec {
     fun encode(backup: Backup): String = json.encodeToString(Backup.serializer(), backup)
 
     /**
-     * Reads a backup, skipping individual goals or sessions that don't decode instead of rejecting the
-     * whole file. Throws [BackupFormatException] if this isn't a SuperChant backup at all, or is from a
-     * newer format this version can't understand.
+     * Reads a backup, skipping individual goals or sessions that don't decode (or goals the editor couldn't
+     * make, see [Goal.isValid]) instead of rejecting the whole file. Throws [BackupFormatException] if this
+     * isn't a SuperChant backup at all, or is from a newer format this version can't understand.
      */
     fun decode(text: String): Backup {
         val root = try {
@@ -81,14 +84,29 @@ object BackupCodec {
             format = format,
             exportedAt = root["exportedAt"]?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: 0L,
             settings = settings,
-            goals = decodeEach(root["goals"]) { json.decodeFromJsonElement(Goal.serializer(), it) }.withUniqueGoalIds(),
-            history = decodeEach(root["history"]) { json.decodeFromJsonElement(SessionRecord.serializer(), it) }
+            goals = decodeEach(root["goals"]) { goal ->
+                val withIds = (goal.withContentId() as? JsonObject)?.let { obj ->
+                    val mantras = obj["mantras"] as? JsonArray ?: return@let obj
+                    JsonObject(obj + ("mantras" to JsonArray(mantras.map { it.withContentId() })))
+                } ?: goal
+                json.decodeFromJsonElement(Goal.serializer(), withIds).takeIf { it.isValid }
+            }.withUniqueGoalIds(),
+            history = decodeEach(root["history"]) { json.decodeFromJsonElement(SessionRecord.serializer(), it.withContentId()) }
                 .withUniqueRecordIds()
         )
     }
 
-    private fun <T> decodeEach(element: JsonElement?, decode: (JsonElement) -> T): List<T> =
+    private fun <T : Any> decodeEach(element: JsonElement?, decode: (JsonElement) -> T?): List<T> =
         (element as? JsonArray).orEmpty().mapNotNull { runCatching { decode(it) }.getOrNull() }
+
+    /**
+     * An entry written without an ID (e.g. by hand) gets one derived from its content rather than a random
+     * one, so importing the same file twice updates it instead of adding a copy.
+     */
+    private fun JsonElement.withContentId(): JsonElement {
+        if (this !is JsonObject || (get("id") ?: JsonNull) != JsonNull) return this
+        return JsonObject(this + ("id" to JsonPrimitive(UUID.nameUUIDFromBytes(toString().toByteArray()).toString())))
+    }
 
     /** Sessions from both, newest first; on an ID clash the imported copy wins. Nothing is dropped. */
     fun mergeHistory(existing: List<SessionRecord>, imported: List<SessionRecord>): List<SessionRecord> {

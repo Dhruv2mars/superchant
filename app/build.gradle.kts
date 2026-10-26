@@ -75,6 +75,11 @@ android {
         compose = true
         buildConfig = true
     }
+
+    // android.util.Log (used by PreferencesRepository) is a no-op in JVM unit tests
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 // buildReleaseApk / buildReleaseBundle: build, then copy to the repo root as SuperChant-v{version}.{apk,aab}.

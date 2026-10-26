@@ -37,19 +37,20 @@ object AppShortcuts {
 
     /** Long-press shortcuts for the first goals, kept in step with the goal list. */
     fun updateGoalShortcuts(context: Context, goals: List<Goal>) {
-        val shortcuts = goals.take(MAX_GOAL_SHORTCUTS).mapIndexed { index, goal ->
-            ShortcutInfoCompat.Builder(context, "goal_${goal.id}")
-                .setShortLabel(goal.name.take(24))
-                .setLongLabel(context.getString(R.string.shortcut_start_goal, goal.name))
-                .setIcon(IconCompat.createWithResource(context, R.drawable.ic_shortcut_goal))
-                .setIntent(startIntent(context, goal.id))
-                .setRank(index)
-                .build()
-        }
         try {
+            // A shortcut needs a label; a goal without a name (only possible in older data) gets none
+            val shortcuts = goals.filter { it.name.isNotBlank() }.take(MAX_GOAL_SHORTCUTS).mapIndexed { index, goal ->
+                ShortcutInfoCompat.Builder(context, "goal_${goal.id}")
+                    .setShortLabel(goal.name.take(24))
+                    .setLongLabel(context.getString(R.string.shortcut_start_goal, goal.name))
+                    .setIcon(IconCompat.createWithResource(context, R.drawable.ic_shortcut_goal))
+                    .setIntent(startIntent(context, goal.id))
+                    .setRank(index)
+                    .build()
+            }
             ShortcutManagerCompat.setDynamicShortcuts(context, shortcuts)
         } catch (e: Exception) {
-            // Rate limiting or a launcher without shortcut support; nothing to do
+            // Rate limiting, a launcher without shortcut support, or a goal it rejects; shortcuts are optional
         }
     }
 }

@@ -145,7 +145,8 @@ class ChantingService : Service() {
             return
         }
         serviceScope.launch {
-            val saved = preferencesRepository.loadActiveSession()
+            // Read after queued writes: a session stopped just before this was saved and must not come back
+            val saved = preferencesRepository.afterWrites { loadActiveSession() }
             // A session may have been started while loading.
             if (state.isActive) return@launch
             when (val action = saved?.restoreAction(System.currentTimeMillis())) {
@@ -160,8 +161,8 @@ class ChantingService : Service() {
                     }
                 }
                 is RestoreAction.Finish -> {
-                    preferencesRepository.write { addSessionRecord(action.record) }
-                    preferencesRepository.write { clearActiveSession(saved.sessionId) }
+                    // One write, so the session stays persisted (for the next try) if saving it to history fails
+                    preferencesRepository.finishSession(saved, action.record.endTime)
                     stopSelf()
                 }
                 RestoreAction.Discard -> {

@@ -6,6 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.random.Random
 
 class StoredListTest {
 
@@ -46,6 +47,36 @@ class StoredListTest {
             .withUniqueGoalIds()
         assertEquals(2, goals.map { it.id }.toSet().size)
         assertEquals(2, goals[0].mantras.map { it.id }.toSet().size)
+    }
+
+    @Test
+    fun replacementIdsAreTheSameAsBeforeAndQuickForManyCopies() {
+        // The earlier (quadratic) rule: the smallest free "-N" suffix from 2. Screens and edits rely on these IDs.
+        fun reference(ids: List<String>): List<String> {
+            val seen = HashSet<String>()
+            return ids.map { original ->
+                val id = if (original !in seen) original else generateSequence(2) { it + 1 }.map { "$original-$it" }.first { it !in seen }
+                seen.add(id)
+                id
+            }
+        }
+        fun unique(ids: List<String>) = ids.withUniqueIds({ it }) { _, id -> id }
+
+        assertEquals(listOf("g", "g-2", "g-2-2", "g-3", "g-4", "g-2-3"), unique(listOf("g", "g", "g-2", "g", "g", "g-2")))
+        val random = Random(7)
+        val alphabet = listOf("a", "a-2", "a-3", "a-2-2", "b", "b-2", "a-2-3")
+        repeat(500) {
+            val ids = List(random.nextInt(1, 40)) { alphabet[random.nextInt(alphabet.size)] }
+            assertEquals(ids.toString(), reference(ids), unique(ids))
+        }
+
+        // 10,000 copies of one ID took about 1.4 s before
+        val copies = List(10_000) { "1700000000000" }
+        val start = System.nanoTime()
+        val ids = unique(copies)
+        val ms = (System.nanoTime() - start) / 1_000_000
+        assertEquals(10_000, ids.toSet().size)
+        assertTrue("$ms ms", ms < 300)
     }
 
     @Test

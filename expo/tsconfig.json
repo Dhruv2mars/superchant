@@ -4,8 +4,21 @@
     "strict": true,
     "resolveJsonModule": true,
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": [
+        "./src/*"
+      ],
+      "superchant-native": [
+        "./modules/superchant-native/src"
+      ]
+    },
+    "types": [
+      "bun"
+    ]
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
 }

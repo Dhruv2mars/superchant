@@ -8,10 +8,13 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.core.content.ContextCompat
 import com.superchant.AppShortcuts
 import com.superchant.data.Backup
 import com.superchant.data.BackupCodec
+import com.superchant.data.BackupFormatException
 import com.superchant.data.ChantState
 import com.superchant.data.Goal
 import com.superchant.data.PreferencesRepository
@@ -20,6 +23,7 @@ import com.superchant.data.RestoreAction
 import com.superchant.data.SessionRecord
 import com.superchant.data.ThemeMode
 import com.superchant.reminder.ReminderScheduler
+import com.superchant.reminder.ReminderTime
 import com.superchant.service.ChantingService
 import com.superchant.service.VolumeKeyAccessibilityService
 import expo.modules.kotlin.Promise
@@ -134,7 +138,13 @@ class SuperchantNativeModule : Module() {
                         ctx.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(text!!.toByteArray()) }
                         promise.resolve(true)
                     } else {
-                        promise.resolve(ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() })
+                        // Backups are small; refuse anything absurd rather than running out of memory
+                        val bytes = ctx.contentResolver.openInputStream(uri)!!.use { it.readNBytesCompat(MAX_BACKUP_BYTES + 1) }
+                        if (bytes.size > MAX_BACKUP_BYTES) {
+                            promise.reject(CodedException("ERR_BACKUP_FORMAT", "Too large", null))
+                        } else {
+                            promise.resolve(bytes.decodeToString())
+                        }
                     }
                 } catch (e: Exception) {
                     promise.reject(CodedException("ERR_BACKUP_FILE", e.message, e))
@@ -231,12 +241,25 @@ class SuperchantNativeModule : Module() {
             repo.afterWrites { BackupCodec.encode(exportBackup(now.toLong())) }
         }
 
-        /** Decodes and merges a backup file's text; throws for files that aren't SuperChant backups. */
+        /** Decodes and merges a backup file's text; rejects with ERR_BACKUP_FORMAT for files that aren't SuperChant backups. */
         AsyncFunction("importBackup") Coroutine { text: String ->
-            val backup: Backup = withContext(Dispatchers.Default) { BackupCodec.decode(text) }
+            val backup: Backup = try {
+                withContext(Dispatchers.Default) { BackupCodec.decode(text) }
+            } catch (e: BackupFormatException) {
+                throw CodedException("ERR_BACKUP_FORMAT", e.message, e)
+            }
             val repo = repository
-            val result = repo.afterWrites { importBackup(backup) }
-            ReminderScheduler.sync(context)
+            val ctx = context
+            val result = repo.afterWrites {
+                importBackup(backup).also {
+                    // The backup may turn the reminder on; without the notification permission here it could never
+                    // show, so it stays off until turned on in Settings (which asks for it). BackupControls.kt.
+                    if (backup.settings.reminderEnabled == true && !canPostNotifications(ctx)) {
+                        setReminder(ReminderSettings(enabled = false, minuteOfDay = backup.settings.reminderMinuteOfDay ?: ReminderTime.DEFAULT_MINUTE_OF_DAY))
+                    }
+                }
+            }
+            ReminderScheduler.sync(ctx)
             mapOf("sessionsAdded" to result.sessionsAdded, "goalsAdded" to result.goalsAdded, "goalsUpdated" to result.goalsUpdated)
         }
 
@@ -277,9 +300,18 @@ class SuperchantNativeModule : Module() {
         Function("needsRestrictedSettings") { VolumeKeyAccessibilityService.needsRestrictedSettingsPermission(context) }
         Function("openAppSettings") { VolumeKeyAccessibilityService.openAppSettings(context) }
 
-        Function("notificationsGranted") {
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        Function("notificationsGranted") { canPostNotifications(context) }
+
+        /** Whether the vibrator can vary its strength (the intensity sliders only show where it can). */
+        Function("hasAmplitudeControl") {
+            val ctx = context
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                (ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                ctx.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
+            vibrator.hasAmplitudeControl()
         }
 
         View(CounterView::class)
@@ -306,8 +338,24 @@ class SuperchantNativeModule : Module() {
         )
     }.distinctUntilChanged()
 
+    private fun canPostNotifications(context: Context): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
+    private fun java.io.InputStream.readNBytesCompat(limit: Int): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(16 * 1024)
+        while (out.size() < limit) {
+            val read = read(buffer, 0, minOf(buffer.size, limit - out.size()))
+            if (read < 0) break
+            out.write(buffer, 0, read)
+        }
+        return out.toByteArray()
+    }
+
     private companion object {
         const val REQUEST_CREATE = 4201
         const val REQUEST_OPEN = 4202
+        const val MAX_BACKUP_BYTES = 20 * 1024 * 1024
     }
 }

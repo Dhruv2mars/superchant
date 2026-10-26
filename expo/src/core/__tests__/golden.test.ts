@@ -48,7 +48,7 @@ describe('golden fixtures from the Kotlin app', () => {
         }
         expect(output).toBe(c.output);
         expect(error != null).toBe(c.error != null);
-      } else {
+      } else if (c.kind === 'backup') {
         let output: string | null = null;
         let error: string | null = null;
         try {

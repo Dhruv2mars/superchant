@@ -1,0 +1,493 @@
+[
+    {
+        "name": "missing",
+        "kind": "history",
+        "input": null,
+        "items": [],
+        "unreadable": [],
+        "corrupt": false,
+        "rewritten": "[]"
+    },
+    {
+        "name": "empty",
+        "kind": "history",
+        "input": "[]",
+        "items": [],
+        "unreadable": [],
+        "corrupt": false,
+        "rewritten": "[]"
+    },
+    {
+        "name": "corrupt text",
+        "kind": "history",
+        "input": "not json",
+        "items": [],
+        "unreadable": [],
+        "corrupt": true,
+        "rewritten": "[]"
+    },
+    {
+        "name": "empty string",
+        "kind": "history",
+        "input": "",
+        "items": [],
+        "unreadable": [],
+        "corrupt": true,
+        "rewritten": "[]"
+    },
+    {
+        "name": "object not array",
+        "kind": "history",
+        "input": "{\"a\":1}",
+        "items": [],
+        "unreadable": [],
+        "corrupt": true,
+        "rewritten": "[]"
+    },
+    {
+        "name": "string not array",
+        "kind": "history",
+        "input": "\"x\"",
+        "items": [],
+        "unreadable": [],
+        "corrupt": true,
+        "rewritten": "[]"
+    },
+    {
+        "name": "legacy numeric ids with a collision",
+        "kind": "history",
+        "input": "[{\"id\":1700000000000,\"startTime\":1,\"endTime\":2,\"totalCounts\":108,\"totalRounds\":1,\"goalId\":1690000000000,\"goalName\":\"Morning\"},\n {\"id\":1700000000000,\"startTime\":3,\"endTime\":4,\"totalCounts\":5,\"totalRounds\":0,\"goalId\":null,\"goalName\":null}]",
+        "items": [
+            "{\"id\":\"1700000000000\",\"startTime\":1,\"endTime\":2,\"totalCounts\":108,\"totalRounds\":1,\"goalId\":\"1690000000000\",\"goalName\":\"Morning\",\"mantras\":[]}",
+            "{\"id\":\"1700000000000-2\",\"startTime\":3,\"endTime\":4,\"totalCounts\":5,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}"
+        ],
+        "unreadable": [],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"1700000000000\",\"startTime\":1,\"endTime\":2,\"totalCounts\":108,\"totalRounds\":1,\"goalId\":\"1690000000000\",\"goalName\":\"Morning\",\"mantras\":[]},{\"id\":\"1700000000000-2\",\"startTime\":3,\"endTime\":4,\"totalCounts\":5,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}]"
+    },
+    {
+        "name": "broken element kept",
+        "kind": "history",
+        "input": "[{\"id\":\"a\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"broken\"}]",
+        "items": [
+            "{\"id\":\"a\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}"
+        ],
+        "unreadable": [
+            "{\"id\":\"broken\"}"
+        ],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"a\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"broken\"}]"
+    },
+    {
+        "name": "quoted numbers",
+        "kind": "history",
+        "input": "[{\"id\":\"q\",\"startTime\":\"1\",\"endTime\":2,\"totalCounts\":\"3\",\"totalRounds\":0}]",
+        "items": [
+            "{\"id\":\"q\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}"
+        ],
+        "unreadable": [],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"q\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}]"
+    },
+    {
+        "name": "decimal numbers",
+        "kind": "history",
+        "input": "[{\"id\":\"f\",\"startTime\":1.0,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"g\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3.5,\"totalRounds\":0}]",
+        "items": [],
+        "unreadable": [
+            "{\"id\":\"f\",\"startTime\":1.0,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}",
+            "{\"id\":\"g\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3.5,\"totalRounds\":0}"
+        ],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"f\",\"startTime\":1.0,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"g\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3.5,\"totalRounds\":0}]"
+    },
+    {
+        "name": "exponents",
+        "kind": "history",
+        "input": "[{\"id\":\"e\",\"startTime\":1e3,\"endTime\":2E3,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"e2\",\"startTime\":1,\"endTime\":2,\"totalCounts\":1e2,\"totalRounds\":0},{\"id\":\"e3\",\"startTime\":1e-3,\"endTime\":2,\"totalCounts\":1,\"totalRounds\":0}]",
+        "items": [
+            "{\"id\":\"e\",\"startTime\":1000,\"endTime\":2000,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}",
+            "{\"id\":\"e2\",\"startTime\":1,\"endTime\":2,\"totalCounts\":100,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}"
+        ],
+        "unreadable": [
+            "{\"id\":\"e3\",\"startTime\":1e-3,\"endTime\":2,\"totalCounts\":1,\"totalRounds\":0}"
+        ],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"e\",\"startTime\":1000,\"endTime\":2000,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"e2\",\"startTime\":1,\"endTime\":2,\"totalCounts\":100,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"e3\",\"startTime\":0.001,\"endTime\":2,\"totalCounts\":1,\"totalRounds\":0}]"
+    },
+    {
+        "name": "id kinds",
+        "kind": "history",
+        "input": "[{\"id\":true,\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":1.5,\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":{\"x\":1},\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":null,\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":[1],\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":-0,\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}]",
+        "items": [
+            "{\"id\":\"true\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}",
+            "{\"id\":\"1.5\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}",
+            "{\"id\":\"null\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}",
+            "{\"id\":\"-0\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}"
+        ],
+        "unreadable": [
+            "{\"id\":{\"x\":1},\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}",
+            "{\"id\":[1],\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}"
+        ],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"true\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"1.5\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"null\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"-0\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":{\"x\":1},\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":[1],\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}]"
+    },
+    {
+        "name": "goal id and name kinds",
+        "kind": "history",
+        "input": "[{\"id\":\"a\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":7,\"goalName\":null},{\"id\":\"b\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":{\"x\":1}},{\"id\":\"c\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalName\":5},{\"id\":\"d\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalName\":\"x\",\"goalId\":false}]",
+        "items": [
+            "{\"id\":\"a\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":\"7\",\"goalName\":null,\"mantras\":[]}",
+            "{\"id\":\"d\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":\"false\",\"goalName\":\"x\",\"mantras\":[]}"
+        ],
+        "unreadable": [
+            "{\"id\":\"b\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":{\"x\":1}}",
+            "{\"id\":\"c\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalName\":5}"
+        ],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"a\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":\"7\",\"goalName\":null,\"mantras\":[]},{\"id\":\"d\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":\"false\",\"goalName\":\"x\",\"mantras\":[]},{\"id\":\"b\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":{\"x\":1}},{\"id\":\"c\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalName\":5}]"
+    },
+    {
+        "name": "mantras kinds",
+        "kind": "history",
+        "input": "[{\"id\":\"a\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"mantras\":null},{\"id\":\"b\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"mantras\":[{\"name\":\"Om\",\"rounds\":1,\"counts\":108}]},{\"id\":\"c\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"mantras\":[{\"name\":\"Om\",\"rounds\":1}]},{\"id\":\"d\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"mantras\":{}}]",
+        "items": [
+            "{\"id\":\"b\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[{\"name\":\"Om\",\"rounds\":1,\"counts\":108}]}"
+        ],
+        "unreadable": [
+            "{\"id\":\"a\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"mantras\":null}",
+            "{\"id\":\"c\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"mantras\":[{\"name\":\"Om\",\"rounds\":1}]}",
+            "{\"id\":\"d\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"mantras\":{}}"
+        ],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"b\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[{\"name\":\"Om\",\"rounds\":1,\"counts\":108}]},{\"id\":\"a\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"mantras\":null},{\"id\":\"c\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"mantras\":[{\"name\":\"Om\",\"rounds\":1}]},{\"id\":\"d\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"mantras\":{}}]"
+    },
+    {
+        "name": "int overflow",
+        "kind": "history",
+        "input": "[{\"id\":\"o\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3000000000,\"totalRounds\":0},{\"id\":\"p\",\"startTime\":30000000000,\"endTime\":30000000001,\"totalCounts\":2147483647,\"totalRounds\":-2147483648}]",
+        "items": [
+            "{\"id\":\"p\",\"startTime\":30000000000,\"endTime\":30000000001,\"totalCounts\":2147483647,\"totalRounds\":-2147483648,\"goalId\":null,\"goalName\":null,\"mantras\":[]}"
+        ],
+        "unreadable": [
+            "{\"id\":\"o\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3000000000,\"totalRounds\":0}"
+        ],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"p\",\"startTime\":30000000000,\"endTime\":30000000001,\"totalCounts\":2147483647,\"totalRounds\":-2147483648,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"o\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3000000000,\"totalRounds\":0}]"
+    },
+    {
+        "name": "unquoted garbage",
+        "kind": "history",
+        "input": "[{\"id\":abc,\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"z\",\"startTime\":01,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}]",
+        "items": [
+            "{\"id\":\"abc\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}",
+            "{\"id\":\"z\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}"
+        ],
+        "unreadable": [],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"abc\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"z\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}]"
+    },
+    {
+        "name": "booleans and nulls in numbers",
+        "kind": "history",
+        "input": "[{\"id\":\"b\",\"startTime\":true,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"n\",\"startTime\":null,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}]",
+        "items": [],
+        "unreadable": [
+            "{\"id\":\"b\",\"startTime\":true,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}",
+            "{\"id\":\"n\",\"startTime\":null,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}"
+        ],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"b\",\"startTime\":true,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"n\",\"startTime\":null,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}]"
+    },
+    {
+        "name": "escapes and unicode",
+        "kind": "history",
+        "input": "[{\"id\":\"ué\\n\\\"\\\\\\/\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalName\":\"ॐ नमः \\t tab \\u0001 ctl 😀\"}]",
+        "items": [
+            "{\"id\":\"ué\\n\\\"\\\\/\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":\"ॐ नमः \\t tab \\u0001 ctl 😀\",\"mantras\":[]}"
+        ],
+        "unreadable": [],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"ué\\n\\\"\\\\/\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":\"ॐ नमः \\t tab \\u0001 ctl 😀\",\"mantras\":[]}]"
+    },
+    {
+        "name": "duplicate keys",
+        "kind": "history",
+        "input": "[{\"id\":\"d1\",\"id\":\"d2\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"totalCounts\":9}]",
+        "items": [
+            "{\"id\":\"d2\",\"startTime\":1,\"endTime\":2,\"totalCounts\":9,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}"
+        ],
+        "unreadable": [],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"d2\",\"startTime\":1,\"endTime\":2,\"totalCounts\":9,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}]"
+    },
+    {
+        "name": "unknown keys and whitespace",
+        "kind": "history",
+        "input": "[ \n\t{\"id\" : \"w\" , \"roundSize\" : 54, \"extra\":{\"a\":[1,2]},\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0} ]",
+        "items": [
+            "{\"id\":\"w\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}"
+        ],
+        "unreadable": [],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"w\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}]"
+    },
+    {
+        "name": "many duplicates",
+        "kind": "history",
+        "input": "[{\"id\":\"x\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"x\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"x\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"x\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"x\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"x\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"x-2\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}]",
+        "items": [
+            "{\"id\":\"x\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}",
+            "{\"id\":\"x-2\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}",
+            "{\"id\":\"x-3\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}",
+            "{\"id\":\"x-4\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}",
+            "{\"id\":\"x-5\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}",
+            "{\"id\":\"x-6\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}",
+            "{\"id\":\"x-2-2\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}"
+        ],
+        "unreadable": [],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"x\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"x-2\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"x-3\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"x-4\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"x-5\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"x-6\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},{\"id\":\"x-2-2\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}]"
+    },
+    {
+        "name": "non-object elements",
+        "kind": "history",
+        "input": "[1,\"s\",null,[],{\"id\":\"ok\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}]",
+        "items": [
+            "{\"id\":\"ok\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]}"
+        ],
+        "unreadable": [
+            "1",
+            "\"s\"",
+            "null",
+            "[]"
+        ],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"ok\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0,\"goalId\":null,\"goalName\":null,\"mantras\":[]},1,\"s\",null,[]]"
+    },
+    {
+        "name": "odd literals written back",
+        "kind": "history",
+        "input": "[{\"id\":\"w\",\"startTime\":01,\"endTime\":True,\"totalCounts\":abc,\"totalRounds\":2.50,\"a\":18446744073709551615,\"b\":1e-10,\"c\":1e7,\"d\":-0,\"e\":+5,\"f\":12345678.9,\"g\":0.0001,\"h\":FALSE}]",
+        "items": [],
+        "unreadable": [
+            "{\"id\":\"w\",\"startTime\":01,\"endTime\":True,\"totalCounts\":abc,\"totalRounds\":2.50,\"a\":18446744073709551615,\"b\":1e-10,\"c\":1e7,\"d\":-0,\"e\":+5,\"f\":12345678.9,\"g\":0.0001,\"h\":FALSE}"
+        ],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"w\",\"startTime\":1,\"endTime\":\"True\",\"totalCounts\":\"abc\",\"totalRounds\":2.5,\"a\":18446744073709551615,\"b\":1.0E-10,\"c\":1.0E7,\"d\":0,\"e\":5,\"f\":1.23456789E7,\"g\":1.0E-4,\"h\":\"FALSE\"}]"
+    },
+    {
+        "name": "goals",
+        "kind": "goals",
+        "input": "[{\"id\":5,\"name\":\"G\",\"mantras\":[{\"id\":7,\"name\":\"M\",\"targetRounds\":3}],\"createdAt\":9},{\"id\":\"g\",\"name\":\"Dup mantras\",\"mantras\":[{\"id\":\"m\",\"name\":\"A\",\"targetRounds\":1},{\"id\":\"m\",\"name\":\"B\",\"targetRounds\":2}],\"createdAt\":1}]",
+        "items": [
+            "{\"id\":\"5\",\"name\":\"G\",\"mantras\":[{\"id\":\"7\",\"name\":\"M\",\"targetRounds\":3}],\"createdAt\":9}",
+            "{\"id\":\"g\",\"name\":\"Dup mantras\",\"mantras\":[{\"id\":\"m\",\"name\":\"A\",\"targetRounds\":1},{\"id\":\"m-2\",\"name\":\"B\",\"targetRounds\":2}],\"createdAt\":1}"
+        ],
+        "unreadable": [],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"5\",\"name\":\"G\",\"mantras\":[{\"id\":\"7\",\"name\":\"M\",\"targetRounds\":3}],\"createdAt\":9},{\"id\":\"g\",\"name\":\"Dup mantras\",\"mantras\":[{\"id\":\"m\",\"name\":\"A\",\"targetRounds\":1},{\"id\":\"m-2\",\"name\":\"B\",\"targetRounds\":2}],\"createdAt\":1}]"
+    },
+    {
+        "name": "goal duplicates and broken",
+        "kind": "goals",
+        "input": "[{\"id\":\"g\",\"name\":\"A\",\"mantras\":[],\"createdAt\":1},{\"id\":\"g\",\"name\":\"B\",\"mantras\":[],\"createdAt\":2},{\"id\":\"bad\",\"mantras\":[],\"createdAt\":3},{\"id\":\"bad2\",\"name\":\"x\",\"mantras\":[{\"id\":\"m\",\"name\":\"A\"}],\"createdAt\":3},{\"id\":\"n\",\"name\":null,\"mantras\":[],\"createdAt\":3}]",
+        "items": [
+            "{\"id\":\"g\",\"name\":\"A\",\"mantras\":[],\"createdAt\":1}",
+            "{\"id\":\"g-2\",\"name\":\"B\",\"mantras\":[],\"createdAt\":2}"
+        ],
+        "unreadable": [
+            "{\"id\":\"bad\",\"mantras\":[],\"createdAt\":3}",
+            "{\"id\":\"bad2\",\"name\":\"x\",\"mantras\":[{\"id\":\"m\",\"name\":\"A\"}],\"createdAt\":3}",
+            "{\"id\":\"n\",\"name\":null,\"mantras\":[],\"createdAt\":3}"
+        ],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"g\",\"name\":\"A\",\"mantras\":[],\"createdAt\":1},{\"id\":\"g-2\",\"name\":\"B\",\"mantras\":[],\"createdAt\":2},{\"id\":\"bad\",\"mantras\":[],\"createdAt\":3},{\"id\":\"bad2\",\"name\":\"x\",\"mantras\":[{\"id\":\"m\",\"name\":\"A\"}],\"createdAt\":3},{\"id\":\"n\",\"name\":null,\"mantras\":[],\"createdAt\":3}]"
+    },
+    {
+        "name": "goal invalid but stored",
+        "kind": "goals",
+        "input": "[{\"id\":\"z\",\"name\":\"  \",\"mantras\":[{\"id\":\"m\",\"name\":\"\",\"targetRounds\":0}],\"createdAt\":5,\"roundSize\":27}]",
+        "items": [
+            "{\"id\":\"z\",\"name\":\"  \",\"mantras\":[{\"id\":\"m\",\"name\":\"\",\"targetRounds\":0}],\"createdAt\":5}"
+        ],
+        "unreadable": [],
+        "corrupt": false,
+        "rewritten": "[{\"id\":\"z\",\"name\":\"  \",\"mantras\":[{\"id\":\"m\",\"name\":\"\",\"targetRounds\":0}],\"createdAt\":5}]"
+    },
+    {
+        "name": "fresh free session",
+        "kind": "activeSession",
+        "input": "{\"count\":5,\"rounds\":0,\"isActive\":true,\"isPaused\":false,\"sessionStartTime\":100,\"touchCounting\":true,\"activeGoal\":null,\"currentMantraIndex\":0,\"mantraRoundsCompleted\":0,\"sessionId\":\"s\",\"lastUpdatedAt\":200}",
+        "output": "{\"count\":5,\"rounds\":0,\"isActive\":true,\"isPaused\":false,\"sessionStartTime\":100,\"touchCounting\":true,\"activeGoal\":null,\"currentMantraIndex\":0,\"mantraRoundsCompleted\":0,\"sessionId\":\"s\",\"lastUpdatedAt\":200}",
+        "error": null
+    },
+    {
+        "name": "older version with round size 27",
+        "kind": "activeSession",
+        "input": "{\"count\":30,\"rounds\":1,\"isActive\":true,\"sessionStartTime\":5,\"roundSize\":27,\"sessionId\":\"s\",\"lastUpdatedAt\":9}",
+        "output": "{\"count\":30,\"rounds\":0,\"isActive\":true,\"isPaused\":false,\"sessionStartTime\":5,\"touchCounting\":false,\"activeGoal\":null,\"currentMantraIndex\":0,\"mantraRoundsCompleted\":0,\"sessionId\":\"s\",\"lastUpdatedAt\":9}",
+        "error": null
+    },
+    {
+        "name": "legacy goal session at 54",
+        "kind": "activeSession",
+        "input": "{\"count\":250,\"rounds\":4,\"isActive\":true,\"activeGoal\":{\"id\":1,\"name\":\"G\",\"mantras\":[{\"id\":2,\"name\":\"A\",\"targetRounds\":1},{\"id\":3,\"name\":\"B\",\"targetRounds\":2}],\"createdAt\":1},\"currentMantraIndex\":1,\"mantraRoundsCompleted\":3,\"sessionId\":\"s\",\"lastUpdatedAt\":9,\"inputMode\":\"BOTH\"}",
+        "output": "{\"count\":250,\"rounds\":2,\"isActive\":true,\"isPaused\":false,\"sessionStartTime\":0,\"touchCounting\":false,\"activeGoal\":{\"id\":\"1\",\"name\":\"G\",\"mantras\":[{\"id\":\"2\",\"name\":\"A\",\"targetRounds\":1},{\"id\":\"3\",\"name\":\"B\",\"targetRounds\":2}],\"createdAt\":1},\"currentMantraIndex\":1,\"mantraRoundsCompleted\":1,\"sessionId\":\"s\",\"lastUpdatedAt\":9}",
+        "error": null
+    },
+    {
+        "name": "zero target mantras",
+        "kind": "activeSession",
+        "input": "{\"count\":400,\"isActive\":true,\"activeGoal\":{\"id\":\"g\",\"name\":\"G\",\"mantras\":[{\"id\":\"a\",\"name\":\"A\",\"targetRounds\":0},{\"id\":\"b\",\"name\":\"B\",\"targetRounds\":0}],\"createdAt\":1},\"sessionId\":\"s\"}",
+        "output": "{\"count\":400,\"rounds\":3,\"isActive\":true,\"isPaused\":false,\"sessionStartTime\":0,\"touchCounting\":false,\"activeGoal\":{\"id\":\"g\",\"name\":\"G\",\"mantras\":[{\"id\":\"a\",\"name\":\"A\",\"targetRounds\":0},{\"id\":\"b\",\"name\":\"B\",\"targetRounds\":0}],\"createdAt\":1},\"currentMantraIndex\":1,\"mantraRoundsCompleted\":2,\"sessionId\":\"s\",\"lastUpdatedAt\":0}",
+        "error": null
+    },
+    {
+        "name": "paused as string",
+        "kind": "activeSession",
+        "input": "{\"count\":1,\"isActive\":true,\"isPaused\":\"true\",\"sessionId\":\"s\"}",
+        "output": "{\"count\":1,\"rounds\":0,\"isActive\":true,\"isPaused\":true,\"sessionStartTime\":0,\"touchCounting\":false,\"activeGoal\":null,\"currentMantraIndex\":0,\"mantraRoundsCompleted\":0,\"sessionId\":\"s\",\"lastUpdatedAt\":0}",
+        "error": null
+    },
+    {
+        "name": "missing everything",
+        "kind": "activeSession",
+        "input": "{}",
+        "output": "{\"count\":0,\"rounds\":0,\"isActive\":false,\"isPaused\":false,\"sessionStartTime\":0,\"touchCounting\":false,\"activeGoal\":null,\"currentMantraIndex\":0,\"mantraRoundsCompleted\":0,\"sessionId\":\"\",\"lastUpdatedAt\":0}",
+        "error": null
+    },
+    {
+        "name": "not an object",
+        "kind": "activeSession",
+        "input": "[1]",
+        "output": null,
+        "error": "JsonDecodingException"
+    },
+    {
+        "name": "session id number",
+        "kind": "activeSession",
+        "input": "{\"count\":1,\"isActive\":true,\"sessionId\":5}",
+        "output": null,
+        "error": "JsonDecodingException"
+    },
+    {
+        "name": "full",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":1,\"exportedAt\":1000,\"settings\":{\"themeMode\":\"DARK\",\"dailyTarget\":4,\"countVibration\":false,\"countIntensity\":80,\"roundVibration\":true,\"roundIntensity\":255,\"milestonePulse\":true,\"beadClick\":true,\"reminderEnabled\":true,\"reminderMinuteOfDay\":360},\"goals\":[{\"id\":\"g1\",\"name\":\"Morning\",\"mantras\":[{\"id\":\"m1\",\"name\":\"Om\",\"targetRounds\":2}],\"createdAt\":10}],\"history\":[{\"id\":\"s1\",\"startTime\":100,\"endTime\":700,\"totalCounts\":120,\"totalRounds\":2,\"goalId\":\"g1\",\"goalName\":\"Morning\",\"mantras\":[{\"name\":\"Om\",\"rounds\":2,\"counts\":120}]}]}",
+        "output": "{\n    \"app\": \"SuperChant\",\n    \"format\": 1,\n    \"exportedAt\": 1000,\n    \"settings\": {\n        \"themeMode\": \"DARK\",\n        \"dailyTarget\": 4,\n        \"countVibration\": false,\n        \"countIntensity\": 80,\n        \"roundVibration\": true,\n        \"roundIntensity\": 255,\n        \"milestonePulse\": true,\n        \"beadClick\": true,\n        \"reminderEnabled\": true,\n        \"reminderMinuteOfDay\": 360\n    },\n    \"goals\": [\n        {\n            \"id\": \"g1\",\n            \"name\": \"Morning\",\n            \"mantras\": [\n                {\n                    \"id\": \"m1\",\n                    \"name\": \"Om\",\n                    \"targetRounds\": 2\n                }\n            ],\n            \"createdAt\": 10\n        }\n    ],\n    \"history\": [\n        {\n            \"id\": \"s1\",\n            \"startTime\": 100,\n            \"endTime\": 700,\n            \"totalCounts\": 120,\n            \"totalRounds\": 2,\n            \"goalId\": \"g1\",\n            \"goalName\": \"Morning\",\n            \"mantras\": [\n                {\n                    \"name\": \"Om\",\n                    \"rounds\": 2,\n                    \"counts\": 120\n                }\n            ]\n        }\n    ]\n}",
+        "error": null
+    },
+    {
+        "name": "v1.2 removed fields",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":1,\"exportedAt\":1000,\"settings\":{\"themeMode\":\"DARK\",\"inputMode\":\"BOTH\",\"roundSize\":54,\"dailyTarget\":4,\"pocketGuard\":false,\"beadClick\":true},\"goals\":[{\"id\":\"g1\",\"name\":\"Morning\",\"mantras\":[{\"id\":\"m1\",\"name\":\"Om\",\"targetRounds\":2}],\"createdAt\":10,\"roundSize\":54}],\"history\":[]}",
+        "output": "{\n    \"app\": \"SuperChant\",\n    \"format\": 1,\n    \"exportedAt\": 1000,\n    \"settings\": {\n        \"themeMode\": \"DARK\",\n        \"dailyTarget\": 4,\n        \"countVibration\": null,\n        \"countIntensity\": null,\n        \"roundVibration\": null,\n        \"roundIntensity\": null,\n        \"milestonePulse\": null,\n        \"beadClick\": true,\n        \"reminderEnabled\": null,\n        \"reminderMinuteOfDay\": null\n    },\n    \"goals\": [\n        {\n            \"id\": \"g1\",\n            \"name\": \"Morning\",\n            \"mantras\": [\n                {\n                    \"id\": \"m1\",\n                    \"name\": \"Om\",\n                    \"targetRounds\": 2\n                }\n            ],\n            \"createdAt\": 10\n        }\n    ],\n    \"history\": []\n}",
+        "error": null
+    },
+    {
+        "name": "legacy numeric ids",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":1,\"goals\":[{\"id\":1690000000000,\"name\":\"Old\",\"mantras\":[{\"id\":1690000000001,\"name\":\"A\",\"targetRounds\":1}],\"createdAt\":1}],\"history\":[{\"id\":1700000000000,\"startTime\":1,\"endTime\":2,\"totalCounts\":108,\"totalRounds\":1,\"goalId\":1690000000000},{\"id\":1700000000000,\"startTime\":1,\"endTime\":2,\"totalCounts\":108,\"totalRounds\":1}]}",
+        "output": "{\n    \"app\": \"SuperChant\",\n    \"format\": 1,\n    \"exportedAt\": 0,\n    \"settings\": {\n        \"themeMode\": null,\n        \"dailyTarget\": null,\n        \"countVibration\": null,\n        \"countIntensity\": null,\n        \"roundVibration\": null,\n        \"roundIntensity\": null,\n        \"milestonePulse\": null,\n        \"beadClick\": null,\n        \"reminderEnabled\": null,\n        \"reminderMinuteOfDay\": null\n    },\n    \"goals\": [\n        {\n            \"id\": \"1690000000000\",\n            \"name\": \"Old\",\n            \"mantras\": [\n                {\n                    \"id\": \"1690000000001\",\n                    \"name\": \"A\",\n                    \"targetRounds\": 1\n                }\n            ],\n            \"createdAt\": 1\n        }\n    ],\n    \"history\": [\n        {\n            \"id\": \"1700000000000\",\n            \"startTime\": 1,\n            \"endTime\": 2,\n            \"totalCounts\": 108,\n            \"totalRounds\": 1,\n            \"goalId\": \"1690000000000\",\n            \"goalName\": null,\n            \"mantras\": []\n        },\n        {\n            \"id\": \"1700000000000-2\",\n            \"startTime\": 1,\n            \"endTime\": 2,\n            \"totalCounts\": 108,\n            \"totalRounds\": 1,\n            \"goalId\": null,\n            \"goalName\": null,\n            \"mantras\": []\n        }\n    ]\n}",
+        "error": null
+    },
+    {
+        "name": "content ids",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":1,\"goals\":[{\"name\":\"By hand ॐ\",\"mantras\":[{\"name\":\"Om\",\"targetRounds\":1},{\"id\":null,\"name\":\"Ram \\\"x\\\"\\n\",\"targetRounds\":2.0e0}],\"createdAt\":1},{\"name\":\"Second\",\"mantras\":[{\"name\":\"Om\",\"targetRounds\":1}],\"createdAt\":1.0}],\"history\":[{\"startTime\":1,\"endTime\":2,\"totalCounts\":108,\"totalRounds\":1},{\"id\":null,\"startTime\":3,\"endTime\":4,\"totalCounts\":5,\"totalRounds\":0,\"extra\":{\"b\":[1,2.50,true,null,\"é\"]}},{\"startTime\":1,\"endTime\":2,\"totalCounts\":108,\"totalRounds\":1},{\"startTime\":1e1,\"endTime\":2E1,\"totalCounts\":1,\"totalRounds\":0,\"goalName\":\"tab\\there 😀\"}]}",
+        "output": "{\n    \"app\": \"SuperChant\",\n    \"format\": 1,\n    \"exportedAt\": 0,\n    \"settings\": {\n        \"themeMode\": null,\n        \"dailyTarget\": null,\n        \"countVibration\": null,\n        \"countIntensity\": null,\n        \"roundVibration\": null,\n        \"roundIntensity\": null,\n        \"milestonePulse\": null,\n        \"beadClick\": null,\n        \"reminderEnabled\": null,\n        \"reminderMinuteOfDay\": null\n    },\n    \"goals\": [],\n    \"history\": [\n        {\n            \"id\": \"212cba19-f446-31bf-bea2-045c1da11031\",\n            \"startTime\": 1,\n            \"endTime\": 2,\n            \"totalCounts\": 108,\n            \"totalRounds\": 1,\n            \"goalId\": null,\n            \"goalName\": null,\n            \"mantras\": []\n        },\n        {\n            \"id\": \"bedec2f6-435b-3b4d-907f-c2de58fdb0d1\",\n            \"startTime\": 3,\n            \"endTime\": 4,\n            \"totalCounts\": 5,\n            \"totalRounds\": 0,\n            \"goalId\": null,\n            \"goalName\": null,\n            \"mantras\": []\n        },\n        {\n            \"id\": \"212cba19-f446-31bf-bea2-045c1da11031-2\",\n            \"startTime\": 1,\n            \"endTime\": 2,\n            \"totalCounts\": 108,\n            \"totalRounds\": 1,\n            \"goalId\": null,\n            \"goalName\": null,\n            \"mantras\": []\n        },\n        {\n            \"id\": \"f8710b54-71d0-3d21-8eab-fc215ef8027d\",\n            \"startTime\": 10,\n            \"endTime\": 20,\n            \"totalCounts\": 1,\n            \"totalRounds\": 0,\n            \"goalId\": null,\n            \"goalName\": \"tab\\there 😀\",\n            \"mantras\": []\n        }\n    ]\n}",
+        "error": null
+    },
+    {
+        "name": "bad entries",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":1,\"settings\":\"nonsense\",\"history\":[{\"id\":\"ok\",\"startTime\":1,\"endTime\":2,\"totalCounts\":1,\"totalRounds\":0},{\"id\":\"bad\"}],\"goals\":\"not a list\"}",
+        "output": "{\n    \"app\": \"SuperChant\",\n    \"format\": 1,\n    \"exportedAt\": 0,\n    \"settings\": {\n        \"themeMode\": null,\n        \"dailyTarget\": null,\n        \"countVibration\": null,\n        \"countIntensity\": null,\n        \"roundVibration\": null,\n        \"roundIntensity\": null,\n        \"milestonePulse\": null,\n        \"beadClick\": null,\n        \"reminderEnabled\": null,\n        \"reminderMinuteOfDay\": null\n    },\n    \"goals\": [],\n    \"history\": [\n        {\n            \"id\": \"ok\",\n            \"startTime\": 1,\n            \"endTime\": 2,\n            \"totalCounts\": 1,\n            \"totalRounds\": 0,\n            \"goalId\": null,\n            \"goalName\": null,\n            \"mantras\": []\n        }\n    ]\n}",
+        "error": null
+    },
+    {
+        "name": "invalid goals skipped",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":1,\"goals\":[{\"id\":\"ok\",\"name\":\"Fine\",\"mantras\":[{\"id\":\"m\",\"name\":\"Om\",\"targetRounds\":999}],\"createdAt\":1},{\"id\":\"blank\",\"name\":\"  \",\"mantras\":[{\"id\":\"m\",\"name\":\"Om\",\"targetRounds\":1}],\"createdAt\":1},{\"id\":\"none\",\"name\":\"No mantras\",\"mantras\":[],\"createdAt\":1},{\"id\":\"huge\",\"name\":\"Huge\",\"mantras\":[{\"id\":\"m\",\"name\":\"Om\",\"targetRounds\":1000}],\"createdAt\":1}]}",
+        "output": "{\n    \"app\": \"SuperChant\",\n    \"format\": 1,\n    \"exportedAt\": 0,\n    \"settings\": {\n        \"themeMode\": null,\n        \"dailyTarget\": null,\n        \"countVibration\": null,\n        \"countIntensity\": null,\n        \"roundVibration\": null,\n        \"roundIntensity\": null,\n        \"milestonePulse\": null,\n        \"beadClick\": null,\n        \"reminderEnabled\": null,\n        \"reminderMinuteOfDay\": null\n    },\n    \"goals\": [\n        {\n            \"id\": \"ok\",\n            \"name\": \"Fine\",\n            \"mantras\": [\n                {\n                    \"id\": \"m\",\n                    \"name\": \"Om\",\n                    \"targetRounds\": 999\n                }\n            ],\n            \"createdAt\": 1\n        }\n    ],\n    \"history\": []\n}",
+        "error": null
+    },
+    {
+        "name": "settings partly wrong",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":1,\"settings\":{\"themeMode\":\"LIGHT\",\"dailyTarget\":\"4\",\"beadClick\":\"yes\"}}",
+        "output": "{\n    \"app\": \"SuperChant\",\n    \"format\": 1,\n    \"exportedAt\": 0,\n    \"settings\": {\n        \"themeMode\": null,\n        \"dailyTarget\": null,\n        \"countVibration\": null,\n        \"countIntensity\": null,\n        \"roundVibration\": null,\n        \"roundIntensity\": null,\n        \"milestonePulse\": null,\n        \"beadClick\": null,\n        \"reminderEnabled\": null,\n        \"reminderMinuteOfDay\": null\n    },\n    \"goals\": [],\n    \"history\": []\n}",
+        "error": null
+    },
+    {
+        "name": "settings with nulls",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":1,\"settings\":{\"themeMode\":null,\"dailyTarget\":7,\"reminderMinuteOfDay\":5000}}",
+        "output": "{\n    \"app\": \"SuperChant\",\n    \"format\": 1,\n    \"exportedAt\": 0,\n    \"settings\": {\n        \"themeMode\": null,\n        \"dailyTarget\": 7,\n        \"countVibration\": null,\n        \"countIntensity\": null,\n        \"roundVibration\": null,\n        \"roundIntensity\": null,\n        \"milestonePulse\": null,\n        \"beadClick\": null,\n        \"reminderEnabled\": null,\n        \"reminderMinuteOfDay\": 5000\n    },\n    \"goals\": [],\n    \"history\": []\n}",
+        "error": null
+    },
+    {
+        "name": "format quoted",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":\"1\",\"exportedAt\":\"55\"}",
+        "output": "{\n    \"app\": \"SuperChant\",\n    \"format\": 1,\n    \"exportedAt\": 55,\n    \"settings\": {\n        \"themeMode\": null,\n        \"dailyTarget\": null,\n        \"countVibration\": null,\n        \"countIntensity\": null,\n        \"roundVibration\": null,\n        \"roundIntensity\": null,\n        \"milestonePulse\": null,\n        \"beadClick\": null,\n        \"reminderEnabled\": null,\n        \"reminderMinuteOfDay\": null\n    },\n    \"goals\": [],\n    \"history\": []\n}",
+        "error": null
+    },
+    {
+        "name": "format decimal",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":1.0}",
+        "output": null,
+        "error": "BackupFormatException"
+    },
+    {
+        "name": "format zero",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":0,\"exportedAt\":1.5}",
+        "output": "{\n    \"app\": \"SuperChant\",\n    \"format\": 0,\n    \"exportedAt\": 0,\n    \"settings\": {\n        \"themeMode\": null,\n        \"dailyTarget\": null,\n        \"countVibration\": null,\n        \"countIntensity\": null,\n        \"roundVibration\": null,\n        \"roundIntensity\": null,\n        \"milestonePulse\": null,\n        \"beadClick\": null,\n        \"reminderEnabled\": null,\n        \"reminderMinuteOfDay\": null\n    },\n    \"goals\": [],\n    \"history\": []\n}",
+        "error": null
+    },
+    {
+        "name": "newer format",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":2}",
+        "output": null,
+        "error": "BackupFormatException"
+    },
+    {
+        "name": "other app",
+        "kind": "backup",
+        "input": "{\"app\":\"Other\",\"format\":1}",
+        "output": null,
+        "error": "BackupFormatException"
+    },
+    {
+        "name": "missing format",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\"}",
+        "output": null,
+        "error": "BackupFormatException"
+    },
+    {
+        "name": "array",
+        "kind": "backup",
+        "input": "[]",
+        "output": null,
+        "error": "BackupFormatException"
+    },
+    {
+        "name": "not json",
+        "kind": "backup",
+        "input": "not json",
+        "output": null,
+        "error": "BackupFormatException"
+    },
+    {
+        "name": "duplicate history ids",
+        "kind": "backup",
+        "input": "{\"app\":\"SuperChant\",\"format\":1,\"history\":[{\"id\":\"s\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"s\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0},{\"id\":\"s-2\",\"startTime\":1,\"endTime\":2,\"totalCounts\":3,\"totalRounds\":0}]}",
+        "output": "{\n    \"app\": \"SuperChant\",\n    \"format\": 1,\n    \"exportedAt\": 0,\n    \"settings\": {\n        \"themeMode\": null,\n        \"dailyTarget\": null,\n        \"countVibration\": null,\n        \"countIntensity\": null,\n        \"roundVibration\": null,\n        \"roundIntensity\": null,\n        \"milestonePulse\": null,\n        \"beadClick\": null,\n        \"reminderEnabled\": null,\n        \"reminderMinuteOfDay\": null\n    },\n    \"goals\": [],\n    \"history\": [\n        {\n            \"id\": \"s\",\n            \"startTime\": 1,\n            \"endTime\": 2,\n            \"totalCounts\": 3,\n            \"totalRounds\": 0,\n            \"goalId\": null,\n            \"goalName\": null,\n            \"mantras\": []\n        },\n        {\n            \"id\": \"s-2\",\n            \"startTime\": 1,\n            \"endTime\": 2,\n            \"totalCounts\": 3,\n            \"totalRounds\": 0,\n            \"goalId\": null,\n            \"goalName\": null,\n            \"mantras\": []\n        },\n        {\n            \"id\": \"s-2-2\",\n            \"startTime\": 1,\n            \"endTime\": 2,\n            \"totalCounts\": 3,\n            \"totalRounds\": 0,\n            \"goalId\": null,\n            \"goalName\": null,\n            \"mantras\": []\n        }\n    ]\n}",
+        "error": null
+    }
+]

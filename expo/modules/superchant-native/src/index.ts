@@ -86,7 +86,7 @@ declare class SuperchantNativeModule extends NativeModule<Events> implements Ses
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
   /** Ends the session and returns its final state; the stored copy stays until clearActiveSession. */
-  finish(): string;
+  finish(): Promise<string>;
   /** The session persisted by a previous process, as JSON, if any. */
   loadActiveSession(): string | null;
   clearActiveSession(sessionId: string): void;

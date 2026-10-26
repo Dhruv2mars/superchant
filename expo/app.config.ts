@@ -88,6 +88,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     './plugins/withSuperChantAndroid',
+    '@bacons/apple-targets',
   ],
   experiments: { typedRoutes: true },
 });

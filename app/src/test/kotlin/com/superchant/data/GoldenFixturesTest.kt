@@ -74,6 +74,34 @@ class GoldenFixturesTest {
         }
     }
 
+    /** Presses [presses] times from [start]: the final state and every non-plain feedback with its press number. */
+    private fun counterCase(name: String, start: ChantState, presses: Int): JsonObject {
+        var state = start
+        val events = mutableListOf<String>()
+        var accepted = 0
+        repeat(presses) { i ->
+            val result = ChantCounter.increment(state) ?: return@repeat
+            state = result.state
+            accepted++
+            if (result.feedback != CountFeedback.COUNT) events += "${i + 1}:${result.feedback}"
+        }
+        return buildJsonObject {
+            put("name", name)
+            put("kind", "counter")
+            put("input", json.encodeToString(ChantState.serializer(), start))
+            put("presses", presses)
+            put("accepted", accepted)
+            put("output", json.encodeToString(ChantState.serializer(), state))
+            put("events", JsonArray(events.map(::JsonPrimitive)))
+            put("record", json.encodeToString(SessionRecord.serializer(), state.toRecord(state.sessionStartTime + 60_000)))
+        }
+    }
+
+    private val threeMantras = Goal(
+        id = "g", name = "Evening", createdAt = 1,
+        mantras = listOf(MantraGoal("a", "A", 2), MantraGoal("b", "B", 1), MantraGoal("c", "C", 3))
+    )
+
     private val record = """"startTime":1,"endTime":2,"totalCounts":3,"totalRounds":0"""
 
     private fun fixtures(): JsonArray = JsonArray(
@@ -115,6 +143,12 @@ class GoldenFixturesTest {
             activeSessionCase("missing everything", "{}"),
             activeSessionCase("not an object", "[1]"),
             activeSessionCase("session id number", """{"count":1,"isActive":true,"sessionId":5}"""),
+            counterCase("free session, 3 rounds", ChantState(isActive = true, sessionStartTime = 10, sessionId = "s"), 350),
+            counterCase("goal of three mantras to completion and beyond", ChantState(isActive = true, activeGoal = threeMantras, sessionId = "s"), 700),
+            counterCase("paused counts nothing", ChantState(isActive = true, isPaused = true, sessionId = "s"), 10),
+            counterCase("inactive counts nothing", ChantState(sessionId = "s"), 10),
+            counterCase("resumed mid-goal", ChantState(isActive = true, count = 300, rounds = 2, activeGoal = threeMantras, currentMantraIndex = 1, mantraRoundsCompleted = 0, sessionId = "s"), 250),
+            counterCase("zero-round mantra", ChantState(isActive = true, activeGoal = threeMantras.copy(mantras = listOf(MantraGoal("z", "Z", 0), MantraGoal("y", "Y", 1))), sessionId = "s"), 220),
             backupCase("full", """{"app":"SuperChant","format":1,"exportedAt":1000,"settings":{"themeMode":"DARK","dailyTarget":4,"countVibration":false,"countIntensity":80,"roundVibration":true,"roundIntensity":255,"milestonePulse":true,"beadClick":true,"reminderEnabled":true,"reminderMinuteOfDay":360},"goals":[{"id":"g1","name":"Morning","mantras":[{"id":"m1","name":"Om","targetRounds":2}],"createdAt":10}],"history":[{"id":"s1","startTime":100,"endTime":700,"totalCounts":120,"totalRounds":2,"goalId":"g1","goalName":"Morning","mantras":[{"name":"Om","rounds":2,"counts":120}]}]}"""),
             backupCase("v1.2 removed fields", """{"app":"SuperChant","format":1,"exportedAt":1000,"settings":{"themeMode":"DARK","inputMode":"BOTH","roundSize":54,"dailyTarget":4,"pocketGuard":false,"beadClick":true},"goals":[{"id":"g1","name":"Morning","mantras":[{"id":"m1","name":"Om","targetRounds":2}],"createdAt":10,"roundSize":54}],"history":[]}"""),
             backupCase("legacy numeric ids", """{"app":"SuperChant","format":1,"goals":[{"id":1690000000000,"name":"Old","mantras":[{"id":1690000000001,"name":"A","targetRounds":1}],"createdAt":1}],"history":[{"id":1700000000000,"startTime":1,"endTime":2,"totalCounts":108,"totalRounds":1,"goalId":1690000000000},{"id":1700000000000,"startTime":1,"endTime":2,"totalCounts":108,"totalRounds":1}]}"""),

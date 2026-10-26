@@ -10,12 +10,15 @@ import {
   encodeChantState,
   encodeGoal,
   encodeSessionRecord,
+  increment,
   normalizedRounds,
+  toRecord,
 } from '../model';
 import { decodeStoredList, encodeStoredList, withUniqueGoalIds, withUniqueRecordIds } from '../storedList';
 import golden from '../__fixtures__/golden.json';
 
 type Case =
+  | { name: string; kind: 'counter'; input: string; presses: number; accepted: number; output: string; events: string[]; record: string }
   | { name: string; kind: 'history' | 'goals'; input: string | null; items: string[]; unreadable: string[]; corrupt: boolean; rewritten: string }
   | { name: string; kind: 'activeSession' | 'backup'; input: string; output: string | null; error: string | null };
 
@@ -48,6 +51,21 @@ describe('golden fixtures from the Kotlin app', () => {
         }
         expect(output).toBe(c.output);
         expect(error != null).toBe(c.error != null);
+      } else if (c.kind === 'counter') {
+        let state = decodeChantState(parseKJson(c.input));
+        const events: string[] = [];
+        let accepted = 0;
+        for (let i = 1; i <= c.presses; i++) {
+          const r = increment(state);
+          if (!r) continue;
+          state = r.state;
+          accepted++;
+          if (r.feedback !== 'COUNT') events.push(`${i}:${r.feedback}`);
+        }
+        expect(accepted).toBe(c.accepted);
+        expect(events).toEqual(c.events);
+        expect(stringifyKJson(encodeChantState(state))).toBe(c.output);
+        expect(stringifyKJson(encodeSessionRecord(toRecord(state, state.sessionStartTime + 60_000)))).toBe(c.record);
       } else if (c.kind === 'backup') {
         let output: string | null = null;
         let error: string | null = null;

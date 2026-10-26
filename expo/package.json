@@ -31,6 +31,7 @@
     "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
+    "@bacons/apple-targets": "^5.0.0",
     "@types/bun": "^1.4.4",
     "@types/react": "~19.3.0",
     "typescript": "~6.0.3"
@@ -44,7 +45,8 @@
     "test:tz-ny": "TZ=America/New_York bun test src",
     "test:tz-in": "TZ=Asia/Kolkata bun test src",
     "typecheck": "tsc --noEmit",
-    "prebuild": "expo prebuild --clean"
+    "prebuild": "expo prebuild --clean",
+    "test:swift": "swiftc -O modules/superchant-native/ios/ChantModel.swift modules/superchant-native/swift-tests/main.swift -o /tmp/superchant-swift-vectors && /tmp/superchant-swift-vectors src/core/__fixtures__/golden.json"
   },
   "private": true
 }

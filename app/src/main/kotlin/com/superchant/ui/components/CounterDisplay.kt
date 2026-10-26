@@ -149,7 +149,7 @@ fun CounterDisplay(
                 // Beads sit between the meru gap at the top; bead i lights once its share of the round is done.
                 val beadCount = geometry.beadCount
                 for (i in 0 until beadCount) {
-                    val angle = MalaGeometry.beadAngle(i, beadCount)
+                    val angle = geometry.beadAngle(i)
                     val isLit = animatedProgress.value >= (i + 1f) / beadCount - 0.0001f
                     drawCircle(
                         color = if (isLit) progressColor else trackColor,
@@ -211,8 +211,18 @@ internal data class MalaGeometry(
     val beadRadius: Float,
     val beadOrbit: Float,
     val meruRadius: Float,
-    val beadCount: Int
+    val beadCount: Int,
+    /** Arc length between neighbouring bead centres. */
+    val beadPitch: Float,
+    /** Arc length from the meru centre to the first and last bead centres. */
+    val meruClearance: Float
 ) {
+    /**
+     * Angle of bead [index], clockwise from the meru bead at the top. The meru gets its own gap so it sits
+     * as far from its neighbours (edge to edge) as the beads sit from each other, instead of overlapping them.
+     */
+    fun beadAngle(index: Int): Double = (meruClearance + index * beadPitch) / beadOrbit - PI / 2
+
     companion object {
         /** Beads need at least this much arc per bead, in bead radii, to read as separate beads. */
         private const val MIN_SPACING_RADII = 3.2f
@@ -223,22 +233,27 @@ internal data class MalaGeometry(
             val beadOrbit = outerRadius - meruRadius
             val strokeWidth = (outerRadius * 0.05f).coerceIn(5f * density, 12f * density)
             val ringRadius = beadOrbit - meruRadius - strokeWidth / 2 - 4f * density
-            val maxBeads = ((2 * PI * beadOrbit) / (beadRadius * MIN_SPACING_RADII)).toInt() - 2
+            // Around the circle: meru gap, beads one pitch apart, meru gap. Each meru gap is the meru radius
+            // plus one bead gap plus a bead radius, i.e. (meru - bead radius) + pitch, so the beads get
+            // circumference - 2 * (meru - bead radius), shared as (beads + 1) pitches.
+            val beadArc = (2 * PI * beadOrbit).toFloat() - 2 * (meruRadius - beadRadius)
+            val maxBeads = (beadArc / (beadRadius * MIN_SPACING_RADII)).toInt() - 1
+            val beadCount = beadsToShow(maxBeads)
+            val beadPitch = beadArc / (beadCount + 1)
             return MalaGeometry(
                 ringRadius = ringRadius,
                 strokeWidth = strokeWidth,
                 beadRadius = beadRadius,
                 beadOrbit = beadOrbit,
                 meruRadius = meruRadius,
-                beadCount = beadsToShow(maxBeads)
+                beadCount = beadCount,
+                beadPitch = beadPitch,
+                meruClearance = meruRadius - beadRadius + beadPitch
             )
         }
 
         /** One bead per count when all 108 fit; otherwise the most beads that split the round evenly (54 of 2, 36 of 3, ...). */
         fun beadsToShow(maxBeads: Int): Int =
             (minOf(maxBeads, ChantState.ROUND_SIZE) downTo 1).firstOrNull { ChantState.ROUND_SIZE % it == 0 } ?: 0
-
-        /** Angle of bead [index], leaving the top position free for the meru bead. */
-        fun beadAngle(index: Int, count: Int): Double = (index + 0.5) / count * 2 * PI - PI / 2
     }
 }

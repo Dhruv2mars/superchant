@@ -3,6 +3,10 @@ package com.superchant.ui.components
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.hypot
+import kotlin.math.sin
 
 class MalaGeometryTest {
 
@@ -27,5 +31,26 @@ class MalaGeometryTest {
         assertTrue(small.beadCount in 1..108 && 108 % small.beadCount == 0)
         assertTrue(large.beadOrbit + large.meruRadius <= 1000f)
         assertTrue(small.ringRadius > 0f)
+    }
+
+    @Test
+    fun meruBeadClearsItsNeighboursLikeTheBeadsClearEachOther() {
+        // Phone-sized and small rings, at 108, 54 and 36 beads
+        for (outer in listOf(1000f, 410f, 250f)) {
+            val g = MalaGeometry.forRing(outerRadius = outer, density = 2.625f)
+            fun position(angle: Double) = Pair(g.beadOrbit * cos(angle), g.beadOrbit * sin(angle))
+            fun distance(a: Double, b: Double): Double {
+                val (ax, ay) = position(a)
+                val (bx, by) = position(b)
+                return hypot(ax - bx, ay - by)
+            }
+            val meru = -PI / 2
+            val beadGap = distance(g.beadAngle(0), g.beadAngle(1)) - 2 * g.beadRadius
+            val firstGap = distance(meru, g.beadAngle(0)) - g.meruRadius - g.beadRadius
+            val lastGap = distance(meru, g.beadAngle(g.beadCount - 1)) - g.meruRadius - g.beadRadius
+            assertTrue("beads overlap at outer=$outer", beadGap > 0)
+            assertEquals("first bead gap at outer=$outer", beadGap, firstGap, beadGap * 0.05)
+            assertEquals("last bead gap at outer=$outer", beadGap, lastGap, beadGap * 0.05)
+        }
     }
 }

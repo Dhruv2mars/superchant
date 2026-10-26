@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings the native side shows (notification, tile, reminder, shortcuts, accessibility service, counter). -->
+<resources>
+    <plurals name="notification_goal_complete_text">
+        <item quantity="one">%1$s - %2$d round completed</item>
+        <item quantity="other">%1$s - All %2$d rounds completed</item>
+    </plurals>
+    <plurals name="reminder_text_streak">
+        <item quantity="one">Keep your %d-day streak going.</item>
+        <item quantity="other">Keep your %d-day streak going.</item>
+    </plurals>
+    <plurals name="reminder_text_target">
+        <item quantity="one">%1$d of %2$d round so far today.</item>
+        <item quantity="other">%1$d of %2$d rounds so far today.</item>
+    </plurals>
+    <plurals name="rounds_completed">
+        <item quantity="one">%d round completed</item>
+        <item quantity="other">%d rounds completed</item>
+    </plurals>
+    <plurals name="rounds_count">
+        <item quantity="one">%d round</item>
+        <item quantity="other">%d rounds</item>
+    </plurals>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_stop">Stop</string>
+    <string name="app_name">SuperChant</string>
+    <string name="notification_channel_description">Shows your active chanting session progress</string>
+    <string name="notification_channel_name">Chanting Session</string>
+    <string name="notification_goal_complete">Goal Complete!</string>
+    <string name="notification_paused">Paused</string>
+    <string name="reminder_channel_description">One gentle reminder a day, only if you haven\'t practiced yet</string>
+    <string name="reminder_channel_name">Daily reminder</string>
+    <string name="reminder_text">A few quiet minutes with your mala.</string>
+    <string name="reminder_title">Time for your practice</string>
+    <string name="shortcut_start_goal">Start %1$s</string>
+    <string name="status_paused">Paused</string>
+    <string name="tap_to_count_action">Count</string>
+    <string name="tile_start">Tap to start</string>
+    <string name="accessibility_service_label">SuperChant Volume Counter</string>
+    <string name="accessibility_service_description">SuperChant uses this accessibility service only to count volume button presses while a chanting session is running.\n\nDuring a session, volume up or down adds a count instead of changing the volume. At all other times the buttons work as usual.\n\nThe service cannot see your screen, what you type, or other apps. It collects and shares nothing, and SuperChant has no internet access.</string>
+    <string name="accessibility_service_summary">Allows volume buttons to count chants without changing volume</string>
+    <string name="shortcut_start_long">Start a chanting session</string>
+    <string name="shortcut_start_short">Start counting</string>
+    <string name="count_description">Count %1$d of %2$d. %3$s</string>
+    <string name="status_goal_complete">Goal complete. Tap Stop to save it.</string>
+    <string name="status_paused_hint">Paused. Tap ▶ to continue.</string>
+    <string name="status_both">Tap here or press a volume button to count</string>
+    <string name="status_tap">Tap anywhere here to count</string>
+    <string name="status_volume">Press a volume button to count</string>
+    <string name="status_touch_off">Turn on touch counting to count</string>
+</resources>

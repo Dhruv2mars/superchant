@@ -1,0 +1,10 @@
+{
+  "platforms": ["apple", "android"],
+  "coreFeatures": ["compose", "swiftui"],
+  "apple": {
+    "modules": ["SuperchantNativeModule"]
+  },
+  "android": {
+    "modules": ["com.superchant.bridge.SuperchantNativeModule"]
+  }
+}

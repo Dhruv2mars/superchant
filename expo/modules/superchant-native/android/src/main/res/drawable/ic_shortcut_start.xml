@@ -1,0 +1,12 @@
+<!-- Shortcut icon: a mala ring with the meru bead, on the launcher's warm tone -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path android:fillColor="#F5E6D3" android:pathData="M24,0A24,24 0,1 1,24 48A24,24 0,1 1,24 0Z" />
+    <path android:strokeColor="#8C6136" android:strokeWidth="3" android:fillColor="#00000000"
+        android:pathData="M24,13A11,11 0,1 1,24 35A11,11 0,1 1,24 13Z" />
+    <path android:fillColor="#8C6136" android:pathData="M24,9.5A3.5,3.5 0,1 1,24 16.5A3.5,3.5 0,1 1,24 9.5Z" />
+    <path android:fillColor="#8C6136" android:pathData="M21,20L29,24L21,28Z" />
+</vector>

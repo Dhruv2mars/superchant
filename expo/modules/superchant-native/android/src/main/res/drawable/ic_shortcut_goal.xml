@@ -1,0 +1,10 @@
+<!-- Shortcut icon for a goal: a flag on the launcher's warm tone -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path android:fillColor="#F5E6D3" android:pathData="M24,0A24,24 0,1 1,24 48A24,24 0,1 1,24 0Z" />
+    <path android:fillColor="#8C6136" android:pathData="M17,13h2v22h-2z" />
+    <path android:fillColor="#8C6136" android:pathData="M19,14h12l-2.5,4.5L31,23H19z" />
+</vector>

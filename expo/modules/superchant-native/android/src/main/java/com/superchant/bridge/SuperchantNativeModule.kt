@@ -76,6 +76,12 @@ class SuperchantNativeModule : Module() {
 
         Events("onSession", "onSettings", "onHistory", "onGoals", "onStartRequest")
 
+        /** versionName as built (e.g. 2.2026.300, or 2.2026.300-dev for SuperChant Dev), shown in Settings. */
+        Constant("versionName") {
+            val ctx = context
+            ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: ""
+        }
+
         OnCreate {
             val repo = repository
             val appContext = context

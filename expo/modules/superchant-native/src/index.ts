@@ -40,6 +40,8 @@ interface SessionApi {
 }
 
 declare class SuperchantNativeModule extends NativeModule<Events> implements SessionApi {
+  /** The app's version name as built. */
+  readonly versionName: string;
   getSession(): string;
   start(goalJson: string | null, touchCounting: boolean): void;
   setPaused(paused: boolean): void;

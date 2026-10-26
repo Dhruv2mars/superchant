@@ -4,10 +4,14 @@ import { plurals, strings } from './strings';
 export type StringKey = keyof typeof strings;
 export type PluralKey = keyof typeof plurals;
 
-function format(template: string, args: (string | number)[]): string {
+const grouped = new Intl.NumberFormat();
+
+/** Android format placeholders: %s, %d, positional %1$s, and the grouping flag %,d (1,234). */
+export function format(template: string, args: (string | number)[]): string {
   let next = 0;
-  return template.replace(/%(?:(\d+)\$)?([sd])/g, (_, pos: string | undefined) => {
+  return template.replace(/%(?:(\d+)\$)?(,?)([sd])/g, (_, pos: string | undefined, group: string) => {
     const value = pos ? args[Number(pos) - 1] : args[next++];
+    if (group && typeof value === 'number') return grouped.format(value);
     return String(value ?? '');
   });
 }

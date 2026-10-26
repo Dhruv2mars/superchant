@@ -13,6 +13,8 @@ public class SuperchantNativeModule: Module {
 
     Events("onSession")
 
+    Constant("versionName") { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "" }
+
     OnCreate {
       Task { @MainActor in
         SessionEngine.shared.onCoarseChange = { [weak self] state in

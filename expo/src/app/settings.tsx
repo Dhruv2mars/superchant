@@ -1,9 +1,9 @@
 /** Settings (SettingsScreen.kt, ReminderControls.kt, BackupControls.kt). */
 import { useEffect, useState } from 'react';
 import { AppState, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import * as Application from 'expo-application';
 import { getCalendars } from 'expo-localization';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Native from 'superchant-native';
 import { t, tp } from '@/i18n';
 import { platform } from '@/native/platform';
 import { BackupOutcome, defaultSettings, ThemeMode } from '@/native/types';
@@ -108,7 +108,7 @@ export default function Settings() {
               {t('settings_about_tagline')}
             </Text>
             <Text variant="bodySmall" color="onSurfaceVariant" style={{ marginTop: 4 }}>
-              {t('settings_version', Application.nativeApplicationVersion ?? '')}
+              {t('settings_version', Native.versionName)}
             </Text>
           </View>
         </SettingsSection>

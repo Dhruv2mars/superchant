@@ -227,10 +227,8 @@ SuperChant APK never installs. Only Play and adb installs work.
    then `adb connect <ip>:<port>`. QR pairing failed here (`protocol fault`), so use the pairing code.
    A USB cable with USB debugging also works.
 
-Play release state (2026-10-19): the upload key was reset and Google hadn't activated it yet, so uploads failed with
-"The upload certificate ... is not yet valid because it has been recently reset". `PLAY_RELEASES_ENABLED` stays
-`false` until a dispatched `release-internal.yml` succeeds (a scheduled T3 task retries every 6 hours).
-`promote.yml` (internal → alpha) also fails until a first closed-testing release is created by hand in Play Console
-(the app is still a "draft app").
+Play release state (2026-10-26): uploads to internal testing work again (the reset upload key went active on
+2026-10-21) and `PLAY_RELEASES_ENABLED` is `true`. The app is still a "draft app" until its first review, so
+`promote.yml` (internal → alpha) can fail until the closed-testing track has a release set up in Play Console.
 
 - For JavaScript tooling (e.g. `bunx skills`), use bun.

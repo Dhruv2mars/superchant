@@ -1,4 +1,5 @@
 /** String lookup with Android-style placeholders and English plural rules (the app ships in English). */
+import { platformStrings } from './platformStrings';
 import { plurals, strings } from './strings';
 
 export type StringKey = keyof typeof strings;
@@ -17,7 +18,7 @@ export function format(template: string, args: (string | number)[]): string {
 }
 
 export function t(key: StringKey, ...args: (string | number)[]): string {
-  return format(strings[key], args);
+  return format(platformStrings[key] ?? strings[key], args);
 }
 
 /** Quantity string: `count` picks the form (one/other); `args` fill the placeholders (default: count). */

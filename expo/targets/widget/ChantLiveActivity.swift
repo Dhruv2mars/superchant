@@ -82,7 +82,9 @@ struct LockScreenView: View {
       VStack(alignment: .leading, spacing: 4) {
         Text(title(context)).font(.headline).foregroundStyle(cream).lineLimit(1)
         Text(subtitle(context.state)).font(.subheadline).foregroundStyle(cream.opacity(0.7)).lineLimit(1)
-        Text(context.attributes.startedAt, style: .timer).font(.caption).monospacedDigit().foregroundStyle(cream.opacity(0.6))
+        if !context.state.paused {
+          Text(context.attributes.startedAt, style: .timer).font(.caption).monospacedDigit().foregroundStyle(cream.opacity(0.6))
+        }
       }
       Spacer(minLength: 0)
       PauseButton(paused: context.state.paused, disabled: context.state.goalComplete)

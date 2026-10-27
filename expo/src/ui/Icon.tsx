@@ -56,7 +56,17 @@ export function Icon({ name, size = 24, color = 'onSurfaceVariant' }: { name: Ic
   const { c } = useTheme();
   const tint = (c as unknown as Record<string, string>)[color] ?? color;
   if (Platform.OS === 'ios') {
-    return <SymbolView name={ICONS[name].ios as SFSymbol} size={size} tintColor={tint} weight="regular" style={{ width: size, height: size }} />;
+    return (
+      <SymbolView
+        name={ICONS[name].ios as SFSymbol}
+        size={size}
+        tintColor={tint}
+        weight="regular"
+        style={{ width: size, height: size }}
+        accessible={false}
+        accessibilityElementsHidden
+      />
+    );
   }
   const code = symbols[ICONS[name].android];
   return (

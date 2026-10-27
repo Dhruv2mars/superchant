@@ -1,13 +1,12 @@
 Pod::Spec.new do |s|
   s.name           = 'SuperchantNative'
   s.version        = '1.0.0'
-  s.summary        = 'A sample project summary'
-  s.description    = 'A sample project description'
+  s.summary        = 'SuperChant engine: live session, haptics, Live Activity and counter view'
+  s.description    = 'The native side of the SuperChant Expo app on iOS.'
   s.author         = ''
   s.homepage       = 'https://docs.expo.dev/modules/'
   s.platforms      = {
-    :ios => '16.4',
-    :tvos => '16.4'
+    :ios => '17.0'
   }
   s.source         = { git: '' }
   s.static_framework = true

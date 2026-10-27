@@ -20,8 +20,9 @@ export function AppTopBar({ title, navigation, actions }: { title: string; navig
   const ios = Platform.OS === 'ios';
   return (
     <View style={[styles.bar, { paddingTop: insets.top, backgroundColor: c.surface, height: (ios ? 52 : 64) + insets.top }]}>
-      {navigation || ios ? <View style={styles.side}>{navigation}</View> : null}
-      <View style={[styles.titleBox, ios ? styles.titleCentered : { paddingStart: navigation ? 4 : 16 }]} pointerEvents="none">
+      {navigation ? <View style={styles.side}>{navigation}</View> : null}
+      {/* iOS centers a pushed screen's title; a root screen's title leads, like Android */}
+      <View style={[styles.titleBox, ios && navigation ? styles.titleCentered : { paddingStart: navigation ? 4 : 16 }]} pointerEvents="none">
         <Text
           variant="titleLarge"
           weight="600"
@@ -29,7 +30,7 @@ export function AppTopBar({ title, navigation, actions }: { title: string; navig
           adjustsFontSizeToFit
           minimumFontScale={0.72}
           accessibilityRole="header"
-          style={ios ? { fontSize: 17, lineHeight: 22 } : null}
+          style={ios ? (navigation ? { fontSize: 17, lineHeight: 22 } : { fontSize: 24, lineHeight: 30, fontWeight: '700' }) : null}
         >
           {title}
         </Text>

@@ -14,14 +14,15 @@ const dayOfYear = Math.round((Date.UTC(year, month - 1, day) - Date.UTC(year, 0,
 const versionName = `2.${year}.${String(dayOfYear).padStart(3, '0')}`;
 const versionCode = (year % 100) * 100_000 + dayOfYear * 100 + buildNumber;
 
-// EAS project (expo.dev). Updates are the app's only network use; see AGENTS.md.
-const easProjectId = process.env.EAS_PROJECT_ID ?? '';
+// EAS project on expo.dev (account dhruv2mars). Updates are the app's only network use; see AGENTS.md.
+// EAS_PROJECT_ID='' builds with updates turned off (the app then runs only its embedded bundle).
+const easProjectId = process.env.EAS_PROJECT_ID ?? 'd8702c3f-8824-427c-90c1-0c0efe41e1f5';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'SuperChant',
   slug: 'superchant',
-  owner: process.env.EAS_OWNER,
+  owner: 'dhruv2mars',
   scheme: 'superchant',
   version: versionName,
   orientation: 'default',

@@ -1,0 +1,17 @@
+# Buildkite CI (replaces .github/workflows now that this repo lives on Entire).
+# Runs on the free hosted linux-small queue; checkout comes from the Entire plugin Buildkite adds to every job.
+steps:
+  - label: ":android: build, lint, test"
+    key: check
+    agents: { queue: linux-small }
+    timeout_in_minutes: 45
+    plugins:
+      - docker#v5.12.0:
+          image: ghcr.io/cirruslabs/android-sdk:36
+    command: |
+      yes | sdkmanager --licenses >/dev/null || true
+      ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.parallel=false -Dorg.gradle.jvmargs="-Xmx2560m -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process assembleDebug assembleRelease lint test
+      python3 -m unittest discover -s scripts
+      manifest=$$(ls app/build/intermediates/merged_manifest/release/*/AndroidManifest.xml | head -1)
+      test -f "$$manifest" || { echo "merged release manifest not found"; exit 1; }
+      if grep -q 'android.permission.INTERNET' "$$manifest"; then echo "release manifest requests INTERNET; SuperChant must stay offline"; exit 1; fi

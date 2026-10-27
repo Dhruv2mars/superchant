@@ -15,3 +15,19 @@ steps:
       manifest=$$(ls app/build/intermediates/merged_manifest/release/*/AndroidManifest.xml | head -1)
       test -f "$$manifest" || { echo "merged release manifest not found"; exit 1; }
       if grep -q 'android.permission.INTERNET' "$$manifest"; then echo "release manifest requests INTERNET; SuperChant must stay offline"; exit 1; fi
+
+  # The Expo app (expo/): types and the pure cores against the Kotlin golden fixtures in three time zones.
+  # Its Android release build, network guard and the Swift vectors need more than this agent has (see AGENTS.md).
+  - label: ":expo: typecheck, cores"
+    key: expo
+    agents: { queue: linux-small }
+    timeout_in_minutes: 15
+    plugins:
+      - docker#v5.12.0:
+          image: oven/bun:1
+    command: |
+      [ -e /usr/share/zoneinfo/America/New_York ] || { apt-get update -qq && apt-get install -y -qq tzdata >/dev/null; }
+      cd expo
+      bun install --frozen-lockfile
+      bunx tsc --noEmit
+      bun run test

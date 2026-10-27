@@ -165,7 +165,11 @@ bunx tsc --noEmit
 bunx expo prebuild --clean            # regenerate android/ and ios/
 cd android && ./gradlew :superchant-native:testDebugUnitTest :app:assembleRelease
 bunx expo run:ios --configuration Release   # needs Xcode
+(cd android && ../scripts/network-guard.sh)  # after assembleRelease: permissions and the update-only TLS config
 ```
+
+Buildkite runs the typecheck and TS tests on every push (`.buildkite/pipeline.yml`). Run the Swift vectors,
+the module's JVM tests, the release build and the network guard yourself before opening a trail.
 
 - **Golden fixtures.** `app/src/test/.../GoldenFixturesTest.kt` runs the Kotlin decoders, encoders and counting
   rules over edge cases and writes `expo/src/core/__fixtures__/golden.json`

@@ -10,7 +10,7 @@ steps:
           image: ghcr.io/cirruslabs/android-sdk:36
     command: |
       yes | sdkmanager --licenses >/dev/null || true
-      ./gradlew --no-daemon assembleDebug assembleRelease lint test
+      ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.parallel=false -Dorg.gradle.jvmargs="-Xmx2560m -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process assembleDebug assembleRelease lint test
       python3 -m unittest discover -s scripts
       manifest=$$(ls app/build/intermediates/merged_manifest/release/*/AndroidManifest.xml | head -1)
       test -f "$$manifest" || { echo "merged release manifest not found"; exit 1; }

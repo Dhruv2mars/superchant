@@ -47,18 +47,24 @@ export function TouchCountingToggle({ checked, onChange }: { checked: boolean; o
 export function TouchHint({ show, onShown }: { show: boolean; onShown: () => void }) {
   const { c } = useTheme();
   const [visible, setVisible] = useState(false);
+  const [started, setStarted] = useState(false);
   const latched = useRef(false);
   useEffect(() => {
     if (!show || latched.current) return;
     latched.current = true;
+    setStarted(true);
     onShown();
+  }, [show, onShown]);
+  // Marking the hint seen turns `show` off, so the timers can't depend on it
+  useEffect(() => {
+    if (!started) return;
     const a = setTimeout(() => setVisible(true), 600);
     const b = setTimeout(() => setVisible(false), 5600);
     return () => {
       clearTimeout(a);
       clearTimeout(b);
     };
-  }, [show, onShown]);
+  }, [started]);
   if (!visible) return null;
   return (
     <Animated.View

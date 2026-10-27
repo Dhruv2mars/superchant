@@ -226,6 +226,7 @@ struct TapPad<Content: View>: View {
       .accessibilityElement(children: .ignore)
       .accessibilityLabel(label)
       .accessibilityAddTraits(.updatesFrequently)
+      .accessibilityAction { if enabled { onCount() } }
       .accessibilityAction(named: Strings.countAction) { if enabled { onCount() } }
   }
 }

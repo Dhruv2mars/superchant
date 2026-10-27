@@ -117,8 +117,10 @@ public final class SessionEngine: ObservableObject {
     return try? JSONDecoder().decode(ChantState.self, from: data)
   }
 
-  /// Clears the stored session only if it is still session `sessionId`.
+  /// Clears the stored session only if it is still session `sessionId`. With no session running, a Live
+  /// Activity left by a dead process (a session archived or dropped on restore) ends with it.
   func clearStored(sessionId: String) {
+    if !state.isActive { LiveActivityController.shared.end() }
     guard let stored = loadStored() else { return }
     if stored.sessionId == sessionId { defaults.removeObject(forKey: Self.storageKey) }
   }

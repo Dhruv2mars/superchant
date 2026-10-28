@@ -5,13 +5,13 @@ Instructions for coding agents (Codex reads this file; Claude Code reads it thro
 SuperChant is a calm digital japa mala. It counts chants (108 per round) with the volume keys and/or on-screen
 taps. Two apps live in this repo:
 
-- **`app/`: the native Kotlin/Jetpack Compose Android app**, on Google Play today. An AccessibilityService
+- **`expo/`: the Expo (React Native) app for iOS and Android, the app that ships.** It replaced the Kotlin app
+  on Play as a normal update (same package `com.superchant`, same upload key, same data). See "The Expo app"
+  and "Workflow" below.
+- **`app/`: the original Kotlin/Jetpack Compose Android app**, no longer released. An AccessibilityService
   intercepts volume key presses, a foreground service owns the session state, and DataStore Preferences
-  persists settings, goals and history (as JSON via kotlinx.serialization).
-- **`expo/`: the Expo (React Native) app for iOS and Android** that will replace `app/` on Play when Dhruv
-  decides to switch (same package `com.superchant`, same upload key, same data). See "The Expo app" below.
-
-Until the switch, keep `app/`, its CI and the Play pipeline working; changes to shared behavior go into both.
+  persists settings, goals and history (as JSON via kotlinx.serialization). Its engine lives on in the Expo
+  app's native module; `app/` stays for its JVM tests and the golden fixtures until it is removed.
 
 ## Product rules (don't break these)
 
@@ -169,15 +169,17 @@ bunx expo run:ios --configuration Release   # needs Xcode
 (cd android && ../scripts/network-guard.sh)  # after assembleRelease: permissions and the update-only TLS config
 ```
 
-Buildkite runs the typecheck, oxlint and TS tests on every push (`.buildkite/pipeline.yml`). Run the Swift vectors,
-the module's JVM tests, the release build and the network guard yourself before opening a trail.
+Buildkite runs the typecheck, oxlint and TS tests on every push (`.buildkite/pipeline.yml`), on Node: under Bun the
+runtime fingerprint skips the config plugins and stops matching the store build. Run the Swift vectors, the
+module's JVM tests, the release build and the network guard yourself before opening a trail.
 
 - **Golden fixtures.** `app/src/test/.../GoldenFixturesTest.kt` runs the Kotlin decoders, encoders and counting
   rules over edge cases and writes `expo/src/core/__fixtures__/golden.json`
   (`GOLDEN_WRITE=1 ./gradlew test --tests "com.superchant.data.GoldenFixturesTest" --rerun`); the TS and Swift
   tests replay it byte for byte. Change a rule in Kotlin, regenerate, and make TS and Swift match.
-- **Kotlin in two places.** Until the switch, engine changes in `app/src/main/kotlin` must be copied to
-  `expo/modules/superchant-native/android` (the module's tests are the app's JVM tests).
+- **Kotlin in two places.** Engine changes go into `expo/modules/superchant-native/android` (the shipping code)
+  and the same change into `app/src/main/kotlin`, whose JVM tests and golden fixtures cover it, until `app/` is
+  removed.
 - Debug builds are `com.superchant.dev` ("SuperChant Dev") like the Kotlin app; the release is signed from the
   repo-root `local.properties` `RELEASE_*` keys, or the debug key without them. `./gradlew :app:assemblePreview`
   (in `expo/android`) builds the release code as SuperChant Dev with the debug key: no Metro needed, so it is
@@ -185,7 +187,11 @@ the module's JVM tests, the release build and the network guard yourself before 
 - Versions use the same date scheme (`RELEASE_DATE`, `BUILD_NUMBER` env vars), so an Expo build is a normal
   Play update over the Kotlin app.
 - Updates: set `EAS_PROJECT_ID` (and optionally `EAS_UPDATE_CHANNEL`) to enable expo-updates; without it the
-  build runs only its embedded bundle.
+  build runs only its embedded bundle. `runtimeVersion` is the fingerprint policy (`fingerprint.config.js`
+  skips package.json scripts on top of Expo's defaults, which skip the date-based version): an update reaches
+  only builds with the same fingerprint, so native changes (Kotlin/Swift, config plugins, native dependencies)
+  need a store build. Store builds always use the `production` channel; **early updates** (long-press the version
+  in Settings, `src/native/updates.ts`) move one install to `preview` with a saved header override.
 
 ## Design and motion skills
 
@@ -251,26 +257,25 @@ printf '%s\n' \
 
 ## Workflow
 
-- Branches: `dev` is the default and integration branch; `main` is production. Open PRs against `dev`; never
-  push to `dev` or `main` directly.
-  - CI (`.github/workflows/ci.yml`) runs build, lint, test, the release script tests (`scripts/test_play.py`)
-    and an INTERNET-permission guard on every PR.
-  - Every push to `dev` builds a signed bundle and uploads it to the Play **internal testing** track
-    (`release-internal.yml`), so the owner's Play Store install updates within minutes. The release is named
-    `<versionCode> (tree <first 12 hex digits of the source tree>)`.
-  - Merging `dev` into `main` promotes the internal release built from main's exact source tree (`promote.yml`,
-    `scripts/play_promote.py`) to the track in repo variable `PLAY_PROMOTE_TRACK` (`alpha` = closed testing until
-    production access is granted). If no completed internal release matches, it fails instead of promoting
-    another build; re-run it once the matching `dev` upload has finished.
-  - Secrets: `UPLOAD_KEYSTORE_BASE64`, `UPLOAD_KEYSTORE_PASSWORD`, `PLAY_SERVICE_ACCOUNT_JSON`.
+- Branches: `dev` is the default and integration branch; `main` is production. Open trails against `dev`; never
+  push to `dev` or `main` directly. The repo lives on Entire; CI is Buildkite (`.buildkite/pipeline.yml`). The
+  GitHub workflows in `.github/workflows` belong to the old GitHub repo and no longer run.
+  - Every push: the Kotlin app's build, lint, tests and INTERNET guard, and the Expo typecheck, oxlint and TS tests.
+  - A push to `dev` publishes an EAS Update to the **preview** channel; a push to `main` publishes to
+    **production** (everyone). Updates are JavaScript and assets only: fixes and polish (App Review 2.5.2).
+    Buildkite's cluster secret `EXPO_TOKEN` belongs to the Expo robot `superchant-buildkite` (publish only).
+  - A native change (the fingerprint changed; CI prints it) needs a store build: `expo/scripts/release-android.sh`
+    builds the bundle on the Mac (~9 min clean; EAS Build's free tier took ~24 min) and uploads it to Play
+    internal testing with EAS Submit. Promote it to closed testing or production in Play Console.
 - Put verification evidence in the PR description. Screenshots go on the orphan `ux-evidence` branch (one folder
   per PR), never in `dev`/`main`. Play Store listing assets under `docs/play-store/` are the exception.
 - Never commit `local.properties`, keystores, APK/AAB files, `TASKS.md` or local agent state (`.claude/settings*.json`).
-- Releases go through Google Play only. The owner uses the Play Store install (internal testing track) as their
-  daily app, so every upload to internal testing updates it. Build with `./gradlew bundleRelease`, signed with the
-  upload key that `local.properties` points to (`RELEASE_*`; keystore kept outside the repo, never committed).
-  Play App Signing is on. A personal developer account needs a closed test (12+ testers, 14 days) before production.
-- Day-to-day testing on the owner's phone uses the debug build ("SuperChant Dev") over wireless adb, so it never
+- Releases go through Google Play only. The owner's daily app is the Play Store install (internal testing track)
+  with early updates on, so it runs `dev` within minutes of a merge. Store builds are signed with the upload key
+  that the repo-root `local.properties` points to (`RELEASE_*`; keystore and the Play service account JSON live in
+  `~/.superchant-keys`, never committed). Play App Signing is on. A personal developer account needs a closed
+  test (12+ testers, 14 days) before production.
+- To try a branch before merging, put the preview build ("SuperChant Dev") on the phone over wireless adb; it never
   touches the Play install or its data. See "Getting a build on the owner's phone" below.
 
 ### Getting a build on the owner's phone
@@ -279,15 +284,21 @@ The phone is a Realme RMX3392 in India. Play Protect's enhanced fraud protection
 that declares an accessibility service from a browser, messaging app or file manager, so a downloaded
 SuperChant APK never installs. Only Play and adb installs work.
 
-1. **Play (the real app, `com.superchant`):** merge a PR into `dev`; `release-internal.yml` uploads it to internal
-   testing and the Play Store install updates itself. A sideloaded `com.superchant` (upload- or debug-signed)
-   can't be updated by Play later, so never sideload the release package.
+1. **Play (the real app, `com.superchant`):** with early updates on, a merge into `dev` reaches the Play install as
+   an update on its next launch (or two: it downloads, then applies). Native changes arrive with the next
+   `release-android.sh` upload. A sideloaded `com.superchant` (upload- or debug-signed) can't be updated by Play
+   later, so never sideload the release package.
 2. **SuperChant Dev (`com.superchant.dev`) over wireless adb:** phone and Mac on the same Wi-Fi, then
-   `./gradlew installDebug` (or `adb -s <ip:port> install -r app-debug.apk`). Pairing is done once per phone:
+   `./gradlew :app:assemblePreview` in `expo/android` and `adb -s <ip:port> install -r
+   app/build/outputs/apk/preview/app-preview.apk`. The Expo debug key differs from the Kotlin app's, so an old
+   Kotlin SuperChant Dev has to be uninstalled first. Pairing is done once per phone:
    Developer options → Wireless debugging → Pair device with pairing code, then `adb pair <ip>:<pairing port> <code>`.
    The connect port changes when wireless debugging restarts, and adb's built-in mDNS discovery doesn't see the
-   phone from this Mac. Find the phone's IP from `arp -an` and its open ports with a quick TCP scan of 30000-50000,
-   then `adb connect <ip>:<port>`. QR pairing failed here (`protocol fault`), so use the pairing code.
+   phone from this Mac. Find the phone's IP with a ping sweep and `arp -an`, and its open ports with a quick TCP
+   scan of 1024-65535 (the connect port is the one Wireless debugging shows), then `adb connect <ip>:<port>`.
+   QR pairing failed here (`protocol fault`), so use the pairing code. The pairing popup closes as soon as the
+   phone leaves Settings, so read the code off the screen; the pairing port is the extra open port while the
+   popup shows. Run adb outside the agent sandbox, which blocks local-network connections (`No route to host`).
    A USB cable with USB debugging also works.
 
 Play release state (2026-10-26): uploads to internal testing work again (the reset upload key went active on

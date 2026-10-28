@@ -42,7 +42,7 @@ steps:
   # fingerprint; a native change needs a store build (expo/scripts/release-android.sh).
   - label: ":expo: publish update"
     key: publish
-    if: build.branch == "dev" || build.branch == "main" || build.branch == "feat/expo-app"
+    if: build.branch == "dev" || build.branch == "main"
     depends_on: expo
     agents: { queue: linux-small }
     timeout_in_minutes: 20

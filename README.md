@@ -8,94 +8,77 @@
   <strong>A distraction-free digital mala for your spiritual practice</strong>
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/kotlin-2.4-blue?logo=kotlin" alt="Kotlin">
-  <img src="https://img.shields.io/badge/jetpack--compose-Material%203-blue?logo=jetpackcompose" alt="Jetpack Compose">
-  <img src="https://img.shields.io/badge/minSdk-26-green?logo=android" alt="Min SDK">
-  <img src="https://img.shields.io/badge/license-MIT-brightgreen" alt="License">
-</p>
-
 ---
 
 ## What is SuperChant?
 
-SuperChant is a minimalist Android app to count mantras using your phone's **volume buttons**, without looking at the screen: count from the lock screen or while another app is open, and stay focused on your practice.
+SuperChant counts mantras, 108 beads to a round. On Android you can count with the phone's **volume buttons**
+without looking at the screen: from the lock screen or while another app is open. On Android and iPhone you can
+also tap the screen to count.
 
 Built for japa meditation, mantra chanting, prayer counting, and any repetitive spiritual practice.
 
 ## Features
 
 ### Core
-- Press volume up or down to increment your count, or tap the screen (no permissions needed)
-- 108 beads per round, like a traditional mala
-- Touch counting is one switch on the session screen: on, the counter is the tap target and the screen
-  stays awake; off, only the volume buttons count
-- A calm mala ring: beads, a meru bead, a soft glow when a round completes
-- Volume buttons count on the lock screen or in any other app while the screen is on (Android doesn't
-  deliver button presses to accessibility services while the screen is off)
-- Foreground service with persistent notification
-- Pause and resume from Home, the notification or the Quick Settings tile
+- Android: press volume up or down to count, on the lock screen or in any other app while the screen is on
+  (Android doesn't deliver button presses to accessibility services while the screen is off)
+- Tap the screen to count (no permissions needed): one switch on the session screen; on, the counter is the tap
+  target and the screen stays awake
+- 108 beads per round, like a traditional mala, in a calm mala ring with a meru bead and a soft glow per round
+- Pause and resume from the app, the notification, the Quick Settings tile (Android) or the Live Activity
+  (iPhone Lock Screen and Dynamic Island)
 - Optional milestone pulse every 27 beads and an optional soft bead click
-- Start in one tap from a launcher shortcut (or a shortcut per goal) or the Quick Settings tile
-- A running session survives Android closing the app and picks up where it left off
+- Start in one tap from a launcher shortcut (or a shortcut per goal) or the Quick Settings tile (Android)
+- A running session survives the system closing the app and picks up where it left off
 
 ### Goals & Tracking
-- Create structured goals with multiple mantras
-- Set target rounds per mantra — auto-advances when complete
-- Drag-to-reorder mantras in the goal editor
-- Session history with time-based categorization (Today, This Week, This Month, Older)
-- All-time stats: total counts, rounds, sessions, and practice time
+- Goals with several mantras and target rounds per mantra; the session moves on when one is done
+- Session history grouped by Today, This Week, This Month and Older, with all-time totals
 - Your practice: daily target, streak, an 18-week heatmap and lifetime totals per mantra
 - A gentle optional daily reminder, skipped once you've practiced
 
-### Customization
-- Light, dark, and system theme modes
-- Adjustable vibration intensity for counts and round completions
-- Haptic feedback on each count and round milestone
-- Celebration ringtone on goal completion
-
 ### Privacy
-- No servers: SuperChant has no internet permission and never sends your data anywhere
-- History, goals and settings are stored on your device and included in Android's own device backup
-  (Google backup and phone-to-phone transfer), so they come with you to a new phone. Turn off backup
-  for SuperChant in Android settings if you'd rather keep them on this device only.
+- No servers and no accounts. Your history, goals and settings stay on your phone (and in its own device
+  backup); the app goes online only to check for app updates
 - Export everything to a JSON file you keep, and import it on another phone
-- No accounts, no sign-up
 - No analytics, no tracking, no ads
 - [Read the privacy policy](PRIVACY_POLICY.md)
 
 ## Download
 
-SuperChant is released through Google Play only. It is in testing and not public yet; until it is, build it
-from source.
+SuperChant is released through Google Play. It is in testing and not public yet.
 
 ## Build from Source
 
 ```bash
-git clone https://github.com/Dhruv2mars/superchant.git
-cd superchant
-./gradlew assembleDebug        # Debug APK
-./gradlew buildReleaseApk      # Release APK, copied to ./SuperChant-v{version}.apk
+cd expo
+bun install
+bunx expo run:android      # debug build "SuperChant Dev" on a device or emulator (JDK 17, Android SDK)
+bunx expo run:ios          # needs Xcode
 ```
 
-**Requirements:** JDK 17 and the Android SDK. Release builds use the keys in `local.properties` when present and fall back to the debug key otherwise.
+`expo/scripts/release-android.sh` builds and uploads the Play bundle. See [AGENTS.md](AGENTS.md) for tests,
+updates and the release flow.
 
 ## Tech Stack
 
 | Layer | Tech |
 |-------|------|
-| Language | Kotlin 2.4 |
-| UI | Jetpack Compose + Material 3 |
-| Navigation | Jetpack Navigation Compose |
-| State | StateFlow + Foreground Service |
-| Persistence | DataStore Preferences + kotlinx.serialization |
-| Architecture | AccessibilityService + Foreground Service |
+| App | Expo SDK 58, React Native, expo-router, TypeScript |
+| Counting (Android) | Kotlin: AccessibilityService, foreground service, DataStore, a Jetpack Compose mala ring |
+| Counting (iPhone) | Swift: session engine, Core Haptics, SwiftUI ring, Live Activity |
+| Updates | EAS Update (fixes and polish between store builds) |
 
 ## How It Works
 
-SuperChant uses Android's [AccessibilityService](https://developer.android.com/reference/android/accessibilityservice/AccessibilityService) to intercept volume button presses system-wide. When a session that counts with volume buttons is active, the service consumes each counted press (key down, repeats and key up) so the volume doesn't change and it just increments the counter. When no session is running, it's paused, or its goal is complete, the buttons change the volume as usual.
+On Android, SuperChant uses an [AccessibilityService](https://developer.android.com/reference/android/accessibilityservice/AccessibilityService)
+to receive volume button presses system-wide. During a running session the service consumes each counted press
+(key down, repeats and key up) so the volume doesn't change. When no session is running, it's paused, or its
+goal is complete, the buttons change the volume as usual.
 
-The accessibility service does **not** read screen content (`canRetrieveWindowContent = false`), does not interact with other apps, and only activates during user-initiated sessions.
+The accessibility service does **not** read screen content (`canRetrieveWindowContent = false`), does not
+interact with other apps, and only counts during sessions you start. iPhone counts taps only.
 
 ## License
 

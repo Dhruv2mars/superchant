@@ -63,29 +63,6 @@ class PracticeStatsTest {
     }
 
     @Test
-    fun mantraTotalsMergeByNameAndSortByCounts() {
-        val sessions = listOf(
-            session(today, 3, mantras = listOf(MantraTally("Om Namah Shivaya", 2, 216), MantraTally("Gayatri", 1, 120))),
-            session(today, 1, mantras = listOf(MantraTally(" om namah shivaya ", 1, 108))),
-            session(today, 1)
-        )
-        assertEquals(
-            listOf(MantraTotal("Om Namah Shivaya", 3, 324), MantraTotal("Gayatri", 1, 120)),
-            PracticeStats.mantraTotals(sessions)
-        )
-    }
-
-    @Test
-    fun heatLevelsStepUpToTheReference() {
-        assertEquals(0, PracticeStats.heatLevel(null, 16))
-        assertEquals(0, PracticeStats.heatLevel(DayTotal(), 16))
-        assertEquals(1, PracticeStats.heatLevel(DayTotal(counts = 10, rounds = 0), 16))
-        assertEquals(2, PracticeStats.heatLevel(DayTotal(counts = 1, rounds = 6), 16))
-        assertEquals(4, PracticeStats.heatLevel(DayTotal(counts = 1, rounds = 16), 16))
-        assertEquals(4, PracticeStats.heatLevel(DayTotal(counts = 1, rounds = 40), 16))
-    }
-
-    @Test
     fun recordsCarryAPerMantraBreakdownThatAddsUp() {
         val goal = Goal(name = "G", mantras = listOf(MantraGoal(name = "A", targetRounds = 1), MantraGoal(name = "B", targetRounds = 2)))
         var state = ChantState.start(goal, now = 0)

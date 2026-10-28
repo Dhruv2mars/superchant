@@ -36,7 +36,6 @@ import { withUniqueGoalIds, withUniqueRecordIds } from './storedList';
 
 export const BACKUP_APP = 'SuperChant';
 export const BACKUP_FORMAT = 1;
-export const BACKUP_MIME_TYPE = 'application/json';
 
 /** Settings worth carrying to a new phone. Null leaves the current value unchanged on import. */
 export interface BackupSettings {

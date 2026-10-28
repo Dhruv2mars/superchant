@@ -1,7 +1,7 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-// Date-based versions, the same scheme as the Kotlin app (app/build.gradle.kts): versionName 2.YYYY.DDD
-// (DDD = day of year in IST) and versionCode YYDDDNN, so a build of this app is a normal Play update.
+// Date-based versions, the scheme the Kotlin app used: versionName 2.YYYY.DDD (DDD = day of year in IST) and
+// versionCode YYDDDNN, so every build is a normal Play update over the last.
 // RELEASE_DATE=YYYY-MM-DD and BUILD_NUMBER=NN pin them.
 function istToday(): string {
   return new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
@@ -70,7 +70,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-localization',
-    'expo-sharing',
     [
       'expo-splash-screen',
       {

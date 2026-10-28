@@ -1,7 +1,7 @@
-// Android project settings the Kotlin app had (app/build.gradle.kts, AndroidManifest.xml, res/), applied to the
-// generated android/ project: the "SuperChant Dev" debug package next to the Play app, launcher shortcuts, backup
-// rules, release signing from the untracked local.properties, the exact launcher icon vectors, and a release-only
-// network lockdown that lets TLS reach the update servers and nothing else.
+// Android project settings the Kotlin app had, applied to the generated android/ project: the "SuperChant Dev"
+// debug package next to the Play app, launcher shortcuts, backup rules, release signing from the untracked
+// local.properties, the exact launcher icon vectors, and a release-only network lockdown that lets TLS reach the
+// update servers and nothing else.
 const { withAppBuildGradle, withAndroidManifest, withDangerousMod, withGradleProperties, AndroidConfig } = require('expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
@@ -83,7 +83,7 @@ ${UPDATE_HOSTS.map((h) => `        <domain includeSubdomains="false">${h}</domai
 // The preview build (release code as "SuperChant Dev", see withGradle) gets the release network lockdown too
 for (const f of ['res/xml/network_security_config.xml', 'AndroidManifest.xml']) FILES[`src/preview/${f}`] = FILES[`src/release/${f}`];
 
-// The Kotlin app's adaptive launcher icon vectors (copied from app/src/main/res), so the icon is identical.
+// The Kotlin app's adaptive launcher icon vectors, so the icon stayed identical across the switch.
 const ICON_DIR = path.join(__dirname, '..', 'assets', 'android');
 const ICON_FILES = [
   'drawable/ic_launcher_background.xml',

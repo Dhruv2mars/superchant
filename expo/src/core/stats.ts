@@ -23,11 +23,6 @@ export function addDays(key: DayKey, days: number): DayKey {
   return dayKey(new Date(y, m - 1, d + days, 12));
 }
 
-export function dayKeyToDate(key: DayKey): Date {
-  const [y, m, d] = key.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
 export interface DayTotal {
   counts: number;
   rounds: number;

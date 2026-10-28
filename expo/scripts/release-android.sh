@@ -16,7 +16,7 @@ export RELEASE_DATE
 RELEASE_DATE=$(TZ=Asia/Kolkata date +%F)
 day=$(TZ=Asia/Kolkata date +%y%j)
 BUILD_NUMBER=$(PLAY_SERVICE_ACCOUNT_JSON=$(cat "$key") uv run --quiet --no-project --with google-auth --with requests \
-  python3 ../scripts/play_version.py com.superchant "$day")
+  python3 scripts/play_version.py com.superchant "$day")
 export BUILD_NUMBER
 echo "Building versionCode $day$(printf %02d "$BUILD_NUMBER")"
 

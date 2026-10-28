@@ -1,8 +1,10 @@
-# Buildkite CI (replaces .github/workflows now that this repo lives on Entire).
+# Buildkite CI.
 # Runs on the free hosted linux-small queue; checkout comes from the Entire plugin Buildkite adds to every job.
 steps:
-  - label: ":android: build, lint, test"
-    key: check
+  # The Android engine (expo/modules/superchant-native): its JVM tests, including the golden fixtures check that
+  # the TypeScript and Swift tests replay. The release build and network guard need more than this agent has.
+  - label: ":android: native module tests"
+    key: native
     agents: { queue: linux-small }
     timeout_in_minutes: 45
     plugins:
@@ -10,14 +12,17 @@ steps:
           image: ghcr.io/cirruslabs/android-sdk:36
     command: |
       yes | sdkmanager --licenses >/dev/null || true
-      ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.parallel=false -Dorg.gradle.jvmargs="-Xmx2560m -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process assembleDebug assembleRelease lint test
-      python3 -m unittest discover -s scripts
-      manifest=$$(ls app/build/intermediates/merged_manifest/release/*/AndroidManifest.xml | head -1)
-      test -f "$$manifest" || { echo "merged release manifest not found"; exit 1; }
-      if grep -q 'android.permission.INTERNET' "$$manifest"; then echo "release manifest requests INTERNET; SuperChant must stay offline"; exit 1; fi
+      node=$$(curl -fsSL https://nodejs.org/dist/latest-v24.x/SHASUMS256.txt | grep -o 'node-v24[^ ]*-linux-x64.tar.gz' | head -1)
+      curl -fsSL "https://nodejs.org/dist/latest-v24.x/$$node" | tar -xz -C /usr/local --strip-components=1
+      npm install --global --silent bun@1
+      cd expo
+      bun install --frozen-lockfile
+      bunx expo prebuild --platform android --no-install >/dev/null
+      cd android
+      ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.parallel=false -Dorg.gradle.jvmargs="-Xmx2560m -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process :superchant-native:testDebugUnitTest
 
-  # The Expo app (expo/): types, oxlint and the pure cores against the Kotlin golden fixtures in three time zones.
-  # Its Android release build, network guard and the Swift vectors need more than this agent has (see AGENTS.md).
+  # The Expo app (expo/): types, oxlint, the pure cores against the golden fixtures in three time zones, and the
+  # release script's version helper. The Swift vectors need swiftc (see AGENTS.md).
   # Node runs the Expo CLI (bunx picks node when it exists): under Bun the runtime fingerprint skips the config
   # plugins and comes out different from the store build's, so updates from here would never reach it.
   - label: ":expo: typecheck, lint, cores"
@@ -35,6 +40,7 @@ steps:
       bunx tsc --noEmit
       bun run lint
       bun run test
+      python3 -m unittest discover -s scripts
       for p in android ios; do echo "runtime $$p: $$(bunx expo-updates runtimeversion:resolve --platform $$p | tail -1 | sed 's/.*"runtimeVersion":"\([0-9a-f]*\)".*/\1/')"; done
 
   # One store build, two update channels: dev publishes to preview (the owner's install, switched to early

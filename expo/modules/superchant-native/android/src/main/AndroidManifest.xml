@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Same components and class names as the Kotlin app (app/src/main/AndroidManifest.xml), so an enabled
+<!-- Same components and class names as the Kotlin app had, so an enabled
      accessibility service and an added Quick Settings tile keep working across the update. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 

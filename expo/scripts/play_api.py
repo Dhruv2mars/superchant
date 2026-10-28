@@ -1,4 +1,4 @@
-"""Minimal Google Play Developer API access for the release workflows.
+"""Minimal Google Play Developer API access for scripts/release-android.sh.
 
 Reads the service account JSON from $PLAY_SERVICE_ACCOUNT_JSON.
 """

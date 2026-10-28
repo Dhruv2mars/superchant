@@ -12,11 +12,11 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Golden fixtures for the Expo app (expo/src/core/__fixtures__/golden.json): stored strings and backup
- * files run through this app's decoders and encoders, so the TypeScript port can prove it reads and
- * writes the same data byte for byte. Regenerate with
- * `GOLDEN_WRITE=1 ./gradlew test --tests "com.superchant.data.GoldenFixturesTest" --rerun`; otherwise the
- * test fails when the committed fixtures no longer match what this code produces.
+ * Golden fixtures (expo/src/core/__fixtures__/golden.json): stored strings and backup files run through
+ * these Kotlin decoders and encoders, so the TypeScript and Swift code can prove they read and write the
+ * same data byte for byte. Regenerate from expo/android with
+ * `GOLDEN_WRITE=1 ./gradlew :superchant-native:testDebugUnitTest --tests "com.superchant.data.GoldenFixturesTest" --rerun`;
+ * otherwise the test fails when the committed fixtures no longer match what this code produces.
  */
 class GoldenFixturesTest {
 
@@ -171,7 +171,7 @@ class GoldenFixturesTest {
 
     @Test
     fun fixturesMatchThisCode() {
-        val file = File("../expo/src/core/__fixtures__/golden.json")
+        val file = File("../../../src/core/__fixtures__/golden.json")
         val text = Json { prettyPrint = true }.encodeToString(JsonArray.serializer(), fixtures()) + "\n"
         if (System.getenv("GOLDEN_WRITE") == "1") {
             file.parentFile.mkdirs()

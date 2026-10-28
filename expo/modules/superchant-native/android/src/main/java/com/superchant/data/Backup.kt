@@ -121,6 +121,4 @@ object BackupCodec {
         val existingIds = existing.mapTo(HashSet()) { it.id }
         return imported.filterNot { it.id in existingIds } + existing.map { byId[it.id] ?: it }
     }
-
-    fun suggestedFileName(date: java.time.LocalDate): String = "superchant-backup-$date.json"
 }

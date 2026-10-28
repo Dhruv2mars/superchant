@@ -154,9 +154,15 @@ are the Accessibility and Foreground service declarations above.
 - Unconfirmed: Play's help doesn't mention Android Auto Backup specifically. The treatment above is the common
   reading (checked support.google.com/googleplay/android-developer/answer/10787469 on Oct 19).
 
-## 4. When Play switches to the Expo build (`expo/`)
+## 4. The Expo build (`expo/`, on Play since Oct 28, 2026)
 
-The answers above describe the Kotlin app (`app/`), which has no INTERNET permission. The Expo app adds
+**Status (Oct 28):** the Data safety form is saved as recommended below (Device or other IDs: collected, not
+shared, required, App functionality; encrypted in transit; no deletion; no accounts) but not yet sent for
+review. The live Accessibility form has no free-text fields, so the texts below had nothing to replace, and
+"collects data through the Accessibility API" stays No. The privacy policy URL (section 3) points at the old
+GitHub repo, which is gone; it needs a new public home before the next review.
+
+The answers above describe the Kotlin app, which had no INTERNET permission. The Expo app adds
 INTERNET for one purpose, EAS Update (checking for and downloading app updates from `u.expo.dev` and
 `assets.eascdn.net`). Its release build trusts TLS certificates for those two hosts only
 (`network_security_config.xml`, written by `expo/plugins/withSuperChantAndroid.js`), so it cannot reach any

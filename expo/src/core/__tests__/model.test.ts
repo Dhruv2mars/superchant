@@ -1,4 +1,4 @@
-// Ported from app/src/test/.../ChantStateTest.kt, ChantCounterTest.kt and MilestoneTest.kt
+// Ported from the Android engine's ChantStateTest.kt, ChantCounterTest.kt and MilestoneTest.kt
 import { describe, expect, test } from 'bun:test';
 import { parseKJson, stringifyKJson } from '../kjson';
 import {

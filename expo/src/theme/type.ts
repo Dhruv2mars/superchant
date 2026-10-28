@@ -25,5 +25,3 @@ export const type = {
 } satisfies Record<string, TextStyle>;
 
 export type TypeStyle = keyof typeof type;
-
-export const semibold: TextStyle = { fontWeight: '600' };

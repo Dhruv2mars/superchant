@@ -288,8 +288,10 @@ function VersionLine({ report }: { report: (text: string) => void }) {
     if (early) return setAsking(true);
     const next = secretTap(streak.current, Date.now());
     streak.current = next.streak;
-    if (next.remaining === 0) setAsking(true);
-    else if (next.remaining <= SHOW_COUNTDOWN_FROM) report(tp('early_updates_taps_away', next.remaining));
+    if (next.remaining === 0) {
+      report('');
+      setAsking(true);
+    } else if (next.remaining <= SHOW_COUNTDOWN_FROM) report(tp('early_updates_taps_away', next.remaining));
   };
   const toggle = async () => {
     setBusy(true);

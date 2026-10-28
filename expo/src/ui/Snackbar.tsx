@@ -1,4 +1,4 @@
-/** A short message at the bottom (Material snackbar), announced to screen readers. One at a time. */
+/** A short message at the bottom (Material snackbar), announced to screen readers. One at a time; '' hides it. */
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
@@ -17,6 +17,7 @@ export function SnackbarHost({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState<{ text: string; key: number } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const show = useCallback((text: string) => {
+    if (!text) return setMessage(null);
     setMessage({ text, key: Date.now() });
     AccessibilityInfo.announceForAccessibility(text);
   }, []);

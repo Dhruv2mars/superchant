@@ -59,4 +59,12 @@ steps:
       cd expo
       bun install --frozen-lockfile
       channel=preview; [ "$$BUILDKITE_BRANCH" = main ] && channel=production
-      bunx eas-cli@26 update --channel "$$channel" --environment production --non-interactive --message "$$(printf '%s' "$$BUILDKITE_MESSAGE" | head -1 | cut -c1-200)"
+      message=$$(printf '%s' "$$BUILDKITE_MESSAGE" | head -1 | cut -c1-200)
+      # A robot may not upload fingerprint records, so each platform's fingerprint is resolved here and passed
+      # in as a plain runtime string (app.config.ts), and EAS CLI's own fingerprint upload is skipped
+      for p in android ios; do
+        rv=$$(bunx expo-updates runtimeversion:resolve --platform $$p | tail -1 | sed 's/.*"runtimeVersion":"\([0-9a-f]*\)".*/\1/')
+        [ -n "$$rv" ] || { echo "no $$p runtime version"; exit 1; }
+        SUPERCHANT_RUNTIME_VERSION=$$rv EAS_SKIP_AUTO_FINGERPRINT=1 bunx eas-cli@26 update --channel "$$channel" --platform $$p \
+          --environment production --non-interactive --message "$$message"
+      done

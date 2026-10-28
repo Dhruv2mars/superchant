@@ -29,7 +29,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
   backgroundColor: '#FFFBF8',
-  runtimeVersion: { policy: 'fingerprint' },
+  // CI publishes updates as an Expo robot, which may not upload fingerprint records, so it resolves the
+  // fingerprint first and passes it in as a plain string (the same value; Expo's defaults skip a string
+  // runtimeVersion when fingerprinting). Store builds always use the policy.
+  runtimeVersion: process.env.SUPERCHANT_RUNTIME_VERSION || { policy: 'fingerprint' },
   updates: {
     enabled: easProjectId !== '',
     url: easProjectId ? `https://u.expo.dev/${easProjectId}` : undefined,

@@ -264,6 +264,8 @@ printf '%s\n' \
   - A push to `dev` publishes an EAS Update to the **preview** channel; a push to `main` publishes to
     **production** (everyone). Updates are JavaScript and assets only: fixes and polish (App Review 2.5.2).
     Buildkite's cluster secret `EXPO_TOKEN` belongs to the Expo robot `superchant-buildkite` (publish only).
+    Robots may not upload fingerprint records, so the step resolves each platform's fingerprint and passes it as
+    `SUPERCHANT_RUNTIME_VERSION` with `EAS_SKIP_AUTO_FINGERPRINT=1`; to publish by hand, `eas update` works as is.
   - A native change (the fingerprint changed; CI prints it) needs a store build: `expo/scripts/release-android.sh`
     builds the bundle on the Mac (~9 min clean; EAS Build's free tier took ~24 min) and uploads it to Play
     internal testing with EAS Submit. Promote it to closed testing or production in Play Console.

@@ -231,6 +231,10 @@ export const plurals = {
     "one": "%d min",
     "other": "%d min"
   },
+  "early_updates_taps_away": {
+    "one": "%d more tap for early updates",
+    "other": "%d more taps for early updates"
+  },
   "backup_exported": {
     "one": "Exported %1$d session and %2$d goals",
     "other": "Exported %1$d sessions and %2$d goals"

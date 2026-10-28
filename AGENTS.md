@@ -164,7 +164,7 @@ its embedded bundle. `runtimeVersion` is the fingerprint policy (`fingerprint.co
 scripts and `.gitignore` on top of Expo's defaults, which skip the date-based version): an update reaches only
 builds with the same fingerprint, so native changes (Kotlin/Swift including the module's tests, config plugins,
 native dependencies) need a store build. Store builds always use the `production` channel; **early updates**
-(long-press the version in Settings, `src/native/updates.ts`) move one install to `preview` with a saved header
+(tap the version in Settings 7 times in a row, `src/native/updates.ts`) move one install to `preview` with a saved header
 override.
 
 ## Design and motion skills

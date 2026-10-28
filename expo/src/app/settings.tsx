@@ -1,9 +1,10 @@
 /** Settings (SettingsScreen.kt, ReminderControls.kt, BackupControls.kt). */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppState, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { getCalendars } from 'expo-localization';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Native from 'superchant-native';
+import { NO_TAPS, secretTap, SHOW_COUNTDOWN_FROM } from '@/core/secretTaps';
 import { t, tp } from '@/i18n';
 import { platform } from '@/native/platform';
 import { BackupOutcome, defaultSettings, ThemeMode } from '@/native/types';
@@ -273,8 +274,8 @@ const styles = StyleSheet.create({
 });
 
 /**
- * The version, plus the running OTA update. Long-press switches this install between the build's channel and
- * early updates (src/native/updates.ts); the channel shows only when it isn't the default one.
+ * The version, plus the running OTA update. Tapping it 7 times in a row (Android's build-number easter egg) offers
+ * early updates (src/native/updates.ts); once on, the channel shows and one tap offers to turn them off.
  */
 function VersionLine({ report }: { report: (text: string) => void }) {
   const [channel, setChannel] = useState(currentChannel);
@@ -282,6 +283,14 @@ function VersionLine({ report }: { report: (text: string) => void }) {
   const early = channel === EARLY_CHANNEL;
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
+  const streak = useRef(NO_TAPS);
+  const onTap = () => {
+    if (early) return setAsking(true);
+    const next = secretTap(streak.current, Date.now());
+    streak.current = next.streak;
+    if (next.remaining === 0) setAsking(true);
+    else if (next.remaining <= SHOW_COUNTDOWN_FROM) report(tp('early_updates_taps_away', next.remaining));
+  };
   const toggle = async () => {
     setBusy(true);
     const result = await setEarlyUpdates(!early);
@@ -292,7 +301,7 @@ function VersionLine({ report }: { report: (text: string) => void }) {
   };
   return (
     <>
-      <Pressable onLongPress={channel ? () => setAsking(true) : undefined} delayLongPress={800} style={{ marginTop: 4 }}>
+      <Pressable onPress={channel ? onTap : undefined} style={{ marginTop: 4 }}>
         <Text variant="bodySmall" color="onSurfaceVariant">
           {update ? t('settings_version_update', Native.versionName, update) : t('settings_version', Native.versionName)}
         </Text>

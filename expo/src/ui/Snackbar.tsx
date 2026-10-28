@@ -11,6 +11,9 @@ const SnackbarContext = createContext<(message: string) => void>(() => {});
 
 export const useSnackbar = () => useContext(SnackbarContext);
 
+/** Bottom padding (plus the inset) that keeps a screen's last line above a one-line snackbar: its 16 margin, 48 height and a 16 gap. */
+export const SNACKBAR_CLEARANCE = 80;
+
 export function SnackbarHost({ children }: { children: ReactNode }) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();

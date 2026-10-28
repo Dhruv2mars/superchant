@@ -18,7 +18,7 @@ import { Dialog } from '@/ui/Dialog';
 import { Icon, IconName } from '@/ui/Icon';
 import { InlineTimePicker, TimePicker } from '@/ui/native-controls';
 import { IntensityRow, SettingsItem, SettingsSection, SwitchRow } from '@/ui/settingsRows';
-import { useSnackbar } from '@/ui/Snackbar';
+import { SNACKBAR_CLEARANCE, useSnackbar } from '@/ui/Snackbar';
 import { Text } from '@/ui/Text';
 
 const ios = Platform.OS === 'ios';
@@ -41,7 +41,7 @@ export default function Settings() {
   return (
     <View style={{ flex: 1 }}>
       <AppTopBar title={t('settings')} navigation={<BackButton />} />
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 16 + insets.bottom }}>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: SNACKBAR_CLEARANCE + insets.bottom }}>
         <SettingsSection title={t('settings_counting')}>
           {platform.volume ? (
             <>

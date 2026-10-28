@@ -44,10 +44,18 @@ class ReminderTimeTest {
         assertEquals(at(2026, 10, 18, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 6, 5), six, firedYesterday))
         assertEquals(at(2026, 10, 18, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 6, 5), six, 0))
         assertEquals(at(2026, 10, 18, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 5, 0), six, firedYesterday))
+        // Doze or battery saver can hold the alarm past its window, even for hours: today's is still kept
+        assertEquals(at(2026, 10, 18, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 6, 30), six, firedYesterday))
+        assertEquals(at(2026, 10, 18, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 22, 0), six, firedYesterday))
         // Already fired, or the setting just changed: tomorrow's
         assertEquals(at(2026, 10, 19, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 6, 5), six, millis(at(2026, 10, 18, 6, 1))))
-        // Past the delivery window nothing is sent late
-        assertEquals(at(2026, 10, 19, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 6, 30), six, firedYesterday))
+        // Never recorded (set up before it was): only within the window, so one that fired isn't sent again
+        assertEquals(at(2026, 10, 19, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 6, 30), six, 0))
+        // Yesterday's is kept only within the window; one at 0:00 is today's
+        val late = 23 * 60 + 55
+        assertEquals(at(2026, 10, 17, 23, 55), ReminderTime.syncTrigger(at(2026, 10, 18, 0, 5), late, firedYesterday))
+        assertEquals(at(2026, 10, 18, 23, 55), ReminderTime.syncTrigger(at(2026, 10, 18, 0, 30), late, firedYesterday))
+        assertEquals(at(2026, 10, 18, 0, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 1, 0), 0, firedYesterday))
         // The clock was set back: a handled time in the future counts as now
         val future = millis(at(2026, 10, 25, 6, 0))
         assertEquals(at(2026, 10, 18, 6, 0), ReminderTime.syncTrigger(at(2026, 10, 18, 5, 0), six, future))

@@ -32,3 +32,5 @@ steps:
       bunx tsc --noEmit
       bun run lint
       bun run test
+      # The runtime fingerprints updates published from here are tagged with; they must match the store build's
+      for p in android ios; do echo "runtime $$p: $$(bunx expo-updates runtimeversion:resolve --platform $$p | tail -1 | sed 's/.*"runtimeVersion":"\([0-9a-f]*\)".*/\1/')"; done

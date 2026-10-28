@@ -1,17 +1,19 @@
 /** Settings (SettingsScreen.kt, ReminderControls.kt, BackupControls.kt). */
 import { useEffect, useState } from 'react';
-import { AppState, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { AppState, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { getCalendars } from 'expo-localization';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Native from 'superchant-native';
 import { t, tp } from '@/i18n';
 import { platform } from '@/native/platform';
 import { BackupOutcome, defaultSettings, ThemeMode } from '@/native/types';
+import { currentChannel, EARLY_CHANNEL, runningUpdate, setEarlyUpdates } from '@/native/updates';
 import { useSettings } from '@/state/store';
 import { useTheme } from '@/theme';
 import { AccessibilitySetupDialog } from '@/ui/AccessibilitySetup';
 import { AppTopBar, BackButton } from '@/ui/chrome';
 import { Button, Divider, IconButton, PressScale } from '@/ui/controls';
+import { Dialog } from '@/ui/Dialog';
 import { Icon, IconName } from '@/ui/Icon';
 import { InlineTimePicker, TimePicker } from '@/ui/native-controls';
 import { IntensityRow, SettingsItem, SettingsSection, SwitchRow } from '@/ui/settingsRows';
@@ -107,9 +109,7 @@ export default function Settings() {
             <Text variant="bodyMedium" color="onSurfaceVariant">
               {t('settings_about_tagline')}
             </Text>
-            <Text variant="bodySmall" color="onSurfaceVariant" style={{ marginTop: 4 }}>
-              {t('settings_version', Native.versionName)}
-            </Text>
+            <VersionLine report={snackbar} />
           </View>
         </SettingsSection>
       </ScrollView>
@@ -271,3 +271,51 @@ const styles = StyleSheet.create({
   themePill: { flexDirection: 'row', borderRadius: 24, padding: 4, gap: 4 },
   themeOption: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
 });
+
+/**
+ * The version, plus the running OTA update. Long-press switches this install between the build's channel and
+ * early updates (src/native/updates.ts); the channel shows only when it isn't the default one.
+ */
+function VersionLine({ report }: { report: (text: string) => void }) {
+  // Channel constants are read at launch; after a switch without a reload, this state is what's current
+  const [channel, setChannel] = useState(currentChannel);
+  const update = runningUpdate();
+  const early = channel === EARLY_CHANNEL;
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const toggle = async () => {
+    setBusy(true);
+    const result = await setEarlyUpdates(!early);
+    setChannel(early ? 'production' : EARLY_CHANNEL);
+    setBusy(false);
+    setAsking(false);
+    if (result !== 'reloading') report(t(result === 'offline' ? 'early_updates_offline' : 'early_updates_up_to_date'));
+  };
+  return (
+    <>
+      <Pressable onLongPress={channel ? () => setAsking(true) : undefined} delayLongPress={800} style={{ marginTop: 4 }}>
+        <Text variant="bodySmall" color="onSurfaceVariant">
+          {update ? t('settings_version_update', Native.versionName, update) : t('settings_version', Native.versionName)}
+        </Text>
+        {channel && channel !== 'production' ? (
+          <Text variant="bodySmall" color="onSurfaceVariant">
+            {t('settings_channel', channel)}
+          </Text>
+        ) : null}
+      </Pressable>
+      <Dialog
+        visible={asking}
+        title={t('early_updates_title')}
+        onDismiss={() => !busy && setAsking(false)}
+        actions={[
+          { label: t('cancel'), onPress: () => setAsking(false), disabled: busy },
+          { label: t(early ? 'early_updates_turn_off' : 'early_updates_turn_on'), onPress: toggle, style: 'primary', disabled: busy },
+        ]}
+      >
+        <Text variant="bodyMedium" color="onSurfaceVariant">
+          {t(early ? 'early_updates_off_message' : 'early_updates_on_message')}
+        </Text>
+      </Dialog>
+    </>
+  );
+}

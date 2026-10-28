@@ -277,7 +277,6 @@ const styles = StyleSheet.create({
  * early updates (src/native/updates.ts); the channel shows only when it isn't the default one.
  */
 function VersionLine({ report }: { report: (text: string) => void }) {
-  // Channel constants are read at launch; after a switch without a reload, this state is what's current
   const [channel, setChannel] = useState(currentChannel);
   const update = runningUpdate();
   const early = channel === EARLY_CHANNEL;
@@ -286,7 +285,7 @@ function VersionLine({ report }: { report: (text: string) => void }) {
   const toggle = async () => {
     setBusy(true);
     const result = await setEarlyUpdates(!early);
-    setChannel(early ? 'production' : EARLY_CHANNEL);
+    setChannel(currentChannel());
     setBusy(false);
     setAsking(false);
     if (result !== 'reloading') report(t(result === 'offline' ? 'early_updates_offline' : 'early_updates_up_to_date'));

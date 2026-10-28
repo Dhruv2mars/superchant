@@ -18,6 +18,8 @@ import { Text } from '@/ui/Text';
 
 const ios = Platform.OS === 'ios';
 
+const Separator = () => <View style={{ height: 12 }} />;
+
 /** Re-buckets at midnight while open and whenever the app comes back. */
 function useNow(): number {
   const [now, setNow] = useState(Date.now);
@@ -76,7 +78,7 @@ export default function History() {
           keyExtractor={(s) => s.id}
           stickySectionHeadersEnabled={false}
           contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+          ItemSeparatorComponent={Separator}
           initialNumToRender={12}
           windowSize={7}
           ListHeaderComponent={

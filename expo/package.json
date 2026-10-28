@@ -33,6 +33,7 @@
     "@bacons/apple-targets": "^5.0.0",
     "@types/bun": "^1.4.4",
     "@types/react": "~19.3.0",
+    "oxlint": "1.90.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -45,7 +46,8 @@
     "test:tz-in": "TZ=Asia/Kolkata bun test src",
     "typecheck": "tsc --noEmit",
     "prebuild": "expo prebuild --clean",
-    "test:swift": "swiftc -O modules/superchant-native/ios/ChantModel.swift modules/superchant-native/swift-tests/main.swift -o /tmp/superchant-swift-vectors && /tmp/superchant-swift-vectors src/core/__fixtures__/golden.json"
+    "test:swift": "swiftc -O modules/superchant-native/ios/ChantModel.swift modules/superchant-native/swift-tests/main.swift -o /tmp/superchant-swift-vectors && /tmp/superchant-swift-vectors src/core/__fixtures__/golden.json",
+    "lint": "oxlint --deny-warnings"
   },
   "private": true
 }

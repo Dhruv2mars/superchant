@@ -26,19 +26,23 @@ const shortcutsXml = (pkg) => `<?xml version="1.0" encoding="utf-8"?>
 </shortcuts>
 `;
 
+const devStrings = `<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds install as com.superchant.dev next to the Play Store app; label them so they're easy to tell apart. -->
+<resources>
+    <string name="app_name">SuperChant Dev</string>
+    <string name="accessibility_service_label">SuperChant Dev Volume Counter</string>
+</resources>
+`;
+
 const backupInclude = `        <include domain="sharedpref" path="." />
         <include domain="file" path="datastore/" />`;
 
 const FILES = {
   'src/main/res/xml/shortcuts.xml': shortcutsXml('com.superchant'),
   'src/debug/res/xml/shortcuts.xml': shortcutsXml('com.superchant.dev'),
-  'src/debug/res/values/strings_dev.xml': `<?xml version="1.0" encoding="utf-8"?>
-<!-- Debug builds install as com.superchant.dev next to the Play Store app; label them so they're easy to tell apart. -->
-<resources>
-    <string name="app_name">SuperChant Dev</string>
-    <string name="accessibility_service_label">SuperChant Dev Volume Counter</string>
-</resources>
-`,
+  'src/preview/res/xml/shortcuts.xml': shortcutsXml('com.superchant.dev'),
+  'src/debug/res/values/strings_dev.xml': devStrings,
+  'src/preview/res/values/strings_dev.xml': devStrings,
   'src/main/res/xml/backup_rules.xml': `<?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
 ${backupInclude.replace(/^ {4}/gm, '')}
@@ -76,6 +80,8 @@ ${UPDATE_HOSTS.map((h) => `        <domain includeSubdomains="false">${h}</domai
 </manifest>
 `,
 };
+// The preview build (release code as "SuperChant Dev", see withGradle) gets the release network lockdown too
+for (const f of ['res/xml/network_security_config.xml', 'AndroidManifest.xml']) FILES[`src/preview/${f}`] = FILES[`src/release/${f}`];
 
 // The Kotlin app's adaptive launcher icon vectors (copied from app/src/main/res), so the icon is identical.
 const ICON_DIR = path.join(__dirname, '..', 'assets', 'android');
@@ -161,6 +167,19 @@ function withGradle(config) {
       );
       // "SuperChant Dev" installs next to the Play Store app, so testing never touches real practice data
       s = s.replace(/buildTypes \{\s*debug \{/, 'buildTypes {\n        debug {\n            applicationIdSuffix ".dev"\n            versionNameSuffix "-dev"');
+      // "preview": the release build (embedded JS, R8, Hermes) installed as SuperChant Dev with the debug key, for
+      // trying a build on a phone over adb without Metro and without touching the Play install
+      s = s.replace(
+        /(\n {4}buildTypes \{[\s\S]*?\n {8}release \{[\s\S]*?\n {8}\})/,
+        `$1
+        preview {
+            initWith release
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-preview"
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ['release']
+        }`,
+      );
     }
     cfg.modResults.contents = s;
     return cfg;

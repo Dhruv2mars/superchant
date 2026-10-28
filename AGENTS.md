@@ -162,13 +162,14 @@ bun install
 bun run test            # TS cores in three time zones (UTC, New York, Kolkata)
 bun run test:swift      # Swift model against the Kotlin vectors (swiftc, no Xcode needed)
 bunx tsc --noEmit
+bun run lint            # oxlint (.oxlintrc.json), warnings fail
 bunx expo prebuild --clean            # regenerate android/ and ios/
 cd android && ./gradlew :superchant-native:testDebugUnitTest :app:assembleRelease
 bunx expo run:ios --configuration Release   # needs Xcode
 (cd android && ../scripts/network-guard.sh)  # after assembleRelease: permissions and the update-only TLS config
 ```
 
-Buildkite runs the typecheck and TS tests on every push (`.buildkite/pipeline.yml`). Run the Swift vectors,
+Buildkite runs the typecheck, oxlint and TS tests on every push (`.buildkite/pipeline.yml`). Run the Swift vectors,
 the module's JVM tests, the release build and the network guard yourself before opening a trail.
 
 - **Golden fixtures.** `app/src/test/.../GoldenFixturesTest.kt` runs the Kotlin decoders, encoders and counting
@@ -178,7 +179,9 @@ the module's JVM tests, the release build and the network guard yourself before 
 - **Kotlin in two places.** Until the switch, engine changes in `app/src/main/kotlin` must be copied to
   `expo/modules/superchant-native/android` (the module's tests are the app's JVM tests).
 - Debug builds are `com.superchant.dev` ("SuperChant Dev") like the Kotlin app; the release is signed from the
-  repo-root `local.properties` `RELEASE_*` keys, or the debug key without them.
+  repo-root `local.properties` `RELEASE_*` keys, or the debug key without them. `./gradlew :app:assemblePreview`
+  (in `expo/android`) builds the release code as SuperChant Dev with the debug key: no Metro needed, so it is
+  the build to put on a phone over adb.
 - Versions use the same date scheme (`RELEASE_DATE`, `BUILD_NUMBER` env vars), so an Expo build is a normal
   Play update over the Kotlin app.
 - Updates: set `EAS_PROJECT_ID` (and optionally `EAS_UPDATE_CHANNEL`) to enable expo-updates; without it the

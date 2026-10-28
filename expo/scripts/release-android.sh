@@ -23,9 +23,15 @@ echo "Building versionCode $day$(printf %02d "$BUILD_NUMBER")"
 bunx expo prebuild --platform android --clean
 echo "sdk.dir=${ANDROID_HOME:-$HOME/Library/Android/sdk}" > android/local.properties
 (cd android && ./gradlew :app:bundleRelease && ../scripts/network-guard.sh)
+aab=android/app/build/outputs/bundle/release/app-release.aab
+
+# Updates reach this build only if it embeds the fingerprint CI resolves (Gradle can keep a stale one)
+want=$(bunx expo-updates runtimeversion:resolve --platform android | tail -1 | sed 's/.*"runtimeVersion":"\([0-9a-f]*\)".*/\1/')
+got=$(unzip -p "$aab" base/assets/fingerprint)
+test -n "$want" && test "$want" = "$got" || { echo "bundle fingerprint '$got' is not the project's '$want'"; exit 1; }
+echo "Runtime fingerprint $got"
 
 # eas.json points at ./play-service-account.json; link it only for the upload
 ln -sf "$key" play-service-account.json
 trap 'rm -f play-service-account.json' EXIT
-bunx eas-cli@26 submit --platform android --profile production --non-interactive \
-  --path android/app/build/outputs/bundle/release/app-release.aab
+bunx eas-cli@26 submit --platform android --profile production --non-interactive --path "$aab"

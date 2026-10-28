@@ -18,20 +18,45 @@ steps:
 
   # The Expo app (expo/): types, oxlint and the pure cores against the Kotlin golden fixtures in three time zones.
   # Its Android release build, network guard and the Swift vectors need more than this agent has (see AGENTS.md).
+  # Node runs the Expo CLI (bunx picks node when it exists): under Bun the runtime fingerprint skips the config
+  # plugins and comes out different from the store build's, so updates from here would never reach it.
   - label: ":expo: typecheck, lint, cores"
     key: expo
     agents: { queue: linux-small }
     timeout_in_minutes: 15
     plugins:
       - docker#v5.12.0:
-          image: oven/bun:1
+          image: node:24-bookworm
     command: |
       [ -e /usr/share/zoneinfo/America/New_York ] || { apt-get update -qq && apt-get install -y -qq tzdata >/dev/null; }
+      npm install --global --silent bun@1
       cd expo
       bun install --frozen-lockfile
       bunx tsc --noEmit
       bun run lint
       bun run test
-      # The runtime fingerprints updates published from here are tagged with; they must match the store build's
       for p in android ios; do echo "runtime $$p: $$(bunx expo-updates runtimeversion:resolve --platform $$p | tail -1 | sed 's/.*"runtimeVersion":"\([0-9a-f]*\)".*/\1/')"; done
-      bunx expo-updates runtimeversion:resolve --platform android | tail -1 | bun -e 'const d=JSON.parse(await Bun.stdin.text()); for (const x of d.fingerprintSources) console.log("FP", x.type, x.filePath ?? x.id, String(x.hash).slice(0,8))'
+
+  # One store build, two update channels: dev publishes to preview (the owner's install, switched to early
+  # updates in Settings), main to production (everyone). An update reaches only builds with the same runtime
+  # fingerprint; a native change needs a store build (expo/scripts/release-android.sh).
+  - label: ":expo: publish update"
+    key: publish
+    if: build.branch == "dev" || build.branch == "main" || build.branch == "feat/expo-app"
+    depends_on: expo
+    agents: { queue: linux-small }
+    timeout_in_minutes: 20
+    concurrency: 1
+    concurrency_group: superchant/eas-update
+    secrets: [EXPO_TOKEN]
+    plugins:
+      - docker#v5.12.0:
+          image: node:24-bookworm
+          environment: [EXPO_TOKEN, BUILDKITE_BRANCH, BUILDKITE_MESSAGE]
+    command: |
+      git config --global --add safe.directory '*'
+      npm install --global --silent bun@1
+      cd expo
+      bun install --frozen-lockfile
+      channel=preview; [ "$$BUILDKITE_BRANCH" = main ] && channel=production
+      bunx eas-cli@26 update --channel "$$channel" --environment production --non-interactive --message "$$(printf '%s' "$$BUILDKITE_MESSAGE" | head -1 | cut -c1-200)"

@@ -34,3 +34,4 @@ steps:
       bun run test
       # The runtime fingerprints updates published from here are tagged with; they must match the store build's
       for p in android ios; do echo "runtime $$p: $$(bunx expo-updates runtimeversion:resolve --platform $$p | tail -1 | sed 's/.*"runtimeVersion":"\([0-9a-f]*\)".*/\1/')"; done
+      bunx expo-updates runtimeversion:resolve --platform android | tail -1 | bun -e 'const d=JSON.parse(await Bun.stdin.text()); for (const x of d.fingerprintSources) console.log("FP", x.type, x.filePath ?? x.id, String(x.hash).slice(0,8))'

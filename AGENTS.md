@@ -233,8 +233,9 @@ printf '%s\n' \
 - Branches: `dev` is the default and integration branch; `main` is production. Open trails against `dev`; never
   push to `dev` or `main` directly. The repo lives on Entire (the old GitHub repo is gone); a PR is an Entire
   Trail. CI is Buildkite (`.buildkite/pipeline.yml`), which reports to the trail.
-  - Every push: the native module's JVM tests (with the golden fixtures check), and the typecheck, oxlint, TS
-    tests and the version helper's tests. The Expo CLI runs on Node there: under Bun the runtime fingerprint
+  - Every push: the typecheck, oxlint, TS tests and the version helper's tests (under a minute); when native code,
+    plugins, dependencies or the golden fixtures changed, also the native module's JVM tests (`linux-large` with a
+    cached Gradle home). The pipeline's default branch is `dev`, which `if_changed` compares against. The Expo CLI runs on Node there: under Bun the runtime fingerprint
     skips the config plugins and stops matching the store build. Run the Swift vectors, the release build and the
     network guard yourself before opening a trail.
   - A push to `dev` publishes an EAS Update to the **preview** channel; a push to `main` publishes to
@@ -248,13 +249,17 @@ printf '%s\n' \
 - Put verification evidence in the PR description. Screenshots go on the orphan `ux-evidence` branch (one folder
   per PR), never in `dev`/`main`. Play Store listing assets under `docs/play-store/` are the exception.
 - Never commit `local.properties`, keystores, APK/AAB files, `TASKS.md` or local agent state (`.claude/settings*.json`).
-- Releases go through Google Play only. The owner's daily app is the Play Store install (internal testing track)
-  with early updates on, so it runs `dev` within minutes of a merge. Store builds are signed with the upload key
+- Releases go through Google Play only. **The owner keeps one app: the Play Store install.** Two gates put it
+  ahead of everyone else: Play's internal testing list (the owner's Google account) gets every store build first,
+  and early updates (on once, from Settings) put that install on the `preview` channel, so it runs `dev` within
+  minutes of a merge while everyone else gets `main`. Updates can't target an email: no accounts, and Play
+  promotes the same bundle to every track, so the channel is chosen on the device. Store builds are signed with the upload key
   that the repo-root `local.properties` points to (`RELEASE_*`; keystore and the Play service account JSON live in
   `~/.superchant-keys`, never committed). Play App Signing is on. A personal developer account needs a closed
   test (12+ testers, 14 days) before production.
-- To try a branch before merging, put the preview build ("SuperChant Dev") on the phone over wireless adb; it never
-  touches the Play install or its data. See "Getting a build on the owner's phone" below.
+- Try a branch before merging on the emulator (the `preview` or release APK). The owner's phone gets it after the
+  merge into `dev`. Putting SuperChant Dev on the phone over adb (below) is only for a change that needs the real
+  device, and it comes off again afterwards.
 
 ### Getting a build on the owner's phone
 
@@ -262,11 +267,13 @@ The phone is a Realme RMX3392 in India. Play Protect's enhanced fraud protection
 that declares an accessibility service from a browser, messaging app or file manager, so a downloaded
 SuperChant APK never installs. Only Play and adb installs work.
 
-1. **Play (the real app, `com.superchant`):** with early updates on, a merge into `dev` reaches the Play install as
-   an update on its next launch (or two: it downloads, then applies). Native changes arrive with the next
-   `release-android.sh` upload. A sideloaded `com.superchant` (upload- or debug-signed) can't be updated by Play
+1. **Play (the only app kept, `com.superchant`):** with early updates on, a merge into `dev` reaches the Play
+   install as an update on its next launch (or two: it downloads, then applies). Native changes arrive with the next
+   `release-android.sh` upload (Play may take a while to offer it; opening its Play page fetches it). Until an
+   update exists for a new fingerprint, expo-updates logs "No launchable update" on each start and runs the
+   embedded bundle; harmless. A sideloaded `com.superchant` (upload- or debug-signed) can't be updated by Play
    later, so never sideload the release package.
-2. **SuperChant Dev (`com.superchant.dev`) over wireless adb:** phone and Mac on the same Wi-Fi, then
+2. **SuperChant Dev (`com.superchant.dev`) over wireless adb, only when needed:** phone and Mac on the same Wi-Fi, then
    `./gradlew :app:assemblePreview` in `expo/android` and `adb -s <ip:port> install -r
    app/build/outputs/apk/preview/app-preview.apk`. Pairing is done once per phone:
    Developer options → Wireless debugging → Pair device with pairing code, then `adb pair <ip>:<pairing port> <code>`.

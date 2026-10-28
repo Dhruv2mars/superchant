@@ -2,14 +2,29 @@
 # Runs on the free hosted linux-small queue; checkout comes from the Entire plugin Buildkite adds to every job.
 steps:
   # The Android engine (expo/modules/superchant-native): its JVM tests, including the golden fixtures check that
-  # the TypeScript and Swift tests replay. The release build and network guard need more than this agent has.
+  # the TypeScript and Swift tests replay. Runs only when something native (or the fixtures) changed, on the large
+  # agent with the Gradle home kept between builds (an uncached run spends ~6 of its 7 min downloading and
+  # compiling dependencies on the small agent). The release build and network guard stay on the Mac.
   - label: ":android: native module tests"
     key: native
-    agents: { queue: linux-small }
-    timeout_in_minutes: 45
+    agents: { queue: linux-large }
+    timeout_in_minutes: 30
+    if_changed:
+      - "expo/modules/**"
+      - "expo/plugins/**"
+      - "expo/app.config.ts"
+      - "expo/package.json"
+      - "expo/bun.lock"
+      - "expo/src/core/__fixtures__/**"
+      - ".buildkite/pipeline.yml"
+    cache:
+      name: gradle
+      paths: [".gradle-home"]
+      size: 20g
     plugins:
       - docker#v5.12.0:
           image: ghcr.io/cirruslabs/android-sdk:36
+          environment: ["GRADLE_USER_HOME=/workdir/.gradle-home"]
     command: |
       yes | sdkmanager --licenses >/dev/null || true
       node=$$(curl -fsSL https://nodejs.org/dist/latest-v24.x/SHASUMS256.txt | grep -o 'node-v24[^ ]*-linux-x64.tar.gz' | head -1)
@@ -19,7 +34,7 @@ steps:
       bun install --frozen-lockfile
       bunx expo prebuild --platform android --no-install >/dev/null
       cd android
-      ./gradlew --no-daemon --max-workers=1 -Dorg.gradle.parallel=false -Dorg.gradle.jvmargs="-Xmx2560m -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" -Pkotlin.compiler.execution.strategy=in-process :superchant-native:testDebugUnitTest
+      ./gradlew --no-daemon --parallel --build-cache :superchant-native:testDebugUnitTest
 
   # The Expo app (expo/): types, oxlint, the pure cores against the golden fixtures in three time zones, and the
   # release script's version helper. The Swift vectors need swiftc (see AGENTS.md).

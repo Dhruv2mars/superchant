@@ -6,8 +6,9 @@ build/
 *.class
 __pycache__/
 
-# Gradle / Kotlin
+# Gradle / Kotlin (.gradle-home: the CI Gradle cache)
 .gradle/
+.gradle-home/
 .kotlin/
 
 # Local config and secrets

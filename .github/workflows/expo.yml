@@ -1,0 +1,50 @@
+name: Expo app
+
+# CI for an Entire trail while Buildkite's hosted agents are down: the same checks as .buildkite/pipeline.yml
+# (types, oxlint, the pure cores in three time zones, the version helper, the Android engine's JVM tests) plus the
+# Swift vectors, a release build and the network guard. Nothing is published.
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: expo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: expo
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v6
+
+      - run: bun install --frozen-lockfile
+      - name: Typecheck
+        run: bunx tsc --noEmit
+      - name: oxlint
+        run: bun run lint
+      - name: TS cores (UTC, New York, Kolkata)
+        run: bun run test
+      - name: Release script version helper
+        run: python3 -m unittest discover -s scripts
+      - name: Swift model against the golden fixtures
+        run: bun run test:swift
+
+      - name: Generate the Android project
+        run: CI=1 bunx expo prebuild -p android --no-install
+      - name: Engine JVM tests and release build
+        working-directory: expo/android
+        run: ./gradlew :superchant-native:testDebugUnitTest :app:assembleRelease -PreactNativeArchitectures=arm64-v8a
+
+      - name: "Guard - network only for app updates"
+        working-directory: expo/android
+        run: ../scripts/network-guard.sh

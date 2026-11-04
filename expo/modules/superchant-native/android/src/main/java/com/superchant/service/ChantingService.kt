@@ -440,14 +440,20 @@ class ChantingService : Service() {
          * Called by VolumeKeyAccessibilityService on the main thread for each new volume press.
          * Returns true if the press was counted, in which case the key should be consumed.
          */
-        fun onVolumeKeyPressed(): Boolean =
-            acceptsVolumeKeys && _instance?.incrementCount() == true
+        fun onVolumeKeyPressed(downTime: Long): Boolean =
+            (acceptsVolumeKeys && _instance?.incrementCount() == true).also { if (it) lastServicePress = downTime }
+
+        // The press the accessibility service counted last. If the main thread stalls past the key
+        // dispatch timeout, the system also delivers that press to the activity; it must not count twice.
+        private var lastServicePress = Long.MIN_VALUE
 
         /**
          * Called on the main thread for each new volume press SuperChant's own activity receives. No
-         * consent needed: this is ordinary in-app key handling, not the accessibility service.
+         * consent needed: this is ordinary in-app key handling, not the accessibility service. A press
+         * the service already counted is consumed without counting again.
          */
-        fun onForegroundVolumeKeyPressed(): Boolean = _instance?.incrementCount() == true
+        fun onForegroundVolumeKeyPressed(downTime: Long): Boolean =
+            downTime == lastServicePress || _instance?.incrementCount() == true
 
         /**
          * Whether a running session counts volume keys: only once the user agreed to the accessibility

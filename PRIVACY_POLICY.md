@@ -74,8 +74,8 @@ You can turn off backup for your device (or for SuperChant) in Android settings 
 ## Accessibility Service
 
 On Android, SuperChant uses Android's Accessibility Service **solely** to count volume button presses during a chanting
-session, so you can count without looking at your screen, including on the lock screen or while another app
-is open.
+session on the lock screen or while another app is open. It is optional: inside SuperChant, volume buttons and
+taps count without it.
 
 Before you're sent to Android's accessibility settings, SuperChant shows this disclosure in the app and
 asks you to agree.

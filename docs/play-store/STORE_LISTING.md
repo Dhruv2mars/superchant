@@ -58,7 +58,7 @@ YOUR DATA STAYS WITH YOU
 • Android's own device backup can also carry your practice to a new phone.
 
 ABOUT THE VOLUME BUTTONS
-To count with the volume buttons, SuperChant uses an Android accessibility service. Before you turn it on, the app explains what the service does and asks you to agree. The service only listens for volume button presses during a session that is running and not paused. It can't read your screen or see what you type, and it collects nothing. You can use touch counting without it.
+Inside SuperChant the volume buttons count on their own. To count with them on the lock screen or in another app, SuperChant uses an optional Android accessibility service. Before you turn it on, the app explains what the service does and asks you to agree. The service only listens for volume button presses during a session that is running and not paused. It can't read your screen or see what you type, and it collects nothing. You can count with taps and in-app volume presses without it.
 
 For japa meditation, mantra chanting, naam jap, prayer counting and any practice of repetition.
 ```

@@ -22,8 +22,8 @@ private class ForegroundVolumeKeys : ReactActivityHandler {
     private val filter = VolumeKeyFilter(ChantingService::onForegroundVolumeKeyPressed)
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean =
-        event != null && filter.onKey(keyCode, KeyEvent.ACTION_DOWN, event.repeatCount)
+        event != null && filter.onKey(keyCode, KeyEvent.ACTION_DOWN, event.repeatCount, event.downTime)
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean =
-        filter.onKey(keyCode, KeyEvent.ACTION_UP, 0)
+        filter.onKey(keyCode, KeyEvent.ACTION_UP, 0, event?.downTime ?: 0L)
 }

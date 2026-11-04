@@ -14,14 +14,15 @@ class VolumeKeyFilterTest {
 
     private var counting = true
     private var presses = 0
-    private val filter = VolumeKeyFilter { if (counting) presses++; counting }
+    private var lastDownTime = 0L
+    private val filter = VolumeKeyFilter { downTime -> lastDownTime = downTime; if (counting) presses++; counting }
 
     @Test
     fun countedPressConsumesDownRepeatsAndUp() {
-        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 0))
-        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 1))
-        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 2))
-        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_UP, 0))
+        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 0, 7L))
+        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 1, 7L))
+        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 2, 7L))
+        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_UP, 0, 7L))
         // Holding the key counts once.
         assertEquals(1, presses)
     }
@@ -29,34 +30,40 @@ class VolumeKeyFilterTest {
     @Test
     fun uncountedPressPassesThroughEntirely() {
         counting = false // no session, paused, or goal complete
-        assertFalse(filter.onKey(KEYCODE_VOLUME_DOWN, ACTION_DOWN, 0))
-        assertFalse(filter.onKey(KEYCODE_VOLUME_DOWN, ACTION_DOWN, 1))
-        assertFalse(filter.onKey(KEYCODE_VOLUME_DOWN, ACTION_UP, 0))
+        assertFalse(filter.onKey(KEYCODE_VOLUME_DOWN, ACTION_DOWN, 0, 7L))
+        assertFalse(filter.onKey(KEYCODE_VOLUME_DOWN, ACTION_DOWN, 1, 7L))
+        assertFalse(filter.onKey(KEYCODE_VOLUME_DOWN, ACTION_UP, 0, 7L))
         assertEquals(0, presses)
     }
 
     @Test
     fun upForAPressThatStartedBeforeTheSessionPassesThrough() {
         counting = false
-        filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 0)
+        filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 0, 7L)
         counting = true
-        assertFalse(filter.onKey(KEYCODE_VOLUME_UP, ACTION_UP, 0))
+        assertFalse(filter.onKey(KEYCODE_VOLUME_UP, ACTION_UP, 0, 7L))
         // The next press is counted again.
-        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 0))
-        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_UP, 0))
+        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 0, 7L))
+        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_UP, 0, 7L))
     }
 
     @Test
     fun upIsConsumedEvenIfCountingStoppedMidPress() {
-        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 0))
+        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 0, 7L))
         counting = false // e.g. this press completed the goal
-        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_UP, 0))
-        assertFalse(filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 0))
+        assertTrue(filter.onKey(KEYCODE_VOLUME_UP, ACTION_UP, 0, 7L))
+        assertFalse(filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 0, 7L))
+    }
+
+    @Test
+    fun pressIsOfferedWithItsDownTime() {
+        filter.onKey(KEYCODE_VOLUME_UP, ACTION_DOWN, 0, 42L)
+        assertEquals(42L, lastDownTime)
     }
 
     @Test
     fun otherKeysAreIgnored() {
-        assertFalse(filter.onKey(KEYCODE_ENTER, ACTION_DOWN, 0))
+        assertFalse(filter.onKey(KEYCODE_ENTER, ACTION_DOWN, 0, 7L))
         assertEquals(0, presses)
     }
 }

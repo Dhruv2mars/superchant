@@ -16,8 +16,8 @@ engine lives on as the Android half of the native module.
   Check the merged release manifest when adding a dependency (`expo-notifications` links Firebase; don't add it).
 - **OTA updates are for fixes and polish** (App Review 2.5.2); new features ship in store builds.
 - **A round is always 108.** There is no round-size setting.
-- **Counting stays simple:** volume buttons count whenever the accessibility service is set up; touch counting
-  is one on/off toggle on the session screen. No input-mode chooser, no undo, no hold-to-stop, no focus mode,
+- **Counting stays simple:** volume buttons count in SuperChant's own screen, and on the lock screen and in other
+  apps once the accessibility service is set up; touch counting is one on/off toggle on the session screen. No input-mode chooser, no undo, no hold-to-stop, no focus mode,
   no pocket guard (all removed on purpose; see the 2026-10 PR history).
 - **Google Play policy:** the in-app accessibility disclosure (`src/ui/AccessibilitySetup.tsx`) must be shown and
   agreed to before sending anyone to accessibility settings, and volume keys are only consumed with that consent.
@@ -101,11 +101,13 @@ docs/play-store/, docs/app-store/  # Store listings, Play declarations, screensh
 Android (`modules/superchant-native/android`, the Kotlin app's engine moved into a local Expo module with its
 class names unchanged, so an enabled accessibility service, an added tile and the DataStore files carried over):
 
-1. Volume buttons count whenever a session runs, once the accessibility service is enabled and the user
-   agreed to the disclosure (`accessibility_consent`). Touch counting is a per-session switch,
-   `ChantState.touchCounting`, toggled from the hand icon on the session screen. Start never waits on a
-   permission: when volume buttons can't count yet, the session starts with touch counting on and Home
-   offers "Count with volume buttons" (disclosure first). The notification permission is requested, not
+1. Volume buttons count during a session in SuperChant's own screen, always. Outside it (lock screen, other
+   apps) they count once the accessibility service is enabled and the user agreed to the disclosure
+   (`accessibility_consent`). Google Pay (India) refuses to work while any unverified accessibility service is
+   enabled, even one installed from Play, so the service is optional and the app says so. Touch counting is a
+   per-session switch, `ChantState.touchCounting`, toggled from the hand icon on the session screen. Start never
+   waits on a permission: when volume buttons can't count outside the app, the session starts with touch
+   counting on and Home offers "Count with volume buttons outside the app" (disclosure first). The notification permission is requested, not
    required. Starts from launcher shortcuts and the Quick Settings tile arrive as a START_COUNTING intent
    and go through Home.
 2. `ChantingService.start(context, goal, touchCounting)` starts the foreground service. Rounds are always
@@ -113,13 +115,17 @@ class names unchanged, so an enabled accessibility service, an added tile and th
 3. Volume: `VolumeKeyAccessibilityService.onKeyEvent` (main thread) passes key events to `VolumeKeyFilter`, which
    offers each new press (DOWN, repeatCount 0) to `ChantingService.onVolumeKeyPressed()`. A counted press is
    consumed whole (DOWN, repeats, UP); presses that aren't counted (no session, paused, goal complete, or no
-   disclosure consent) pass through to the system untouched.
+   disclosure consent) pass through to the system untouched. In the app, `bridge/SuperchantPackage.kt` (an
+   autolinked Expo `ReactActivityHandler`) runs the activity's key events through another `VolumeKeyFilter`
+   into `ChantingService.onForegroundVolumeKeyPressed()`; a press the service already counted (same
+   `downTime`, delivered again after a stalled main thread) is consumed without counting twice.
    While the screen is off, Android sends volume keys straight to the media session and never to accessibility
    services, so volume counting needs the screen on (lock screen and other apps are fine). Don't claim
    screen-off counting in the app, listing or Play declarations.
    Touch: while touch counting is on, `TapToCountPad` calls `ChantingService.countFromScreen()` (one count per
-   touch, extra fingers and repeats under 150 ms ignored) and Home keeps the screen awake unless paused or the
-   goal is complete. Off, the pad ignores touches and the screen may sleep.
+   touch, extra fingers and repeats under 150 ms ignored). Home keeps the screen awake while touch counting is
+   on, or while the accessibility service is off (in-app volume presses need the screen), unless paused or the
+   goal is complete. Otherwise the screen may sleep.
 4. Both inputs go through one `incrementCount()`, which applies `ChantCounter.increment` (rounds of 108,
    a milestone every 27 beads, goal mantra advance, no counting after the goal completes) and plays the same
    haptics/sounds (plus the optional bead click). There is no undo; Stop is a single tap.

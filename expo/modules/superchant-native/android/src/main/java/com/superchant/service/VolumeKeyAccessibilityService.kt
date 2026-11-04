@@ -102,7 +102,7 @@ class VolumeKeyAccessibilityService : AccessibilityService() {
 
     // Runs on the main thread, like ChantingService, so counting happens synchronously here.
     override fun onKeyEvent(event: KeyEvent): Boolean =
-        keyFilter.onKey(event.keyCode, event.action, event.repeatCount)
+        keyFilter.onKey(event.keyCode, event.action, event.repeatCount, event.downTime)
 
     // Only key events are used; the config subscribes to no accessibility events.
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit

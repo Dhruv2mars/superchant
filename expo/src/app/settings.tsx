@@ -48,7 +48,13 @@ export default function Settings() {
               <SettingsItem
                 title={t('volume_buttons_title')}
                 subtitle={t(volumeReady ? 'volume_buttons_on' : 'volume_buttons_off')}
-                trailing={!volumeReady ? <Button variant="text" label={t('volume_buttons_set_up')} onPress={() => setShowSetup(true)} /> : null}
+                trailing={
+                  volumeReady ? (
+                    <Button variant="text" label={t('volume_buttons_turn_off')} onPress={() => platform.volume?.openAccessibilitySettings()} />
+                  ) : (
+                    <Button variant="text" label={t('volume_buttons_set_up')} onPress={() => setShowSetup(true)} />
+                  )
+                }
               />
               <Divider style={{ marginVertical: 12 }} />
             </>

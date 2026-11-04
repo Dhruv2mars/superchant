@@ -70,11 +70,13 @@ export default function Home() {
 
   const consent = settings?.accessibilityConsent === true;
   const serviceEnabled = useVolumeServiceEnabled(consent);
-  const volumeReady = !ios && serviceEnabled && consent;
+  // Volume buttons always count inside the app on Android; outside it they need the accessibility service
+  const volumeEverywhere = !ios && serviceEnabled && consent;
   const [showSetup, setShowSetup] = useState(false);
 
-  // Awake only while taps can count: not when touch counting is off, paused or the goal is done
-  const keepAwake = isActive && touchCounting && !isPaused && !goalComplete;
+  // Awake while the screen is how counting happens: taps, or in-app volume presses without the service.
+  // Not when paused or the goal is done.
+  const keepAwake = isActive && !isPaused && !goalComplete && (touchCounting || (!ios && !volumeEverywhere));
   useEffect(() => {
     if (!keepAwake) return;
     activateKeepAwakeAsync(KEEP_AWAKE_TAG);
@@ -83,15 +85,15 @@ export default function Home() {
     };
   }, [keepAwake]);
 
-  // A session volume buttons can't count gets touch counting, once per session and readiness change, so
+  // A session volume buttons can't count outside the app gets touch counting, once per session and readiness change, so
   // switching it off by hand sticks across navigation and reopening the app (Android).
   useEffect(() => {
     if (ios || !sessionId || settings == null) return;
-    const key = `${sessionId}:${volumeReady}`;
+    const key = `${sessionId}:${volumeEverywhere}`;
     if (autoTouchHandled === key) return;
     autoTouchHandled = key;
-    if (!volumeReady && !getState().session.touchCounting) platform.setTouchCounting(true);
-  }, [sessionId, volumeReady, settings]);
+    if (!volumeEverywhere && !getState().session.touchCounting) platform.setTouchCounting(true);
+  }, [sessionId, volumeEverywhere, settings]);
 
   const beginSession = useCallback(
     async (goal: Goal | null) => {
@@ -100,9 +102,9 @@ export default function Home() {
         // Counting doesn't need the notification (the service runs either way), so start and say why it's missing
         if (!granted) ToastAndroid.show(t('notifications_off_hint'), ToastAndroid.LONG);
       }
-      platform.start(goal, ios || !volumeReady);
+      platform.start(goal, ios || !volumeEverywhere);
     },
-    [volumeReady],
+    [volumeEverywhere],
   );
 
   // A start asked for elsewhere: a plain "start counting" while a session runs just shows it; a goal starts
@@ -135,7 +137,7 @@ export default function Home() {
   };
 
   const counter = (
-    <CounterView dark={dark} volumeReady={volumeReady} style={styles.counter} />
+    <CounterView dark={dark} volumeReady={!ios} style={styles.counter} />
   );
   const controls = isActive ? (
     <SessionControls
@@ -150,7 +152,7 @@ export default function Home() {
   ) : null;
   const goal = goalKey ? getState().session.activeGoal : null;
   const strip = goal ? <GoalStrip key={goal.id} state={getState().session} goal={goal} /> : null;
-  const offer = isActive && !ios && !volumeReady ? <VolumeButtonsOffer onPress={() => setShowSetup(true)} /> : null;
+  const offer = isActive && !ios && !volumeEverywhere ? <VolumeButtonsOffer onPress={() => setShowSetup(true)} /> : null;
   const idle = !isActive ? (
     <View style={styles.idle}>
       {summary ? (

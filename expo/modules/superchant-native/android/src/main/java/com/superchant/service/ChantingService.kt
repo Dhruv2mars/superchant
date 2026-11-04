@@ -444,6 +444,12 @@ class ChantingService : Service() {
             acceptsVolumeKeys && _instance?.incrementCount() == true
 
         /**
+         * Called on the main thread for each new volume press SuperChant's own activity receives. No
+         * consent needed: this is ordinary in-app key handling, not the accessibility service.
+         */
+        fun onForegroundVolumeKeyPressed(): Boolean = _instance?.incrementCount() == true
+
+        /**
          * Whether a running session counts volume keys: only once the user agreed to the accessibility
          * disclosure (an older install may have the service enabled without it). Otherwise they change volume.
          */

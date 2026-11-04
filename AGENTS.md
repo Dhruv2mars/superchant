@@ -107,7 +107,7 @@ class names unchanged, so an enabled accessibility service, an added tile and th
    enabled, even one installed from Play, so the service is optional and the app says so. Touch counting is a
    per-session switch, `ChantState.touchCounting`, toggled from the hand icon on the session screen. Start never
    waits on a permission: when volume buttons can't count outside the app, the session starts with touch
-   counting on and Home offers "Count with volume buttons outside the app" (disclosure first). The notification permission is requested, not
+   counting on and Home offers "Count outside the app" (disclosure first). The notification permission is requested, not
    required. Starts from launcher shortcuts and the Quick Settings tile arrive as a START_COUNTING intent
    and go through Home.
 2. `ChantingService.start(context, goal, touchCounting)` starts the foreground service. Rounds are always

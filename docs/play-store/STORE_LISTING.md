@@ -53,7 +53,7 @@ A GENTLE REMINDER
 • An optional daily reminder at the time you choose. It stays quiet once today's practice is done.
 
 YOUR DATA STAYS WITH YOU
-• No account, no ads and no analytics. SuperChant has no internet permission, so it can't send your data anywhere.
+• No account, no ads and no analytics. SuperChant goes online only to check for app updates and never sends your practice data anywhere.
 • Export your history, goals and settings to a file you choose, and import it on a new phone.
 • Android's own device backup can also carry your practice to a new phone.
 
@@ -62,7 +62,7 @@ Inside SuperChant the volume buttons count on their own. To count with them on t
 
 For japa meditation, mantra chanting, naam jap, prayer counting and any practice of repetition.
 ```
-(2523 characters.)
+(2657 characters.)
 
 ## Release notes (500 max per language)
 
@@ -136,11 +136,8 @@ now `dev`).
 Accessibility API, foreground service and the re-check of the other App content answers:
 see [`DECLARATIONS.md`](DECLARATIONS.md).
 
-## When Play switches to the Expo build
+## Since the Expo build
 
-The Expo app (`expo/`) checks for app updates online, so two pieces of the listing change on switch day:
-
-- Full description, "YOUR DATA STAYS WITH YOU", first bullet:
-  `• No account, no ads and no analytics. SuperChant goes online only to check for app updates and never sends your practice data anywhere.`
-- Screenshot 8 caption: "No account, no ads, no tracking" (re-render `08-private.png` with `docs/play-store/tools`).
-
+The Expo app (`expo/`) checks for app updates online, so the full description says so ("YOUR DATA STAYS WITH YOU",
+first bullet; live in Play since 2026-11-06). Still to do: screenshot 8's caption becomes "No account, no ads, no
+tracking" (re-render `08-private.png` with `docs/play-store/tools`).

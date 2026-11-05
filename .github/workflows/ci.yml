@@ -1,11 +1,11 @@
 name: CI
 
-# GitHub is a one-way mirror of the Entire repo (git mirror); this runs on every mirrored push.
-# Same checks as .buildkite/pipeline.yml plus what Buildkite leaves to the Mac: the Swift vectors, a release build
-# (debug-signed, no secrets) and the network guard. Nothing is published.
+# GitHub is a one-way mirror of the Entire repo (git mirror); this runs on every mirrored push and reports its result
+# to the trail as the "CI" check (.github/scripts/entire-check.sh), which the trail's merge gate requires.
+# A push to dev publishes an EAS Update to the preview channel, a push to main to production.
 on:
   push:
-    branches-ignore: [ux-evidence]
+    branches-ignore: [ux-evidence, 'archive/**']
   workflow_dispatch:
 
 permissions:
@@ -19,6 +19,9 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      ENTIRE_PLUGIN_KEY: ${{ secrets.ENTIRE_PLUGIN_KEY }}
+      ENTIRE_PLUGIN_INSTALLATION: ${{ vars.ENTIRE_PLUGIN_INSTALLATION }}
     defaults:
       run:
         working-directory: expo
@@ -26,6 +29,14 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+      - name: Report to Entire
+        working-directory: .
+        run: .github/scripts/entire-check.sh in_progress
+      # Node runs the Expo CLI (bunx picks node when it exists): under Bun the runtime fingerprint skips the config
+      # plugins and comes out different from the store build's
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
       - uses: oven-sh/setup-bun@v2
       - uses: actions/setup-java@v6
         with:
@@ -44,13 +55,59 @@ jobs:
         run: python3 -m unittest discover -s scripts
       - name: Swift model against the golden fixtures
         run: bun run test:swift
+      - name: Runtime fingerprints
+        run: |
+          for p in android ios; do echo "runtime $p: $(bunx expo-updates runtimeversion:resolve --platform $p | tail -1)"; done
 
       - name: Generate the Android project
         run: CI=1 bunx expo prebuild -p android --no-install
       - name: Engine JVM tests and release build
         working-directory: expo/android
         run: ./gradlew :superchant-native:testDebugUnitTest :app:assembleRelease -PreactNativeArchitectures=arm64-v8a
-
       - name: "Guard: network only for app updates"
         working-directory: expo/android
         run: ../scripts/network-guard.sh
+
+      - name: Report to Entire
+        if: always()
+        working-directory: .
+        run: .github/scripts/entire-check.sh ${{ job.status }}
+
+  # One store build, two update channels: dev publishes to preview (the owner's install, switched to early updates in
+  # Settings), main to production (everyone). An update reaches only builds with the same runtime fingerprint; a
+  # native change needs a store build (expo/scripts/release-android.sh).
+  publish:
+    needs: check
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: eas-update
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: expo
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Publish the update
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          channel=preview; [ "$GITHUB_REF_NAME" = main ] && channel=production
+          message=$(printf '%s' "$MESSAGE" | head -1 | cut -c1-200)
+          # A robot may not upload fingerprint records, so each platform's fingerprint is resolved here and passed in
+          # as a plain runtime string (app.config.ts), and EAS CLI's own fingerprint upload is skipped
+          for p in android ios; do
+            rv=$(bunx expo-updates runtimeversion:resolve --platform $p | tail -1 | sed 's/.*"runtimeVersion":"\([0-9a-f]*\)".*/\1/')
+            [ -n "$rv" ] || { echo "no $p runtime version"; exit 1; }
+            SUPERCHANT_RUNTIME_VERSION=$rv EAS_SKIP_AUTO_FINGERPRINT=1 bunx eas-cli@26 update --channel "$channel" --platform $p \
+              --environment production --non-interactive --message "$message"
+          done

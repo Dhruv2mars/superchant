@@ -240,17 +240,17 @@ printf '%s\n' \
   push to `dev` or `main` directly. The repo lives on Entire; a PR is an Entire Trail. GitHub
   (`Dhruv2mars/superchant`, remote `github`) is only a one-way CI/public mirror of Entire, synced with `git mirror`
   (push with `git ship`; run `git mirror` after merging a trail); never push, merge or edit on GitHub directly.
-  CI is Buildkite (`.buildkite/pipeline.yml`), which reports to the trail, and GitHub Actions
-  (`.github/workflows/ci.yml`) on every mirrored push.
-  - Every push: the typecheck, oxlint, TS tests and the version helper's tests (under a minute); when native code,
-    plugins, dependencies or the golden fixtures changed, also the native module's JVM tests (`linux-large` with a
-    cached Gradle home). The pipeline's default branch is `dev`, which `if_changed` compares against. The Expo CLI runs on Node there: under Bun the runtime fingerprint
-    skips the config plugins and stops matching the store build. Run the Swift vectors, the release build and the
-    network guard yourself before opening a trail.
-  - A push to `dev` publishes an EAS Update to the **preview** channel; a push to `main` publishes to
-    **production** (everyone). Updates are JavaScript and assets only: fixes and polish (App Review 2.5.2).
-    Buildkite's cluster secret `EXPO_TOKEN` belongs to the Expo robot `superchant-buildkite` (publish only).
-    Robots may not upload fingerprint records, so the step resolves each platform's fingerprint and passes it as
+  CI is GitHub Actions (`.github/workflows/ci.yml`) on every mirrored push: the typecheck, oxlint, TS tests, the
+  version helper's tests, the Swift vectors, the native module's JVM tests, a debug-signed release build and the
+  network guard (~15 min). `.github/scripts/entire-check.sh` reports the result to the trail as the
+  `github-actions` check of the Entire plugin `dhruv2mars-github-actions` (owned by the dhruv2mars project,
+  installed on superchant only, `checks:write`; its Ed25519 key is the Actions secret `ENTIRE_PLUGIN_KEY`, backed
+  up in `~/.superchant-keys/entire-plugin-key.pem`), and the trail's merge gate requires it. The Expo CLI runs on
+  Node there: under Bun the runtime fingerprint skips the config plugins and stops matching the store build.
+  - A push to `dev` publishes an EAS Update to the **preview** channel once the checks pass; a push to `main`
+    publishes to **production** (everyone). Updates are JavaScript and assets only: fixes and polish (App Review
+    2.5.2). The Actions secret `EXPO_TOKEN` belongs to the Expo robot `superchant-github-actions` (publish only).
+    Robots may not upload fingerprint records, so the job resolves each platform's fingerprint and passes it as
     `SUPERCHANT_RUNTIME_VERSION` with `EAS_SKIP_AUTO_FINGERPRINT=1`; to publish by hand, `eas update` works as is.
   - A native change (the fingerprint changed; CI prints it) needs a store build: `expo/scripts/release-android.sh`
     builds the bundle on the Mac (~9 min clean; EAS Build's free tier took ~24 min) and uploads it to Play

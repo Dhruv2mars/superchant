@@ -1,0 +1,73 @@
+name: Report to Entire
+
+# Reports each CI run to the Entire trail as the github-actions check of the Entire plugin dhruv2mars-github-actions
+# (owned by the dhruv2mars project, installed on superchant only, checks:write); the trail's merge gate requires it.
+# Only this workflow holds the plugin key: it checks out nothing and runs only curl, openssl and jq (all on the
+# runner image), so CI's code never sees the secret. workflow_run uses this file as it is on dev.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [requested, completed]
+
+permissions: {}
+
+jobs:
+  report:
+    # Mirrored pushes only; a run from a fork never reaches the key
+    if: github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Report the run
+        env:
+          ENTIRE_PLUGIN_KEY: ${{ secrets.ENTIRE_PLUGIN_KEY }}
+          INSTALLATION: ${{ vars.ENTIRE_PLUGIN_INSTALLATION }}
+          ACTION: ${{ github.event.action }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          UPDATED_AT: ${{ github.event.workflow_run.updated_at }}
+        run: |
+          set -eu
+          plugin=dhruv2mars-github-actions
+          core=https://in.auth.entire.io
+          cell=https://aws-ap-south-1.api.entire.io
+          repo=repo_01M5Y2BZ4KEG5YXCTAANDDRMNM
+          b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+          umask 077
+          key=$RUNNER_TEMP/entire-plugin.pem
+          printf '%s\n' "$ENTIRE_PLUGIN_KEY" > "$key"
+
+          # Plugin JWT (EdDSA, iat 30 s back since the core allows no skew), exchanged for an installation token
+          iat=$(($(date +%s) - 30))
+          header=$(printf '{"alg":"EdDSA","typ":"JWT"}' | b64url)
+          claims=$(jq -cn --arg iss "urn:entire:plugin:$plugin" --arg aud "$core/api/authz/sts" --arg plugin "$plugin" \
+            --arg ins "$INSTALLATION" --argjson iat "$iat" \
+            '{iss: $iss, aud: $aud, plugin_id: $plugin, installation_id: $ins, iat: $iat, exp: ($iat + 300)}' | b64url)
+          sig=$(printf '%s.%s' "$header" "$claims" | openssl pkeyutl -sign -inkey "$key" -rawin -in /dev/stdin | b64url)
+          rm -f "$key"
+          token=$(curl -fsS -X POST "$core/api/v1/plugins/$plugin/installations/$INSTALLATION/access-tokens" \
+            -H "Authorization: Bearer $header.$claims.$sig" -H 'Content-Type: application/json' \
+            -d '{"permissions":{"checks":"write"}}' | jq -r .token)
+          echo "::add-mask::$token"
+
+          case "$ACTION:$CONCLUSION" in
+            requested:*) state='{"status": "in_progress"}'; title="CI is running" ;;
+            *:success) state='{"status": "completed", "conclusion": "success"}'; title="CI passed" ;;
+            *:cancelled) state='{"status": "completed", "conclusion": "cancelled"}'; title="CI was cancelled" ;;
+            *) state='{"status": "completed", "conclusion": "failure"}'; title="CI failed ($CONCLUSION)" ;;
+          esac
+          # One suite and one run per commit, stamped with the run's own update time so a late "requested" event
+          # never overwrites a newer result
+          jq -n --arg branch "$BRANCH" --arg id "$RUN_ID" --arg at "$UPDATED_AT" --arg url "$RUN_URL" \
+            --arg title "$title" --argjson state "$state" '
+            ($state + if $state.status == "completed" then {completed_at: $at} else {} end) as $s | {
+              branch: $branch,
+              check_suite: ({key: "github-actions", name: "GitHub Actions", external_id: $id, external_updated_at: $at} + $s),
+              check_runs: [{key: "ci", name: "CI", external_id: $id, external_updated_at: $at, details_url: $url,
+                output: {title: $title, summary: ($title + ": " + $url)}} + $s]
+            }' |
+            curl -fsS -X POST "$cell/api/v1/repos/$repo/commits/$SHA/check-runs" \
+              -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d @- | jq -c .results

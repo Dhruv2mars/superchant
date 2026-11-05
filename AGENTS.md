@@ -242,11 +242,12 @@ printf '%s\n' \
   (push with `git ship`; run `git mirror` after merging a trail); never push, merge or edit on GitHub directly.
   CI is GitHub Actions (`.github/workflows/ci.yml`) on every mirrored push: the typecheck, oxlint, TS tests, the
   version helper's tests, the Swift vectors, the native module's JVM tests, a debug-signed release build and the
-  network guard (~15 min). `.github/scripts/entire-check.sh` reports the result to the trail as the
-  `github-actions` check of the Entire plugin `dhruv2mars-github-actions` (owned by the dhruv2mars project,
-  installed on superchant only, `checks:write`; its Ed25519 key is the Actions secret `ENTIRE_PLUGIN_KEY`, backed
-  up in `~/.superchant-keys/entire-plugin-key.pem`), and the trail's merge gate requires it. The Expo CLI runs on
-  Node there: under Bun the runtime fingerprint skips the config plugins and stops matching the store build.
+  network guard (~15 min). `.github/workflows/report.yml` (`workflow_run`, no checkout, the only workflow with the
+  plugin key) reports each run to the trail as the `github-actions` check of the Entire plugin
+  `dhruv2mars-github-actions` (owned by the dhruv2mars project, installed on superchant only, `checks:write`; its
+  Ed25519 key is the Actions secret `ENTIRE_PLUGIN_KEY`, backed up in `~/.superchant-keys/entire-plugin-key.pem`),
+  and the trail's merge gate requires that check. The Expo CLI runs on Node there: under Bun the runtime
+  fingerprint skips the config plugins and stops matching the store build.
   - A push to `dev` publishes an EAS Update to the **preview** channel once the checks pass; a push to `main`
     publishes to **production** (everyone). Updates are JavaScript and assets only: fixes and polish (App Review
     2.5.2). The Actions secret `EXPO_TOKEN` belongs to the Expo robot `superchant-github-actions` (publish only).

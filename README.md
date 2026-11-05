@@ -8,6 +8,10 @@
   <strong>A distraction-free digital mala for your spiritual practice</strong>
 </p>
 
+<p align="center">
+  <sub>Developed on <a href="https://entire.com/et/dhruv2mars/superchant">Entire</a>. The GitHub copy is a read-only mirror for CI; open issues and changes on Entire.</sub>
+</p>
+
 ---
 
 ## What is SuperChant?

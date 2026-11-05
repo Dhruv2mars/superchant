@@ -46,8 +46,10 @@ jobs:
           claims=$(jq -cn --arg iss "urn:entire:plugin:$plugin" --arg aud "$core/api/authz/sts" --arg plugin "$plugin" \
             --arg ins "$INSTALLATION" --argjson iat "$iat" \
             '{iss: $iss, aud: $aud, plugin_id: $plugin, installation_id: $ins, iat: $iat, exp: ($iat + 300)}' | b64url)
-          sig=$(printf '%s.%s' "$header" "$claims" | openssl pkeyutl -sign -inkey "$key" -rawin -in /dev/stdin | b64url)
-          rm -f "$key"
+          # Ed25519 signs in one shot, which OpenSSL 3.0 does only from a file of known size, not a pipe
+          printf '%s.%s' "$header" "$claims" > "$RUNNER_TEMP/jwt-input"
+          sig=$(openssl pkeyutl -sign -inkey "$key" -rawin -in "$RUNNER_TEMP/jwt-input" | b64url)
+          rm -f "$key" "$RUNNER_TEMP/jwt-input"
           token=$(curl -fsS -X POST "$core/api/v1/plugins/$plugin/installations/$INSTALLATION/access-tokens" \
             -H "Authorization: Bearer $header.$claims.$sig" -H 'Content-Type: application/json' \
             -d '{"permissions":{"checks":"write"}}' | jq -r .token)

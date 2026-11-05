@@ -11,9 +11,10 @@ on:
 permissions:
   contents: read
 
+# A newer push cancels a branch's run, except on dev and main, where that could stop a publish halfway
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/main' }}
 
 jobs:
   check:

@@ -237,8 +237,11 @@ printf '%s\n' \
 ## Workflow
 
 - Branches: `dev` is the default and integration branch; `main` is production. Open trails against `dev`; never
-  push to `dev` or `main` directly. The repo lives on Entire (the old GitHub repo is gone); a PR is an Entire
-  Trail. CI is Buildkite (`.buildkite/pipeline.yml`), which reports to the trail.
+  push to `dev` or `main` directly. The repo lives on Entire; a PR is an Entire Trail. GitHub
+  (`Dhruv2mars/superchant`, remote `github`) is only a one-way CI/public mirror of Entire, synced with `git mirror`
+  (push with `git ship`; run `git mirror` after merging a trail); never push, merge or edit on GitHub directly.
+  CI is Buildkite (`.buildkite/pipeline.yml`), which reports to the trail, and GitHub Actions
+  (`.github/workflows/ci.yml`) on every mirrored push.
   - Every push: the typecheck, oxlint, TS tests and the version helper's tests (under a minute); when native code,
     plugins, dependencies or the golden fixtures changed, also the native module's JVM tests (`linux-large` with a
     cached Gradle home). The pipeline's default branch is `dev`, which `if_changed` compares against. The Expo CLI runs on Node there: under Bun the runtime fingerprint

@@ -15,7 +15,6 @@ export const defaultSettings: Settings = {
   dailyTarget: 0,
   reminderEnabled: false,
   reminderMinuteOfDay: 6 * 60,
-  accessibilityConsent: false,
   touchHintSeen: false,
 };
 
@@ -67,7 +66,6 @@ export interface PlatformApi {
   setMilestonePulse(on: boolean): void;
   setBeadClick(on: boolean): void;
   setDailyTarget(rounds: number): void;
-  setAccessibilityConsent(agreed: boolean): void;
   setTouchHintSeen(): void;
   /** Saves the reminder and re-arms it. Resolves false if notifications aren't allowed (it then stays off). */
   setReminder(enabled: boolean, minuteOfDay: number): Promise<boolean>;
@@ -83,13 +81,6 @@ export interface PlatformApi {
   notificationsGranted(): Promise<boolean>;
   requestNotifications(): Promise<boolean>;
 
-  /** Android-only capabilities; absent on iOS. */
-  volume?: {
-    isServiceEnabled(): boolean;
-    openAccessibilitySettings(): void;
-    needsRestrictedSettings(): boolean;
-    openAppSettings(): void;
-  };
   hasAmplitudeControl: boolean;
 
   /** A start asked for by a launcher shortcut, the tile, or an iOS quick action. */

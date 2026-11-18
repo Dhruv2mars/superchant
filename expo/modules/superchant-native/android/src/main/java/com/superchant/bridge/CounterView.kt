@@ -34,7 +34,7 @@ import expo.modules.kotlin.views.ExpoComposeView
 data class CounterProps(
     /** Dark colors (the app's theme setting, resolved in JS). */
     val dark: MutableState<Boolean> = mutableStateOf(false),
-    /** Volume buttons can count: the accessibility service is on and its disclosure was agreed to. */
+    /** Volume buttons can count (Android; iPhone never counts them). */
     val volumeReady: MutableState<Boolean> = mutableStateOf(false)
 ) : ComposeProps
 

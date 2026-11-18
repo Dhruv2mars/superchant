@@ -11,10 +11,8 @@ ffmpeg, and adb against the `Pixel_9_API_35_A` emulator running the **release** 
 2. **Clean status bar.** `adb shell settings put global sysui_demo_allowed 1`, then the
    `com.android.systemui.demo` broadcasts: `enter`, `clock -e hhmm 0941`, `battery -e level 100 -e plugged false`,
    `network -e wifi show -e level 4 -e fully true`, `network -e mobile hide`, `notifications -e visible false`.
-3. **Volume keys.** Use the uinput recipe in AGENTS.md. Keep one `adb shell uinput -` process fed from a FIFO
-   so presses can be sent on demand. Stop the agent-device snapshot helper first
-   (`adb shell am force-stop com.callstack.agentdevice.snapshothelper`): its UiAutomation connection
-   suppresses other accessibility services, so volume presses stop counting while it runs.
+3. **Volume keys.** `adb shell input keyevent KEYCODE_VOLUME_UP` counts during a session (see "Simulating
+   volume keys" in AGENTS.md).
 4. **Raw captures.** `adb exec-out screencap -p` at 1080 x 2424, saved as lossless WebP in `../screenshots/raw/`.
    Dark variants: `adb shell cmd uimode night yes` with the app theme on System.
 5. **Store frames.** `frame_spec.json` lists `[raw png, output png, caption]` (decode the raw WebP to PNG

@@ -47,7 +47,6 @@ export const platform: PlatformApi = {
   setMilestonePulse: (on) => Native.setMilestonePulse(on),
   setBeadClick: (on) => Native.setBeadClick(on),
   setDailyTarget: (rounds) => Native.setDailyTarget(rounds),
-  setAccessibilityConsent: (agreed) => Native.setAccessibilityConsent(agreed),
   setTouchHintSeen: () => Native.setTouchHintSeen(),
   async setReminder(enabled, minuteOfDay) {
     // Turning it on asks for the notification permission where needed; without it the reminder stays off
@@ -86,12 +85,6 @@ export const platform: PlatformApi = {
   notificationsGranted: async () => Native.notificationsGranted(),
   requestNotifications,
 
-  volume: {
-    isServiceEnabled: () => Native.isAccessibilityServiceEnabled(),
-    openAccessibilitySettings: () => Native.openAccessibilitySettings(),
-    needsRestrictedSettings: () => Native.needsRestrictedSettings(),
-    openAppSettings: () => Native.openAppSettings(),
-  },
   get hasAmplitudeControl() {
     return Native.hasAmplitudeControl();
   },

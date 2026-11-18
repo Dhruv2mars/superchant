@@ -119,11 +119,6 @@ export function SessionControls({
   );
 }
 
-/** Quiet offer to count with the volume buttons outside the app too, shown while they can't (Android). */
-export function VolumeButtonsOffer({ onPress }: { onPress: () => void }) {
-  return <Button label={t('volume_buttons_offer')} variant="text" icon="volume" onPress={onPress} style={{ alignSelf: 'center' }} />;
-}
-
 /**
  * Compact goal progress: name, current mantra and overall progress in a fixed-height card; tap to expand
  * the mantra list (height-capped and scrollable). Changes only at round boundaries.

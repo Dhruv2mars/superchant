@@ -27,7 +27,6 @@ export interface StoredSettings {
   dailyTarget: number;
   reminderEnabled: boolean;
   reminderMinuteOfDay: number;
-  accessibilityConsent: boolean;
   touchHintSeen: boolean;
 }
 
@@ -39,7 +38,6 @@ export const KEYS = {
   roundIntensity: 'round_vibration_intensity',
   milestonePulse: 'milestone_pulse',
   beadClick: 'bead_click',
-  accessibilityConsent: 'accessibility_consent',
   dailyTarget: 'daily_target',
   reminderEnabled: 'reminder_enabled',
   reminderMinute: 'reminder_minute',
@@ -82,7 +80,6 @@ export class Repository {
       dailyTarget: clamp(int(kv, KEYS.dailyTarget) ?? 0, 0, DAILY_TARGET_MAX),
       reminderEnabled: bool(kv, KEYS.reminderEnabled) ?? false,
       reminderMinuteOfDay: minute != null && minute >= 0 && minute < 24 * 60 ? minute : 6 * 60,
-      accessibilityConsent: bool(kv, KEYS.accessibilityConsent) ?? false,
       touchHintSeen: bool(kv, KEYS.touchHintSeen) ?? false,
     };
   }

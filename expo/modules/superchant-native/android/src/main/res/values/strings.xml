@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Strings the native side shows (notification, tile, reminder, shortcuts, accessibility service, counter). -->
+<!-- Strings the native side shows (notification, tile, reminder, shortcuts, counter). -->
 <resources>
     <plurals name="notification_goal_complete_text">
         <item quantity="one">%1$s - %2$d round completed</item>
@@ -37,9 +37,6 @@
     <string name="status_paused">Paused</string>
     <string name="tap_to_count_action">Count</string>
     <string name="tile_start">Tap to start</string>
-    <string name="accessibility_service_label">SuperChant Volume Counter</string>
-    <string name="accessibility_service_description">SuperChant uses this accessibility service only to count volume button presses while a chanting session is running.\n\nDuring a session, volume up or down adds a count instead of changing the volume. At all other times the buttons work as usual.\n\nThe service cannot see your screen, what you type, or other apps. It collects and shares nothing. SuperChant goes online only to check for app updates.</string>
-    <string name="accessibility_service_summary">Allows volume buttons to count chants without changing volume</string>
     <string name="shortcut_start_long">Start a chanting session</string>
     <string name="shortcut_start_short">Start counting</string>
     <string name="count_description">Count %1$d of %2$d. %3$s</string>

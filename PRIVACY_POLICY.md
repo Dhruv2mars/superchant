@@ -35,8 +35,7 @@ The following data is stored on your device:
 - **Chanting session history** - Your completed sessions (counts, rounds, duration, goal
   name and how many rounds of each of its mantras)
 - **Goals** - Custom goals you create
-- **Preferences** - Theme, vibration, counting, daily target and reminder settings, and whether you
-  agreed to the accessibility disclosure
+- **Preferences** - Theme, vibration, counting, daily target and reminder settings
 - **Active session** - The progress of a session that is running, so it can resume if Android closes
   the app. It is deleted when you stop the session.
 
@@ -71,27 +70,16 @@ backup is turned on in your Android settings, the data above is included in your
 
 You can turn off backup for your device (or for SuperChant) in Android settings at any time.
 
-## Accessibility Service
+## Volume Buttons
 
-On Android, SuperChant uses Android's Accessibility Service **solely** to count volume button presses during a chanting
-session on the lock screen or while another app is open. It is optional: inside SuperChant, volume buttons and
-taps count without it.
+On Android, volume up and down count during a chanting session, on the lock screen and in other apps too.
+SuperChant does this with a standard Android media session that it holds only while a session is running:
+Android tells it when a volume button is pressed, and SuperChant counts the press instead of changing the
+volume. It plays no audio and needs no permission. When the session is paused or stopped, the buttons change
+the volume as usual.
 
-Before you're sent to Android's accessibility settings, SuperChant shows this disclosure in the app and
-asks you to agree.
-
-**What the Accessibility Service does:**
-- Detects when volume up/down buttons are pressed
-- Counts a press, instead of changing the volume, only while a chanting session is running and not paused
-- At all other times, and for every other key, lets the press through untouched without keeping it
-
-**What the Accessibility Service does NOT do:**
-- Read any screen content
-- Access any other apps
-- Collect any information
-- Transmit any data
-
-The accessibility service has `canRetrieveWindowContent="false"` set, meaning it cannot read content from your screen or other apps.
+SuperChant doesn't use an accessibility service. It can't read your screen, see what you type, or see or
+control other apps.
 
 ## Third-Party Services
 

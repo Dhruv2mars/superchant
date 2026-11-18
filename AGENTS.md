@@ -16,14 +16,17 @@ engine lives on as the Android half of the native module.
   Check the merged release manifest when adding a dependency (`expo-notifications` links Firebase; don't add it).
 - **OTA updates are for fixes and polish** (App Review 2.5.2); new features ship in store builds.
 - **A round is always 108.** There is no round-size setting.
-- **Counting stays simple:** volume buttons count in SuperChant's own screen, and on the lock screen and in other
-  apps once the accessibility service is set up; touch counting is one on/off toggle on the session screen. No input-mode chooser, no undo, no hold-to-stop, no focus mode,
-  no pocket guard (all removed on purpose; see the 2026-10 PR history).
-- **Google Play policy:** the in-app accessibility disclosure (`src/ui/AccessibilitySetup.tsx`) must be shown and
-  agreed to before sending anyone to accessibility settings, and volume keys are only consumed with that consent.
-  The service never reads screen content (`canRetrieveWindowContent=false`, no event types). If you change what
-  the service or the `specialUse` foreground service does, the Play Console declarations, `PRIVACY_POLICY.md`
-  and `docs/play-store/STORE_LISTING.md` must be updated to match.
+- **Counting stays simple:** during a session, volume buttons count in SuperChant's own screen, on the lock
+  screen and in other apps, with no setup; touch counting is one on/off toggle on the session screen. No
+  input-mode chooser, no undo, no hold-to-stop, no focus mode, no pocket guard (all removed on purpose; see the
+  2026-10 PR history).
+- **No accessibility service, ever.** Google Pay (India) refuses payments while any app has an accessibility
+  service enabled that can control the device: Play Integrity's app access risk verdict reports it as
+  `KNOWN_CONTROLLING` even for a Play-installed app, and only accessibility tools that Play has verified are
+  exempt. SuperChant isn't one. It counts outside its screen with a remote-volume media session instead
+  (2026-11, see "How counting works"). Don't bring back an accessibility service, an overlay, or screen capture.
+- **Google Play policy:** if you change what the `specialUse` foreground service does, the Play Console
+  declarations, `PRIVACY_POLICY.md` and `docs/play-store/STORE_LISTING.md` must be updated to match.
 - **iOS never counts volume buttons** (App Review 2.5.9). iPhone counts taps and shows a Live Activity.
 - Keep it minimal and quiet: add a feature only if it clearly helps someone while they chant.
 
@@ -72,7 +75,7 @@ expo/
 ├── scripts/                       # release-android.sh, network-guard.sh, play_version.py (+ test)
 ├── src/
 │   ├── app/                       # expo-router screens: Home (index), Goals, goal-editor, History, Settings
-│   ├── ui/                        # UI kit: Dialog, Menu, Snackbar, AccessibilitySetup, insights, home, native controls
+│   ├── ui/                        # UI kit: Dialog, Menu, Snackbar, insights, home, native controls
 │   ├── core/                      # Pure cores: kotlinx-compatible JSON, model and counting rules, stored lists,
 │   │                              #   backup codec, stats, reminder plan, iOS repository; __fixtures__/golden.json
 │   ├── native/                    # platform.{android,ios}.ts (the platform layer), updates.ts (early updates)
@@ -83,8 +86,8 @@ expo/
 │   │   ├── bridge/                # SuperchantNativeModule (the JS bridge), CounterView (native ring + tap pad)
 │   │   ├── data/                  # ChantState (ROUND_SIZE = 108), ChantCounter, StoredList, Backup, PracticeStats,
 │   │   │                          #   PreferencesRepository (DataStore; StateFlows + ordered `write {}` queue)
-│   │   ├── service/               # ChantingService (foreground, owns the session), VolumeKeyAccessibilityService,
-│   │   │                          #   VolumeKeyFilter, BeadClick, ChantTileService
+│   │   ├── service/               # ChantingService (foreground, owns the session), VolumeKeySession (volume
+│   │   │                          #   outside the app), VolumeKeyFilter (in the app), BeadClick, ChantTileService
 │   │   ├── reminder/Reminder.kt   # Daily reminder: ReminderTime (pure), inexact alarm scheduler, receivers
 │   │   └── ui/                    # Compose mala ring (CounterDisplay), TapToCountPad, theme and Motion tokens
 │   ├── android/src/test/          # JVM tests (JUnit 4), incl. GoldenFixturesTest
@@ -99,33 +102,34 @@ docs/play-store/, docs/app-store/  # Store listings, Play declarations, screensh
 **The count loop is native on each platform; JavaScript never runs per count.**
 
 Android (`modules/superchant-native/android`, the Kotlin app's engine moved into a local Expo module with its
-class names unchanged, so an enabled accessibility service, an added tile and the DataStore files carried over):
+class names unchanged, so an added tile and the DataStore files carried over):
 
-1. Volume buttons count during a session in SuperChant's own screen, always. Outside it (lock screen, other
-   apps) they count once the accessibility service is enabled and the user agreed to the disclosure
-   (`accessibility_consent`). Google Pay (India) refuses to work while any unverified accessibility service is
-   enabled, even one installed from Play, so the service is optional and the app says so. Touch counting is a
-   per-session switch, `ChantState.touchCounting`, toggled from the hand icon on the session screen. Start never
-   waits on a permission: when volume buttons can't count outside the app, the session starts with touch
-   counting on and Home offers "Count outside the app" (disclosure first). The notification permission is requested, not
-   required. Starts from launcher shortcuts and the Quick Settings tile arrive as a START_COUNTING intent
-   and go through Home.
+1. Volume buttons count during a session everywhere: in SuperChant's own screen, on the lock screen and in other
+   apps, with no permission or setup. Touch counting is a per-session switch, `ChantState.touchCounting`,
+   toggled from the hand icon on the session screen; Android sessions start with it off. The notification
+   permission is requested, not required. Starts from launcher shortcuts and the Quick Settings tile arrive as
+   a START_COUNTING intent and go through Home.
 2. `ChantingService.start(context, goal, touchCounting)` starts the foreground service. Rounds are always
    `ChantState.ROUND_SIZE` (108).
-3. Volume: `VolumeKeyAccessibilityService.onKeyEvent` (main thread) passes key events to `VolumeKeyFilter`, which
-   offers each new press (DOWN, repeatCount 0) to `ChantingService.onVolumeKeyPressed()`. A counted press is
-   consumed whole (DOWN, repeats, UP); presses that aren't counted (no session, paused, goal complete, or no
-   disclosure consent) pass through to the system untouched. In the app, `bridge/SuperchantPackage.kt` (an
-   autolinked Expo `ReactActivityHandler`) runs the activity's key events through another `VolumeKeyFilter`
-   into `ChantingService.onForegroundVolumeKeyPressed()`; a press the service already counted (same
-   `downTime`, delivered again after a stalled main thread) is consumed without counting twice.
-   While the screen is off, Android sends volume keys straight to the media session and never to accessibility
-   services, so volume counting needs the screen on (lock screen and other apps are fine). Don't claim
-   screen-off counting in the app, listing or Play declarations.
+3. Volume, in the app: `bridge/SuperchantPackage.kt` (an autolinked Expo `ReactActivityHandler`) runs the
+   activity's key events through `VolumeKeyFilter`, which offers each new press (DOWN, repeatCount 0) to
+   `ChantingService.onForegroundVolumeKeyPressed()`. A counted press is consumed whole (DOWN, repeats, UP);
+   presses that aren't counted (no session, paused, goal complete) pass through untouched.
+   Volume, outside the app: `service/VolumeKeySession.kt`, a `MediaSession` with a remote `VolumeProvider`
+   (`VOLUME_CONTROL_RELATIVE`) that `ChantingService` holds while a session runs. It reports PLAYING while the
+   session counts (not paused, goal not complete), so `MediaSessionService` sends it the volume keys no focused
+   window handled, as `onAdjustVolume`: one non-zero adjustment per key down and repeat, zero on release.
+   `VolumePressTracker` counts the first of each press. Paused, it reports PAUSED and the keys change the volume.
+   The session needs a `MediaSession.Callback`, or the framework drops the adjustments. Each press shows the
+   system volume panel with a cast-style slider that doesn't move. Android gives the keys to the session that
+   most recently started playing, so when another app starts media playback mid-session, the session goes
+   PAUSED then PLAYING a second later to take them back. A foreground app that handles volume keys itself
+   (video players, the camera, games) still gets them first. Screen-off counting works on the emulator (uinput
+   presses while asleep) but is unverified on the owner's phone, so don't claim it in the app, listing or Play
+   declarations yet.
    Touch: while touch counting is on, `TapToCountPad` calls `ChantingService.countFromScreen()` (one count per
    touch, extra fingers and repeats under 150 ms ignored). Home keeps the screen awake while touch counting is
-   on, or while the accessibility service is off (in-app volume presses need the screen), unless paused or the
-   goal is complete. Otherwise the screen may sleep.
+   on, unless paused or the goal is complete. Otherwise the screen may sleep.
 4. Both inputs go through one `incrementCount()`, which applies `ChantCounter.increment` (rounds of 108,
    a milestone every 27 beads, goal mantra advance, no counting after the goal completes) and plays the same
    haptics/sounds (plus the optional bead click). There is no undo; Stop is a single tap.
@@ -146,7 +150,7 @@ Live Activity extension; its `Shared.swift` copies `ChantActivityAttributes` and
 
 Both: insights (streak, heatmap, per-mantra totals) are computed in JS from the stored history
 (`src/core/stats.ts`); each goal session's `SessionRecord.mantras` holds its per-mantra breakdown. Removed
-features leave stored data behind: prefs `input_mode`, `round_size`, `pocket_guard` and
+features leave stored data behind: prefs `input_mode`, `round_size`, `pocket_guard`, `accessibility_consent` and
 `roundSize`/`inputMode`/`pocketGuard` fields in old sessions and backups are never read (JSON uses
 `ignoreUnknownKeys`). Don't reuse those keys. A restored active session's rounds and goal progress are
 recomputed from its count at 108 (`ChantState.normalizedRounds`).
@@ -199,7 +203,7 @@ times a round).
 - TypeScript: 2-space indent; Kotlin: 4-space indent, trailing-lambda Compose style.
 - Reuse `src/ui` (Dialog, Menu, Snackbar, settings rows, controls) instead of copying UI.
 - All UI strings go in `src/i18n/strings.ts` (plurals for counts); none are hardcoded. Android notification,
-  tile and accessibility strings live in the module's `res/values/strings.xml`.
+  tile and counter strings live in the module's `res/values/strings.xml`.
 - Text and icons meet WCAG AA (4.5:1) in both themes; touch targets are at least 48dp.
 
 ## Verifying changes
@@ -217,14 +221,11 @@ Done means verified, not just compiled:
 
 ### Simulating volume keys
 
-Shell-injected keys (`adb shell input keyevent KEYCODE_VOLUME_UP`) skip the accessibility key filter, so
-they never reach `onKeyEvent`. Use a virtual uinput keyboard so the keys take the real hardware path:
+`adb shell input keyevent KEYCODE_VOLUME_UP` reaches both the app's key handler and the media session, so it
+counts in the app, in other apps and on the lock screen. For the real hardware path on the emulator, use a
+virtual uinput keyboard (the owner's ColorOS phone rejects this JSON and blocks writes to its keypad node):
 
 ```bash
-PKG=com.superchant      # release APK; use com.superchant.dev for debug builds
-adb shell settings put secure enabled_accessibility_services $PKG/com.superchant.service.VolumeKeyAccessibilityService
-adb shell settings put secure accessibility_enabled 1
-adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS
 # Register a device with KEY_VOLUMEDOWN/UP (114/115), then press VOLUME_UP once (EV_KEY=1).
 printf '%s\n' \
   '{"id":1,"command":"register","name":"Volume Keys","vid":4660,"pid":22136,"bus":"usb","configuration":[{"type":"UI_SET_EVBIT","data":[1]},{"type":"UI_SET_KEYBIT","data":[114,115]}]}' \
@@ -275,7 +276,7 @@ printf '%s\n' \
 
 The phone is a Realme RMX3392 in India. Play Protect's enhanced fraud protection there blocks installing any APK
 that declares an accessibility service from a browser, messaging app or file manager, so a downloaded
-SuperChant APK never installs. Only Play and adb installs work.
+SuperChant APK from before 2026-11 never installs. Use Play and adb installs only.
 
 1. **Play (the only app kept, `com.superchant`):** with early updates on, a merge into `dev` reaches the Play
    install as an update on its next launch (or two: it downloads, then applies). Native changes arrive with the next

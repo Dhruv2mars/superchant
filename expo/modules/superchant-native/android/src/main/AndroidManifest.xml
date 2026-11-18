@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Same components and class names as the Kotlin app had, so an enabled
-     accessibility service and an added Quick Settings tile keep working across the update. -->
+<!-- Same components and class names as the Kotlin app had, so an added Quick Settings tile keeps
+     working across the update. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -50,18 +50,5 @@
             </intent-filter>
         </receiver>
 
-        <!-- Accessibility Service for Volume Key Interception -->
-        <service
-            android:name="com.superchant.service.VolumeKeyAccessibilityService"
-            android:exported="true"
-            android:label="@string/accessibility_service_label"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
     </application>
 </manifest>

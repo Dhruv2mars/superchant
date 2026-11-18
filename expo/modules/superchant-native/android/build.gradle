@@ -16,7 +16,7 @@ apply plugin: 'org.jetbrains.kotlin.plugin.serialization'
 group = 'com.superchant.engine'
 version = '1.0.0'
 
-// The SuperChant engine: the Kotlin app's data layer, counting service, accessibility key filter, Quick Settings
+// The SuperChant engine: the Kotlin app's data layer, counting service, volume key session, Quick Settings
 // tile, reminders and the Compose mala ring, unchanged where possible (see AGENTS.md).
 android {
   namespace "com.superchant.engine"

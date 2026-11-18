@@ -3,9 +3,8 @@
 Source of truth for the Play Console main store listing (en-US). Keep it in sync with the app: every claim
 here was checked against the code and on the `Pixel_9_API_35_A` emulator (release build, 2026-10-19).
 
-Don't claim that volume buttons count **with the screen off**. While the screen is off, Android sends volume
-keys straight to the media session and never to accessibility services (see AGENTS.md, "How counting works").
-Lock screen and other apps are fine as long as the screen is on.
+Don't claim that volume buttons count **with the screen off** (unverified on real phones; see AGENTS.md, "How
+counting works"). Lock screen and other apps are fine as long as the screen is on.
 
 ## App name (30 max)
 ```
@@ -58,7 +57,7 @@ YOUR DATA STAYS WITH YOU
 • Android's own device backup can also carry your practice to a new phone.
 
 ABOUT THE VOLUME BUTTONS
-Inside SuperChant the volume buttons count on their own. To count with them on the lock screen or in another app, SuperChant uses an optional Android accessibility service. Before you turn it on, the app explains what the service does and asks you to agree. The service only listens for volume button presses during a session that is running and not paused. It can't read your screen or see what you type, and it collects nothing. You can count with taps and in-app volume presses without it.
+During a session the volume buttons count, on the lock screen and in other apps too, with no setup and no special permission. Pause the session and they change the volume again. SuperChant uses no accessibility service, so payment apps keep working.
 
 For japa meditation, mantra chanting, naam jap, prayer counting and any practice of repetition.
 ```
@@ -133,7 +132,7 @@ The URL points at `main`, so policy changes go live only once they're merged to 
 now `dev`).
 
 ## Declarations
-Accessibility API, foreground service and the re-check of the other App content answers:
+Foreground service and the re-check of the other App content answers (the accessibility service is gone):
 see [`DECLARATIONS.md`](DECLARATIONS.md).
 
 ## Since the Expo build

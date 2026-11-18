@@ -42,8 +42,9 @@ import kotlinx.serialization.json.Json
 /**
  * Foreground service that manages the chanting session.
  *
- * Counts volume presses from VolumeKeyAccessibilityService and, while touch counting is on, on-screen
- * taps (via [countFromScreen]) through one increment path ([ChantCounter]), and:
+ * Counts volume presses (from SuperChant's own screen, and from [VolumeKeySession] everywhere else) and,
+ * while touch counting is on, on-screen taps (via [countFromScreen]) through one increment path
+ * ([ChantCounter]), and:
  * - Increments the count
  * - Triggers vibration feedback
  * - Updates the notification
@@ -60,6 +61,8 @@ class ChantingService : Service() {
     private var ringtone: Ringtone? = null
     // Created on first use, so sessions without the click never open an audio track
     private var beadClick: BeadClick? = null
+    // Takes the volume keys outside the app while the session counts; null when no session runs
+    private var volumeKeys: VolumeKeySession? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -101,6 +104,7 @@ class ChantingService : Service() {
         ringtone?.stop()
         ringtone = null
         beadClick?.release()
+        releaseVolumeKeys()
         // Normally stopSession() already reset the state. If the service is destroyed mid-session,
         // the persisted copy stays and is restored on the next app launch.
         if (_instance === this) {
@@ -117,6 +121,20 @@ class ChantingService : Service() {
     private fun setState(newState: ChantState) {
         _sharedChantState.value = newState
         if (newState.isActive) preferencesRepository.write { saveActiveSession(newState) }
+        syncVolumeKeys()
+    }
+
+    /** Volume keys count outside the app while the session runs, isn't paused and its goal isn't complete. */
+    private fun syncVolumeKeys() {
+        val state = state
+        val counting = state.isActive && !state.isPaused && !state.isGoalComplete
+        if (counting && volumeKeys == null) volumeKeys = VolumeKeySession(this) { incrementCount() }
+        volumeKeys?.setCounting(counting)
+    }
+
+    private fun releaseVolumeKeys() {
+        volumeKeys?.release()
+        volumeKeys = null
     }
 
     private fun startSession(goal: Goal?, touchCounting: Boolean) {
@@ -153,7 +171,9 @@ class ChantingService : Service() {
                 is RestoreAction.Resume -> {
                     _sharedChantState.value = action.state
                     _instance = this@ChantingService
-                    if (!enterForeground()) {
+                    if (enterForeground()) {
+                        syncVolumeKeys()
+                    } else {
                         // Not allowed from the background here; keep the saved copy for the next launch.
                         _instance = null
                         _sharedChantState.value = ChantState()
@@ -178,6 +198,7 @@ class ChantingService : Service() {
         val current = state
         _instance = null
         _sharedChantState.value = ChantState()
+        releaseVolumeKeys()
 
         if (current.isActive) {
             preferencesRepository.finishSession(current, System.currentTimeMillis())
@@ -197,6 +218,7 @@ class ChantingService : Service() {
         val current = state
         _instance = null
         _sharedChantState.value = ChantState()
+        releaseVolumeKeys()
         preferencesRepository.finishSession(current, System.currentTimeMillis())
         stopSelf()
     }
@@ -437,30 +459,10 @@ class ChantingService : Service() {
             get() = _instance != null
 
         /**
-         * Called by VolumeKeyAccessibilityService on the main thread for each new volume press.
+         * Called on the main thread for each new volume press SuperChant's own activity receives.
          * Returns true if the press was counted, in which case the key should be consumed.
          */
-        fun onVolumeKeyPressed(downTime: Long): Boolean =
-            (acceptsVolumeKeys && _instance?.incrementCount() == true).also { if (it) lastServicePress = downTime }
-
-        // The press the accessibility service counted last. If the main thread stalls past the key
-        // dispatch timeout, the system also delivers that press to the activity; it must not count twice.
-        private var lastServicePress = Long.MIN_VALUE
-
-        /**
-         * Called on the main thread for each new volume press SuperChant's own activity receives. No
-         * consent needed: this is ordinary in-app key handling, not the accessibility service. A press
-         * the service already counted is consumed without counting again.
-         */
-        fun onForegroundVolumeKeyPressed(downTime: Long): Boolean =
-            downTime == lastServicePress || _instance?.incrementCount() == true
-
-        /**
-         * Whether a running session counts volume keys: only once the user agreed to the accessibility
-         * disclosure (an older install may have the service enabled without it). Otherwise they change volume.
-         */
-        private val acceptsVolumeKeys: Boolean
-            get() = _instance?.preferencesRepository?.accessibilityConsent?.value == true
+        fun onForegroundVolumeKeyPressed(): Boolean = _instance?.incrementCount() == true
 
         /** Counts one on-screen tap through the same path as a volume press, if touch counting is on. Call on the main thread. */
         fun countFromScreen() {

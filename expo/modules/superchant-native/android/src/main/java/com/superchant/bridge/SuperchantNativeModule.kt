@@ -25,7 +25,6 @@ import com.superchant.data.ThemeMode
 import com.superchant.reminder.ReminderScheduler
 import com.superchant.reminder.ReminderTime
 import com.superchant.service.ChantingService
-import com.superchant.service.VolumeKeyAccessibilityService
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.functions.Queues
@@ -222,7 +221,6 @@ class SuperchantNativeModule : Module() {
         Function("setMilestonePulse") { on: Boolean -> repository.write { setMilestonePulse(on) } }
         Function("setBeadClick") { on: Boolean -> repository.write { setBeadClick(on) } }
         Function("setDailyTarget") { v: Int -> repository.write { setDailyTarget(v) } }
-        Function("setAccessibilityConsent") { on: Boolean -> repository.write { setAccessibilityConsent(on) } }
         Function("setTouchHintSeen") { repository.write { setTouchHintSeen() } }
 
         /** Saves the reminder setting, then matches the alarm to it (ReminderControls in the Kotlin app). */
@@ -299,12 +297,7 @@ class SuperchantNativeModule : Module() {
             )
         }.runOnQueue(Queues.MAIN)
 
-        // --- Volume buttons and permissions ----------------------------------------------------------------
-
-        Function("isAccessibilityServiceEnabled") { VolumeKeyAccessibilityService.isAccessibilityServiceEnabled(context) }
-        Function("openAccessibilitySettings") { VolumeKeyAccessibilityService.openAccessibilitySettings(context) }
-        Function("needsRestrictedSettings") { VolumeKeyAccessibilityService.needsRestrictedSettingsPermission(context) }
-        Function("openAppSettings") { VolumeKeyAccessibilityService.openAppSettings(context) }
+        // --- Permissions and hardware ----------------------------------------------------------------------
 
         Function("notificationsGranted") { canPostNotifications(context) }
 
@@ -325,9 +318,9 @@ class SuperchantNativeModule : Module() {
 
     private fun settingsFlow(repo: PreferencesRepository) = combine(
         combine(repo.themeMode.filterNotNull(), repo.vibrationSettings.filterNotNull(), repo.countingFeel.filterNotNull(), ::Triple),
-        combine(repo.dailyTarget.filterNotNull(), repo.reminder.filterNotNull(), repo.accessibilityConsent.filterNotNull(), ::Triple),
+        combine(repo.dailyTarget.filterNotNull(), repo.reminder.filterNotNull(), ::Pair),
         repo.touchHintSeen.filterNotNull()
-    ) { (theme, vibration, feel), (target, reminder, consent), hintSeen ->
+    ) { (theme, vibration, feel), (target, reminder), hintSeen ->
         mapOf(
             "themeMode" to theme.name,
             "roundVibration" to vibration.roundEnabled,
@@ -339,7 +332,6 @@ class SuperchantNativeModule : Module() {
             "dailyTarget" to target,
             "reminderEnabled" to reminder.enabled,
             "reminderMinuteOfDay" to reminder.minuteOfDay,
-            "accessibilityConsent" to consent,
             "touchHintSeen" to hintSeen
         )
     }.distinctUntilChanged()

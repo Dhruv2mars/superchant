@@ -9,7 +9,7 @@ Apple Developer Program membership (paid, Dhruv's decision), then `eas build -p 
   (volume buttons included), and the same rules apply to notarized apps outside the App Store. iPhone counts with
   taps on the counter (large target, haptics, screen kept awake), and a Live Activity shows the session on the
   Lock Screen and in the Dynamic Island, with pause/resume.
-- **No Quick Settings tile, launcher shortcuts or accessibility service.** Android-only features.
+- **No Quick Settings tile or launcher shortcuts.** Android-only features.
 - **Reminders** are local notifications planned a week ahead and re-planned whenever practice, the setting
   or a session changes (`expo/src/core/reminders.ts`), since iOS can't run code when a reminder is due.
 

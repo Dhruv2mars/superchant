@@ -14,16 +14,15 @@ class SuperchantPackage : Package {
 }
 
 /**
- * Counts volume presses while SuperChant's own window has focus, without the accessibility service
- * (payment apps such as Google Pay refuse to run while one is enabled). Ordinary key handling: the
- * activity gets a key only when the accessibility service didn't count it, so a press never counts twice.
+ * Counts volume presses while SuperChant's own window has focus. Ordinary key handling: a counted press
+ * never reaches the media session that counts presses outside the app ([com.superchant.service.VolumeKeySession]).
  */
 private class ForegroundVolumeKeys : ReactActivityHandler {
     private val filter = VolumeKeyFilter(ChantingService::onForegroundVolumeKeyPressed)
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean =
-        event != null && filter.onKey(keyCode, KeyEvent.ACTION_DOWN, event.repeatCount, event.downTime)
+        event != null && filter.onKey(keyCode, KeyEvent.ACTION_DOWN, event.repeatCount)
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean =
-        filter.onKey(keyCode, KeyEvent.ACTION_UP, 0, event?.downTime ?: 0L)
+        filter.onKey(keyCode, KeyEvent.ACTION_UP, 0)
 }

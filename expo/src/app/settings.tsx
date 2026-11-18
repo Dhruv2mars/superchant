@@ -1,6 +1,6 @@
 /** Settings (SettingsScreen.kt, ReminderControls.kt, BackupControls.kt). */
-import { useEffect, useRef, useState } from 'react';
-import { AppState, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { getCalendars } from 'expo-localization';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Native from 'superchant-native';
@@ -11,7 +11,6 @@ import { BackupOutcome, defaultSettings, ThemeMode } from '@/native/types';
 import { currentChannel, EARLY_CHANNEL, runningUpdate, setEarlyUpdates } from '@/native/updates';
 import { useSettings } from '@/state/store';
 import { useTheme } from '@/theme';
-import { AccessibilitySetupDialog } from '@/ui/AccessibilitySetup';
 import { AppTopBar, BackButton } from '@/ui/chrome';
 import { Button, Divider, IconButton, PressScale } from '@/ui/controls';
 import { Dialog } from '@/ui/Dialog';
@@ -28,14 +27,6 @@ export default function Settings() {
   const s = useSettings() ?? defaultSettings;
   const insets = useSafeAreaInsets();
   const snackbar = useSnackbar();
-  const [serviceEnabled, setServiceEnabled] = useState(() => platform.volume?.isServiceEnabled() ?? false);
-  const [showSetup, setShowSetup] = useState(false);
-  // Re-checked on return, e.g. from the accessibility settings
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (st) => st === 'active' && setServiceEnabled(platform.volume?.isServiceEnabled() ?? false));
-    return () => sub.remove();
-  }, []);
-  const volumeReady = serviceEnabled && s.accessibilityConsent;
   const amplitude = platform.hasAmplitudeControl;
 
   return (
@@ -43,22 +34,12 @@ export default function Settings() {
       <AppTopBar title={t('settings')} navigation={<BackButton />} />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: SNACKBAR_CLEARANCE + insets.bottom }}>
         <SettingsSection title={t('settings_counting')}>
-          {platform.volume ? (
+          {ios ? null : (
             <>
-              <SettingsItem
-                title={t('volume_buttons_title')}
-                subtitle={t(volumeReady ? 'volume_buttons_on' : 'volume_buttons_off')}
-                trailing={
-                  volumeReady ? (
-                    <Button variant="text" label={t('volume_buttons_turn_off')} onPress={() => platform.volume?.openAccessibilitySettings()} />
-                  ) : (
-                    <Button variant="text" label={t('volume_buttons_set_up')} onPress={() => setShowSetup(true)} />
-                  )
-                }
-              />
+              <SettingsItem title={t('volume_buttons_title')} subtitle={t('volume_buttons_desc')} />
               <Divider style={{ marginVertical: 12 }} />
             </>
-          ) : null}
+          )}
           <SwitchRow title={t('bead_click_title')} subtitle={t('bead_click_desc')} value={s.beadClick} onChange={platform.setBeadClick} />
         </SettingsSection>
 
@@ -120,19 +101,6 @@ export default function Settings() {
           </View>
         </SettingsSection>
       </ScrollView>
-      <AccessibilitySetupDialog
-        visible={showSetup}
-        consented={s.accessibilityConsent}
-        onConsent={() => {
-          platform.setAccessibilityConsent(true);
-          if (serviceEnabled) setShowSetup(false);
-        }}
-        onDismiss={() => setShowSetup(false)}
-        onOpenSettings={() => {
-          setShowSetup(false);
-          platform.volume?.openAccessibilitySettings();
-        }}
-      />
     </View>
   );
 }

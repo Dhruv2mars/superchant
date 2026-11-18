@@ -24,7 +24,7 @@ describe('Repository', () => {
     expect(new Repository(new MemoryKV()).settings()).toEqual({
       themeMode: 'SYSTEM', roundVibration: true, countVibration: true, countIntensity: 80, roundIntensity: 255,
       milestonePulse: true, beadClick: false, dailyTarget: 0, reminderEnabled: false, reminderMinuteOfDay: 360,
-      accessibilityConsent: false, touchHintSeen: false,
+      touchHintSeen: false,
     });
   });
 

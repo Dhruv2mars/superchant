@@ -79,10 +79,10 @@ class PreferencesRepository internal constructor(
         val SESSION_HISTORY = stringPreferencesKey("session_history")
         val SAVED_GOALS = stringPreferencesKey("saved_goals")
         val ACTIVE_SESSION = stringPreferencesKey("active_session")
-        // Keys of removed features ("input_mode", "round_size", "pocket_guard") may still be stored; they are never read.
+        // Keys of removed features ("input_mode", "round_size", "pocket_guard", "accessibility_consent") may still be
+        // stored; they are never read.
         val MILESTONE_PULSE = booleanPreferencesKey("milestone_pulse")
         val BEAD_CLICK = booleanPreferencesKey("bead_click")
-        val ACCESSIBILITY_CONSENT = booleanPreferencesKey("accessibility_consent")
         val DAILY_TARGET = intPreferencesKey("daily_target")
         val REMINDER_ENABLED = booleanPreferencesKey("reminder_enabled")
         val REMINDER_MINUTE = intPreferencesKey("reminder_minute")
@@ -247,13 +247,6 @@ class PreferencesRepository internal constructor(
      */
     suspend fun loadReminder(): Pair<ReminderSettings, Long> =
         prefs.first().let { it.reminderSettings() to (it[PreferencesKeys.REMINDER_HANDLED_THROUGH] ?: 0L) }
-
-    /** Whether the user agreed to the accessibility service disclosure. */
-    val accessibilityConsent: StateFlow<Boolean?> = prefs.map { it[PreferencesKeys.ACCESSIBILITY_CONSENT] ?: false }.share()
-
-    suspend fun setAccessibilityConsent(agreed: Boolean) {
-        dataStore.edit { it[PreferencesKeys.ACCESSIBILITY_CONSENT] = agreed }
-    }
 
     /** Whether the one-time hint for the touch-counting toggle has been shown. */
     val touchHintSeen: StateFlow<Boolean?> = prefs.map { it[PreferencesKeys.TOUCH_HINT_SEEN] ?: false }.share()

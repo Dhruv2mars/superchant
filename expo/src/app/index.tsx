@@ -5,7 +5,7 @@
  * re-renders on coarse changes (start, stop, pause, a round, the goal advancing).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Platform, ScrollView, StyleSheet, ToastAndroid, useWindowDimensions, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, ToastAndroid, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -16,35 +16,15 @@ import { t, tp } from '@/i18n';
 import { platform } from '@/native/platform';
 import { getState, requestStart, useAppState, useHistory, useSession, useSettings } from '@/state/store';
 import { useTheme } from '@/theme';
-import { AccessibilitySetupDialog } from '@/ui/AccessibilitySetup';
 import { AppTopBar } from '@/ui/chrome';
 import { Button, IconButton } from '@/ui/controls';
-import { GoalStrip, SessionControls, VolumeButtonsOffer } from '@/ui/home';
+import { GoalStrip, SessionControls } from '@/ui/home';
 import { TodayLine } from '@/ui/insights';
 import { Text } from '@/ui/Text';
 
 const ios = Platform.OS === 'ios';
 const SUMMARY_VISIBLE_MS = 6000;
 const KEEP_AWAKE_TAG = 'touch-counting';
-
-/** The session and volume readiness touch counting was last turned on for automatically (process-wide). */
-let autoTouchHandled: string | null = null;
-
-/** Whether the accessibility service is on, re-checked whenever the app comes back or consent changes (Android). */
-function useVolumeServiceEnabled(consent: boolean): boolean {
-  const [enabled, setEnabled] = useState(() => platform.volume?.isServiceEnabled() ?? false);
-  useEffect(() => {
-    if (platform.volume) setEnabled(platform.volume.isServiceEnabled());
-  }, [consent]);
-  useEffect(() => {
-    if (!platform.volume) return;
-    const sub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') setEnabled(platform.volume!.isServiceEnabled());
-    });
-    return () => sub.remove();
-  }, []);
-  return enabled;
-}
 
 interface Summary {
   counts: number;
@@ -63,20 +43,13 @@ export default function Home() {
   const isPaused = useSession((s) => s.isPaused);
   const touchCounting = useSession((s) => s.touchCounting);
   const goalComplete = useSession(isGoalComplete);
-  const sessionId = useSession((s) => (s.isActive ? s.sessionId : null));
   // Goal progress without the per-count fields, so the strip only changes at round boundaries
   const goalKey = useSession((s) => (s.activeGoal ? `${s.activeGoal.id}:${s.currentMantraIndex}:${s.mantraRoundsCompleted}` : null));
   const pendingStart = useAppState((s) => s.pendingStart);
 
-  const consent = settings?.accessibilityConsent === true;
-  const serviceEnabled = useVolumeServiceEnabled(consent);
-  // Volume buttons always count inside the app on Android; outside it they need the accessibility service
-  const volumeEverywhere = !ios && serviceEnabled && consent;
-  const [showSetup, setShowSetup] = useState(false);
-
-  // Awake while the screen is how counting happens: taps, or in-app volume presses without the service.
-  // Not when paused or the goal is done.
-  const keepAwake = isActive && !isPaused && !goalComplete && (touchCounting || (!ios && !volumeEverywhere));
+  // Awake while taps are how counting happens; volume buttons count on the lock screen too. Not when paused or
+  // the goal is done.
+  const keepAwake = isActive && !isPaused && !goalComplete && touchCounting;
   useEffect(() => {
     if (!keepAwake) return;
     activateKeepAwakeAsync(KEEP_AWAKE_TAG);
@@ -85,16 +58,6 @@ export default function Home() {
     };
   }, [keepAwake]);
 
-  // A session volume buttons can't count outside the app gets touch counting, once per session and readiness change, so
-  // switching it off by hand sticks across navigation and reopening the app (Android).
-  useEffect(() => {
-    if (ios || !sessionId || settings == null) return;
-    const key = `${sessionId}:${volumeEverywhere}`;
-    if (autoTouchHandled === key) return;
-    autoTouchHandled = key;
-    if (!volumeEverywhere && !getState().session.touchCounting) platform.setTouchCounting(true);
-  }, [sessionId, volumeEverywhere, settings]);
-
   const beginSession = useCallback(
     async (goal: Goal | null) => {
       if (!ios && !(await platform.notificationsGranted())) {
@@ -102,9 +65,10 @@ export default function Home() {
         // Counting doesn't need the notification (the service runs either way), so start and say why it's missing
         if (!granted) ToastAndroid.show(t('notifications_off_hint'), ToastAndroid.LONG);
       }
-      platform.start(goal, ios || !volumeEverywhere);
+      // Volume buttons count on Android; iPhone counts taps
+      platform.start(goal, ios);
     },
-    [volumeEverywhere],
+    [],
   );
 
   // A start asked for elsewhere: a plain "start counting" while a session runs just shows it; a goal starts
@@ -152,7 +116,6 @@ export default function Home() {
   ) : null;
   const goal = goalKey ? getState().session.activeGoal : null;
   const strip = goal ? <GoalStrip key={goal.id} state={getState().session} goal={goal} /> : null;
-  const offer = isActive && !ios && !volumeEverywhere ? <VolumeButtonsOffer onPress={() => setShowSetup(true)} /> : null;
   const idle = !isActive ? (
     <View style={styles.idle}>
       {summary ? (
@@ -199,7 +162,6 @@ export default function Home() {
               <>
                 {controls}
                 {strip}
-                {offer}
               </>
             ) : (
               idle
@@ -212,24 +174,9 @@ export default function Home() {
           {strip}
           {/* The counter takes whatever is left, so everything else always fits */}
           <View style={{ flex: 1 }}>{counter}</View>
-          {offer}
           {idle}
         </View>
       )}
-      <AccessibilitySetupDialog
-        visible={showSetup}
-        consented={consent}
-        onConsent={() => {
-          platform.setAccessibilityConsent(true);
-          // Already enabled (e.g. from an older version): nothing left to set up
-          if (serviceEnabled) setShowSetup(false);
-        }}
-        onDismiss={() => setShowSetup(false)}
-        onOpenSettings={() => {
-          setShowSetup(false);
-          platform.volume?.openAccessibilitySettings();
-        }}
-      />
     </View>
   );
 }

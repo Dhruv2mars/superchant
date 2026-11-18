@@ -141,7 +141,6 @@ export const platform: PlatformApi = {
     publishSettings();
     syncReminders();
   },
-  setAccessibilityConsent: () => {},
   setTouchHintSeen: () => (repo.setBool('touchHintSeen', true), publishSettings()),
   async setReminder(enabled, minuteOfDay) {
     if (enabled && (await Native.notificationStatus()) !== 'granted' && !(await Native.requestNotificationPermission())) return false;
@@ -193,7 +192,6 @@ export const platform: PlatformApi = {
   notificationsGranted: async () => (await Native.notificationStatus()) === 'granted',
   requestNotifications: () => Native.requestNotificationPermission(),
 
-  volume: undefined,
   hasAmplitudeControl: Native.hasAmplitudeControl(),
 
   takeLaunchRequest: () => null,

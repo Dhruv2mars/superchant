@@ -12,7 +12,6 @@ export interface SettingsSnapshot {
   dailyTarget: number;
   reminderEnabled: boolean;
   reminderMinuteOfDay: number;
-  accessibilityConsent: boolean;
   touchHintSeen: boolean;
 }
 
@@ -65,7 +64,6 @@ declare class SuperchantNativeModule extends NativeModule<Events> implements Ses
   setMilestonePulse(on: boolean): void;
   setBeadClick(on: boolean): void;
   setDailyTarget(rounds: number): void;
-  setAccessibilityConsent(agreed: boolean): void;
   setTouchHintSeen(): void;
   setReminder(enabled: boolean, minuteOfDay: number): Promise<void>;
   saveGoal(goalJson: string): void;
@@ -76,10 +74,6 @@ declare class SuperchantNativeModule extends NativeModule<Events> implements Ses
   importBackup(text: string): Promise<{ sessionsAdded: number; goalsAdded: number; goalsUpdated: number }>;
   saveBackupFile(fileName: string, text: string): Promise<boolean | null>;
   openBackupFile(): Promise<string | null>;
-  isAccessibilityServiceEnabled(): boolean;
-  openAccessibilitySettings(): void;
-  needsRestrictedSettings(): boolean;
-  openAppSettings(): void;
   notificationsGranted(): boolean;
   hasAmplitudeControl(): boolean;
 
@@ -108,7 +102,7 @@ export default requireNativeModule<SuperchantNativeModule>('SuperchantNative');
 
 export interface CounterViewProps extends ViewProps {
   dark: boolean;
-  /** Android: volume buttons can count (service enabled and disclosure agreed). */
+  /** Android: volume buttons can count (iPhone never counts them). */
   volumeReady: boolean;
 }
 

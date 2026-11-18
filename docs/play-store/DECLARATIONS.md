@@ -1,8 +1,8 @@
 # SuperChant - Play Console declarations
 
 Texts for **Policy and programs > App content** in Play Console, checked against the code and the release build
-on the `Pixel_9_API_35_A` emulator (2026-10-19). If the accessibility service or the foreground service
-changes, update this file, `PRIVACY_POLICY.md` and `STORE_LISTING.md` together (AGENTS.md, product rules).
+on the `Pixel_9_API_35_A` emulator (2026-10-19). If the foreground service changes, update this file,
+`PRIVACY_POLICY.md` and `STORE_LISTING.md` together (AGENTS.md, product rules).
 
 Free-text answers are kept under 500 characters each so they fit Play's text boxes.
 
@@ -11,72 +11,19 @@ Demo videos (both recorded on the emulator with the release APK, captioned, unde
 
 | Video | File | YouTube title | Length |
 |-------|------|---------------|--------|
-| Accessibility API | `superchant-accessibility-api.mp4` | SuperChant – Accessibility API use | 52 s |
 | Foreground service | `superchant-foreground-service.mp4` | SuperChant – Foreground service use | 41 s |
 
 Play needs a link it can open, so use the `https://www.youtube.com/watch?v=...` form, not `/shorts/`.
 
-## 1. Accessibility API
+## 1. Accessibility API: no longer used (2026-11)
 
-What the app does (verified):
-
-- `VolumeKeyAccessibilityService` with `accessibility_service_config.xml`: `flagRequestFilterKeyEvents`,
-  `canRequestFilterKeyEvents="true"`, `canRetrieveWindowContent="false"`, no `accessibilityEventTypes`, no
-  `isAccessibilityTool` (so false).
-- `onKeyEvent` hands key events to `VolumeKeyFilter`. Any key other than volume up/down returns `false`
-  right away and isn't stored. A volume press is offered to `ChantingService.onVolumeKeyPressed()`, which counts
-  it only while a session is running, not paused, the goal isn't complete, **and** the user agreed to the in-app
-  disclosure (`accessibility_consent`). A counted press is consumed whole (down, repeats, up). Every other press
-  passes through and changes the volume as usual.
-- `onAccessibilityEvent` does nothing. The service never performs gestures or global actions.
-- **Prominent disclosure first:** "Count with volume buttons" (Home) or "Set up" (Settings) opens
-  `AccessibilityDisclosureDialog` ("Before you turn on volume counting", with what it does, what it never does,
-  and the buttons I agree / Not now). Only "I agree" stores consent and opens Accessibility settings.
-- Works in the app, in other apps and on the lock screen **while the screen is on**. With the screen off,
-  Android sends volume keys to the media session and never to accessibility services (verified in logcat:
-  `MediaSessionService: Nothing is playing on the music stream. Skipping volume event`), so the declaration
-  doesn't claim screen-off counting.
-
-### Console form (as captured Oct 19, 2026)
-- Accessibility-tool status isn't a question: Console reads it from the manifest ("The isAccessibilityTool
-  attribute has not been set ... you've declared that your app is not an accessibility tool"). That's correct:
-  SuperChant isn't designed for people with disabilities, so it relies on the prominent disclosure and consent.
-- **Usage** ("Why does your app need to use the AccessibilityServices API?"): **App functionality** only.
-- **Sensitive data** ("Do you collect and/or share any personal or sensitive user data using the
-  AccessibilityServices API?"): **No**.
-- **Prominent disclosure**: the YouTube link to the accessibility video, plus the checkbox "I acknowledge that my
-  video meets the video requirements of prominent disclosure".
-- The form has no free-text fields. The texts below are for any follow-up questions from Play review, an
-  appeal, or a field Console adds later.
-
-### Core functionality that uses the Accessibility API
-```
-SuperChant is a japa mala (chant counter). Its core feature is counting each repetition of a mantra with a press of the phone's volume up or down button, so the user can chant without looking at or touching the screen, including from the lock screen or while another app is open. The accessibility service only filters volume key events: during a running, unpaused chanting session it turns each press into one count instead of a volume change.
-```
-
-### Why the Accessibility API is needed (no alternative)
-```
-No other public API lets an app receive volume button presses while it isn't the focused window. Activity key callbacks only work while SuperChant's own screen is focused. MediaSession volume handling only reaches an app that is actively playing audio, which would mean playing silent audio all session and taking audio focus from the user's chant recordings. Key-event filtering (flagRequestFilterKeyEvents) is the only way to count presses on the lock screen or in other apps.
-```
-
-### What the service does not access or do
-```
-The service declares no accessibility event types, sets canRetrieveWindowContent="false", and never reads the screen or other apps. It doesn't perform gestures or actions and doesn't change settings. It ignores every key other than volume up/down and keeps no record of any key. It only consumes volume presses that it counts during a running, unpaused session; at all other times the buttons change the volume as usual. SuperChant has no internet permission and collects no data.
-```
-
-### Prominent disclosure and consent (if asked)
-```
-Before the user is sent to Accessibility settings, SuperChant shows a full-screen dialog, "Before you turn on volume counting". It says what the service does (detects volume presses only during a running session and turns them into counts) and what it never does (read the screen or other apps, collect or share data, perform actions). Only after the user taps "I agree" does the app open settings and count volume presses. "Not now" keeps touch counting, which needs no permission.
-```
-
-### Data collected through the Accessibility API
-None. Nothing is stored, logged or sent (the app has no INTERNET permission).
-
-### Video
-"SuperChant – Accessibility API use": Start → touch counting on by default → "Count with volume buttons" →
-disclosure → I agree → setup dialog → Accessibility settings → SuperChant Volume Counter → On → Allow → back in
-the app, volume presses count without changing the volume → app in the background → live count in the
-notification → lock screen. 23 presses, 23 counts.
+The accessibility service was removed: with it enabled, Google Pay (India) refused payments, because Play
+Integrity's app access risk verdict reports any enabled key-filtering accessibility service as
+`KNOWN_CONTROLLING`, even when the app came from Play. Volume buttons now count outside the app through a
+remote-volume `MediaSession` held by the foreground service (AGENTS.md, "How counting works"). Builds from this
+change on declare no `BIND_ACCESSIBILITY_SERVICE` service, so the Accessibility API declaration no longer
+applies. Once every active track carries such a build, Play Console stops asking for it; if a review still
+asks, answer that the app doesn't use the Accessibility API. The old texts are in git history (before 2026-11-18).
 
 ## 2. Foreground service: `FOREGROUND_SERVICE_SPECIAL_USE`
 
@@ -100,12 +47,12 @@ What the app does (verified):
 
 ### Describe the user-initiated task
 ```
-A chanting session is started by the user (Start button, a goal, a launcher shortcut or the Quick Settings tile). While it runs, the user counts mantras with the volume buttons, often from the lock screen or while another app is open. The foreground service holds the session state, turns each press into a count with a vibration, and shows the live count with Pause/Resume and Stop in its notification. It runs only until the user taps Stop.
+A chanting session is started by the user (Start button, a goal, a launcher shortcut or the Quick Settings tile). While it runs, the user counts mantras with the volume buttons, often from the lock screen or while another app is open. The foreground service holds the session state and a media session that receives the volume presses, turns each press into a count with a vibration, and shows the live count with Pause/Resume and Stop in its notification. It runs only until the user taps Stop.
 ```
 
 ### Why no other foreground service type or API fits
 ```
-Counting happens in real time while SuperChant isn't visible, and every press must give immediate vibration feedback, so the work can't be deferred or batched (WorkManager, JobScheduler). No standard foreground service type fits: it isn't media playback, location, a phone call, health or fitness sensor data, connected-device, data sync or short-service work, and a session lasts as long as the user chants, often more than an hour.
+Counting happens in real time while SuperChant isn't visible, and every press must give immediate vibration feedback, so the work can't be deferred or batched (WorkManager, JobScheduler). No standard foreground service type fits: it plays no audio or video (its media session only receives volume button presses), and it isn't location, a phone call, health or fitness sensor data, connected-device, data sync or short-service work, and a session lasts as long as the user chants, often more than an hour.
 ```
 
 ### Impact if the task is deferred or interrupted
@@ -129,7 +76,7 @@ are the Accessibility and Foreground service declarations above.
 |-------------|----------------------|----------------|
 | Privacy policy | `https://github.com/dhruv2mars/superchant/blob/main/PRIVACY_POLICY.md` | URL returns 200; repo is public. Policy updated Oct 19 (on `dev` until merged to `main`) |
 | Ads | No, the app has no ads | No ad SDKs; no INTERNET permission |
-| App access | All functionality is available without special access | No login or account; accessibility setup is user-controlled and shown in the videos |
+| App access | All functionality is available without special access | No login or account, and no permission to set up |
 | Content rating | Saved: category "All Other App Types", Everyone / PEGI 3 / USK 0 / IARC 3+, no descriptors. "No" to violence, sexual content, language, controlled substances, gambling; no user interaction or content sharing, no location sharing, no digital purchases → Everyone / PEGI 3 | Static counter; no user-generated content |
 | Target audience and content | 13+ is fine (saved: 13–15, 16–17, 18+). Not designed for children; no appeal-to-children elements | Avoids the Families policy; keep as is |
 | News app | Not listed in Console for this app | Nothing to answer |
@@ -167,6 +114,8 @@ INTERNET for one purpose, EAS Update (checking for and downloading app updates f
 `assets.eascdn.net`). Its release build trusts TLS certificates for those two hosts only
 (`network_security_config.xml`, written by `expo/plugins/withSuperChantAndroid.js`), so it cannot reach any
 other server. Before the first Expo upload, resubmit these:
+
+The two Accessibility texts below are obsolete since the service was removed (section 1).
 
 **Accessibility, "What the service does not access or do"** (replace the last sentence):
 ```

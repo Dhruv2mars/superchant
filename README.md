@@ -25,8 +25,8 @@ Built for japa meditation, mantra chanting, prayer counting, and any repetitive 
 ## Features
 
 ### Core
-- Android: press volume up or down to count, on the lock screen or in any other app while the screen is on
-  (Android doesn't deliver button presses to accessibility services while the screen is off)
+- Android: press volume up or down to count, on the lock screen or in most other apps while the screen is on,
+  with no setup (no accessibility service, so payment apps keep working)
 - Tap the screen to count (no permissions needed): one switch on the session screen; on, the counter is the tap
   target and the screen stays awake
 - 108 beads per round, like a traditional mala, in a calm mala ring with a meru bead and a soft glow per round
@@ -70,19 +70,18 @@ updates and the release flow.
 | Layer | Tech |
 |-------|------|
 | App | Expo SDK 58, React Native, expo-router, TypeScript |
-| Counting (Android) | Kotlin: AccessibilityService, foreground service, DataStore, a Jetpack Compose mala ring |
+| Counting (Android) | Kotlin: foreground service, media session, DataStore, a Jetpack Compose mala ring |
 | Counting (iPhone) | Swift: session engine, Core Haptics, SwiftUI ring, Live Activity |
 | Updates | EAS Update (fixes and polish between store builds) |
 
 ## How It Works
 
-On Android, SuperChant uses an [AccessibilityService](https://developer.android.com/reference/android/accessibilityservice/AccessibilityService)
-to receive volume button presses system-wide. During a running session the service consumes each counted press
-(key down, repeats and key up) so the volume doesn't change. When no session is running, it's paused, or its
-goal is complete, the buttons change the volume as usual.
-
-The accessibility service does **not** read screen content (`canRetrieveWindowContent = false`), does not
-interact with other apps, and only counts during sessions you start. iPhone counts taps only.
+On Android, a running session holds a [MediaSession](https://developer.android.com/reference/android/media/session/MediaSession)
+with a remote volume provider, so Android hands it the volume button presses that the app on screen doesn't use
+(the lock screen and most apps), and SuperChant counts each one instead of changing the volume. In its own screen
+the app counts presses directly. When no session is running, it's paused, or its goal is complete, the buttons
+change the volume as usual. It plays no audio, needs no permission, and uses no accessibility service, so payment
+apps such as Google Pay keep working. iPhone counts taps only.
 
 ## License
 

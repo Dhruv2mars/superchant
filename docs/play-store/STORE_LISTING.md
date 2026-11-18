@@ -80,6 +80,16 @@ SuperChant 2.0
 </en-US>
 ```
 
+2.2026.322 (2632200, on internal and closed testing since 2026-11-18):
+```
+<en-US>
+SuperChant 2.2026.322
+• Volume buttons now count on the lock screen and in other apps, with no setup
+• SuperChant no longer uses an accessibility service, so Google Pay and other payment apps keep working
+• Pause the session to use the volume buttons for volume again
+</en-US>
+```
+
 ## Graphics
 
 | Asset | File | Notes |

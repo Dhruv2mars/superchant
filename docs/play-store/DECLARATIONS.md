@@ -106,8 +106,8 @@ are the Accessibility and Foreground service declarations above.
 **Status (Oct 28):** the Data safety form is saved as recommended below (Device or other IDs: collected, not
 shared, required, App functionality; encrypted in transit; no deletion; no accounts) but not yet sent for
 review. The live Accessibility form has no free-text fields, so the texts below had nothing to replace, and
-"collects data through the Accessibility API" stays No. The privacy policy URL (section 3) points at the old
-GitHub repo, which is gone; it needs a new public home before the next review.
+"collects data through the Accessibility API" stays No. The privacy policy URL (section 3) works again
+(2026-11-18): GitHub is now the public mirror of the Entire repo, so the `main` URL returns 200.
 
 The answers above describe the Kotlin app, which had no INTERNET permission. The Expo app adds
 INTERNET for one purpose, EAS Update (checking for and downloading app updates from `u.expo.dev` and

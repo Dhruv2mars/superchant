@@ -288,16 +288,23 @@ SuperChant APK from before 2026-11 never installs. Use Play and adb installs onl
    `./gradlew :app:assemblePreview` in `expo/android` and `adb -s <ip:port> install -r
    app/build/outputs/apk/preview/app-preview.apk`. Pairing is done once per phone:
    Developer options → Wireless debugging → Pair device with pairing code, then `adb pair <ip>:<pairing port> <code>`.
-   The connect port changes when wireless debugging restarts, and adb's built-in mDNS discovery doesn't see the
-   phone from this Mac. Find the phone's IP with a ping sweep and `arp -an`, and its open ports with a quick TCP
-   scan of 1024-65535 (the connect port is the one Wireless debugging shows), then `adb connect <ip>:<port>`.
+   The connect port changes when wireless debugging restarts. `dns-sd -B _adb-tls-pairing._tcp` and `dns-sd -L`
+   on the Mac find the phone and its pairing port (adb's own mDNS doesn't). The phone's IP can change between
+   sessions (it was 192.168.1.18, not the .5 that a ping sweep found first), so resolve its `Android_*.local` name
+   and connect to the port a quick TCP scan finds open. Wireless debugging turns itself off on reboot.
    QR pairing failed here (`protocol fault`), so use the pairing code. The pairing popup closes as soon as the
    phone leaves Settings, so read the code off the screen; the pairing port is the extra open port while the
    popup shows. Run adb outside the agent sandbox, which blocks local-network connections (`No route to host`).
-   A USB cable with USB debugging also works.
+   A USB cable with USB debugging also works, and it survives reboots.
+   **Google Pay:** keep wireless debugging off when you're done. On 2026-11-18, GPay stayed "Payments blocked"
+   after a reboot with wireless debugging on, and worked after one with it off (USB debugging on). After any
+   accessibility service has been on, GPay's block clears only on a restart once the service is gone. Don't
+   leave adb-installed helpers (for example agent-device's `com.callstack.agentdevice.snapshothelper`, which
+   connects as UI automation) on the phone either: uninstall them after use and restart before paying.
 
-Play release state (2026-10-28): the Expo build is on internal testing (versionCode 2630100 onwards); the
-last Kotlin build, 2629900, is on closed testing (alpha). The app is still a "draft app" until its first review,
-and the privacy policy URL in Play Console still points at the deleted GitHub repo.
+Play release state (2026-11-18): 2632200 (2.2026.322, no accessibility service) is on internal testing and
+closed testing (alpha), and replaced the last Kotlin build, 2629900, there. Production is empty. The app is still
+a "draft app" until its first review. The privacy policy URL resolves again through the GitHub mirror. The Play
+service account can release to tracks but can't edit the store listing (403), so listing text goes in by hand.
 
 - For JavaScript tooling (e.g. `bunx skills`), use bun.

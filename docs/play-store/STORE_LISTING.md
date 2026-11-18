@@ -61,7 +61,7 @@ During a session the volume buttons count, on the lock screen and in other apps 
 
 For japa meditation, mantra chanting, naam jap, prayer counting and any practice of repetition.
 ```
-(2657 characters.)
+(2414 characters. In Play Console since 2026-11-18.)
 
 ## Release notes (500 max per language)
 

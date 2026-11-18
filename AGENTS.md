@@ -305,6 +305,8 @@ SuperChant APK from before 2026-11 never installs. Use Play and adb installs onl
 Play release state (2026-11-18): 2632200 (2.2026.322, no accessibility service) is on internal testing and
 closed testing (alpha), and replaced the last Kotlin build, 2629900, there. Production is empty. The app is still
 a "draft app" until its first review. The privacy policy URL resolves again through the GitHub mirror. The Play
-service account can release to tracks but can't edit the store listing (403), so listing text goes in by hand.
+service account can release to tracks but can't edit the store listing (403), so listing text goes in by hand
+in Play Console. Console still lists the old Accessibility API declaration as answered; nothing asks for it. Trader
+status is due by 2027-02-01.
 
 - For JavaScript tooling (e.g. `bunx skills`), use bun.
